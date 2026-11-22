@@ -1,0 +1,10 @@
+# 依赖与构建产物
+node_modules/
+
+# 本插件无关：DSH 沙箱权限修复留下的记录，不要提交
+acl-*.json
+acl-*.jsonl
+acl-*.ps1
+
+# 日志
+*.log

@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "moduleResolution": "Bundler"
+  },
+  "include": ["index.ts", "types/**/*.ts", "types/**/*.d.ts"]
+}

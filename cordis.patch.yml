@@ -1,0 +1,5 @@
+# Bundle patch for dsh-feature-hub. One Host row carries the bundle; the
+# feature components live in the Client module and register themselves.
+- insert:
+    - id: feature-hub
+      name: dsh-feature-hub

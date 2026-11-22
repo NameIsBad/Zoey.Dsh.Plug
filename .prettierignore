@@ -1,0 +1,6 @@
+# Prettier 忽略：生成物与依赖不参与格式化
+client/client.js
+index.js
+types/dsh-observed.generated.md
+node_modules/
+pnpm-lock.yaml

@@ -1,0 +1,83 @@
+/**
+ * 「任务提醒」的中英文字典。
+ *
+ * 键名与 `engine.ts` / `index.ts` 里的 `t(...)` 一一对应：提醒标题按类别取，
+ * 询问原因按 `ask.*` 取，系统通知标题按 `desktop.*` 取。
+ */
+export const zh = {
+  region: '任务提醒',
+  open: '打开这个会话',
+  dismiss: '关闭提醒',
+  'toast.completed': '任务完成',
+  'toast.failed': '任务失败',
+  'toast.asked': '等待你的回应',
+  'asked.approval': '需要你批准一个操作',
+  'asked.question': '需要你回答一个问题',
+  'asked.other': '需要你处理一个交互',
+  'desktop.completed': '任务完成',
+  'desktop.failed': '任务失败',
+  'desktop.asked': '需要你的回应',
+  'session.fallback': '未命名会话',
+  'settings.title': '任务提醒',
+  'settings.description':
+    '任务完成、失败或等待你回应时弹 Windows 系统通知，并留在通知中心；窗口最小化或关闭到托盘时也能收到。',
+  'notify.enabled': '启用任务提醒',
+  'notify.enabledHint': '总开关；关闭后不再出现任何提醒。',
+  'notify.completed': '任务完成时提醒',
+  'notify.completedHint': '一轮回答正常结束时提醒。',
+  'notify.failed': '任务失败时提醒',
+  'notify.failedHint': '回答过程中出现错误时提醒，并显示错误摘要。',
+  'notify.asked': '等待确认或回答时提醒',
+  'notify.askedHint': '需要你批准工具调用或回答问题时提醒。',
+  'notify.system': '使用 Windows 系统通知',
+  'notify.systemHint': '关闭后只在 DSH 窗口内提醒；从托盘彻底退出应用后不会再收到提醒。',
+  'notify.test': '测试系统通知',
+  'notify.testAction': '发送测试',
+  'notify.testSent': '已发送',
+  'notify.testTitle': '任务提醒',
+  'notify.testBody': '看到这条通知，说明系统通知可以正常工作。',
+  'notify.permission.unsupported': '当前环境不支持系统通知',
+  'notify.permission.default': '首次使用需要允许通知',
+  'notify.permission.granted': '系统通知已允许',
+  'notify.permission.denied': '系统通知被拒绝，可稍后在系统设置里恢复',
+}
+
+/** 英文字案（与中文一一对应）。 */
+export const en: Record<keyof typeof zh, string> = {
+  region: 'Task notices',
+  open: 'Open this session',
+  dismiss: 'Dismiss notice',
+  'toast.completed': 'Task completed',
+  'toast.failed': 'Task failed',
+  'toast.asked': 'Waiting for you',
+  'asked.approval': 'Approval is required',
+  'asked.question': 'A question needs your answer',
+  'asked.other': 'An interaction needs your input',
+  'desktop.completed': 'Task completed',
+  'desktop.failed': 'Task failed',
+  'desktop.asked': 'Waiting for you',
+  'session.fallback': 'Untitled session',
+  'settings.title': 'Task notices',
+  'settings.description':
+    'Windows notifications are raised when a task completes, fails, or waits for you, and stay in the notification center; they also arrive while the window is minimized or closed to the tray.',
+  'notify.enabled': 'Enable task notices',
+  'notify.enabledHint': 'Master switch; turning it off hides every notice.',
+  'notify.completed': 'Notify when a task completes',
+  'notify.completedHint': 'Shown when a turn ends normally.',
+  'notify.failed': 'Notify when a task fails',
+  'notify.failedHint': 'Shown when a turn ends with an error, including a short error summary.',
+  'notify.asked': 'Notify when input is required',
+  'notify.askedHint': 'Shown when you need to approve a tool call or answer a question.',
+  'notify.system': 'Use Windows system notifications',
+  'notify.systemHint':
+    'When off, only an in-window notice appears. Quitting the app from the tray stops all notices.',
+  'notify.test': 'Test system notification',
+  'notify.testAction': 'Send test',
+  'notify.testSent': 'Sent',
+  'notify.testTitle': 'Task notices',
+  'notify.testBody': 'If you can see this, system notifications work.',
+  'notify.permission.unsupported': 'System notifications are not supported here',
+  'notify.permission.default': 'Notification permission is requested on first use',
+  'notify.permission.granted': 'System notifications are allowed',
+  'notify.permission.denied': 'System notifications were denied; restore them in the system settings',
+}

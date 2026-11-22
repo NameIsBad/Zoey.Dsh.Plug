@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36" role="img" aria-label="Recent tasks">
+  <g fill="none" stroke="#4d6bfe" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 8 A10 10 0 1 1 9.34 23"/>
+    <path d="M9.69 26.98 L9.34 23 L12.62 25.3"/>
+    <path d="M18 12.6 V18 L21.6 19.9"/>
+  </g>
+</svg>
