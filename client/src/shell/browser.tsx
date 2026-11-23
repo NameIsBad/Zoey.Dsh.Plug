@@ -10,11 +10,16 @@ import type * as ReactTypes from 'react'
  *
  * 与原生的一处结构差异：原生把行动作、目录选择流注册成自己声明的子槽；
  * 本注册不声明那些子槽（原生还装着，重复声明会让整个注册失败），
- * 因此这些 UI 在本文件里直接渲染，菜单沿用宿主原生的右键菜单（会话项、
- * 工作区分组项都由宿主贡献，弹层与键盘导航由宿主负责）。
+ * 因此这些 UI 在本文件里直接渲染。
+ *
+ * 菜单分两类：会话行沿用宿主原生右键菜单（菜单项与对话框都由原生插件贡献，
+ * 弹层与键盘导航也由宿主负责）；工作区行改用本插件自绘的 `PointMenu`——
+ * 原生工作区菜单的「重命名 / 删除工作区」只往它自己注入面的 store 里写请求，
+ * 对话框由原生浏览区渲染，接管后那条请求没人消费（表现为点了没反应），
+ * 所以必须由本插件的菜单 + 对话框接手。
  */
 
-import { Menu } from './menu'
+import { Menu, PointMenu } from './menu'
 import type { MenuItem } from './menu'
 import { ProjectRow, SearchResultRow, SessionRow } from './rows'
 import type { RowMenuRequest } from './rows'
@@ -26,12 +31,15 @@ import {
   IconChevronsUpDown,
   IconClock,
   IconClose,
+  IconEdit,
   IconFlatList,
   IconFolderClose,
+  IconFolderOpen,
   IconProjectAdd,
   IconQueue,
   IconSearch,
   IconSliders,
+  IconTrash,
   IconWorkspaceTree,
 } from './icons'
 import { useViewState } from './view-state'
@@ -48,6 +56,7 @@ import {
   pinCurrentBlank,
   reconcileManualOrder,
   sessionMemberIds,
+  visibleSessionIds,
 } from './tree'
 import type { GroupNode, SessionGroupBy, SessionNode, SessionOrderBy, SessionRowState } from './tree'
 
@@ -96,6 +105,17 @@ export interface WorkspaceBrowserFace {
   renameWorkspace(workspaceId: string, title: string): Promise<void>
   /** 删除工作区登记。 */
   deleteWorkspace(workspaceId: string): Promise<void>
+  /**
+   * 在系统文件管理器里显示工作区目录。
+   *
+   * 打开文件管理器的能力由原生插件贡献在右键菜单里，插件拿不到服务，
+   * 所以这里借菜单服务的 resolve/select 触发同一条原生动作。
+   *
+   * @param workspaceId 工作区 id。
+   * @param path 工作区目录。
+   * @returns 是否真的触发了；宿主缺少该动作时返回 false。
+   */
+  revealWorkspace(workspaceId: string, path: string): Promise<boolean>
   /** 把工作区移动到另一个之前（缺省移到末尾）。 */
   insertWorkspaceBefore(workspaceId: string, beforeWorkspaceId?: string): Promise<void>
   /** 归档会话（运行中的会话由宿主拒绝，错误会提示）。 */
@@ -367,6 +387,17 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
         ungroupedOrder: orderedUngrouped,
       }),
     [list, orderedWorkspaces, rowState, statuses, expandedGroups, orderedUngrouped],
+  )
+
+  // 分组之外的功能（例如「最近任务」）要的是「全部可见会话」，不能从 groups 里取：
+  // 折叠的分组不带行，那样折叠项目会把它的任务从摘要里一起隐掉——折叠只是导航状态，
+  // 不该改变跨项目的最近任务列表。可见性口径与列表一致（草稿 / 子代理 / 归档）。
+  const sectionRows = React.useMemo(
+    () =>
+      visibleSessionIds(list, archivedSessionIds, view.archivedFilter)
+        .map((id) => list.byId[id])
+        .filter((session): session is SessionSummary => session !== undefined),
+    [list, archivedSessionIds, view.archivedFilter],
   )
 
   // 当前会话所在分组默认展开（原生同样在首次出现时自动展开）。
@@ -643,7 +674,15 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
     })
   }
 
+  // 原生右键菜单的「重命名 / 删除工作区」只往宿主的 action-request store 里写一条请求，
+  // 对话框由 `sidebar.workspaces` 的占用者渲染；而那个 store 只在原生注入面里（本插件
+  // 拿不到）。所以工作区行改用自绘菜单，请求直接落在本地，由本插件的对话框执行。
   const [workspaceAction, setWorkspaceAction] = React.useState<WorkspaceActionRequest | null>(null)
+  // 工作区行的自绘右键菜单：目标分组 + 弹出点（原生菜单里的重命名/删除在本插件里没有消费者）。
+  const [workspaceMenu, setWorkspaceMenu] = React.useState<{
+    readonly group: GroupNode
+    readonly point: { readonly x: number; readonly y: number }
+  } | null>(null)
   // 内置目录浏览对话框只在宿主支持「列目录」能力时可用。当前 profile 组合的是
   // native 后端（只有 pick()），所以默认直接走系统对话框；列目录能力缺失时
   // 不要弹出一个读不到内容的空对话框。
@@ -857,36 +896,76 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
   }
 
   /**
-   * 打开一个工作区的原生右键菜单。
+   * 打开一个工作区的自绘右键菜单。
    *
-   * 菜单项由宿主的 ui-workspace 插件贡献（重命名 / 删除工作区），所以文案、
-   * 权限判定与原生完全一致；本插件只负责把目标与坐标交出去。
+   * 为什么不用宿主的原生菜单：`ui-workspace` 的「重命名 / 删除工作区」只往它自己
+   * 注入面的 store 里写一条请求，对话框由原生浏览区渲染；本插件取代原生浏览区后
+   * 没人消费这条请求，点下去等于没点（删除工作区后列表里还在）。
+   * 自绘菜单把请求落在本插件里，由本插件的对话框执行；「在文件夹显示」仍借原生
+   * 动作（见 {@link WorkspaceBrowserFace.revealWorkspace}）。
    *
    * @param group 分组。
    * @param point 视口坐标。
    */
   const openWorkspaceMenu = (group: GroupNode, point: { readonly x: number; readonly y: number }): void => {
     if (group.workspaceId === undefined) return
-    props.openContextMenu(
-      {
-        kind: 'workspace',
-        workspaceId: group.workspaceId,
-        path: group.cwd ?? '',
-        displayTitle: group.label,
-        point,
-      },
-      point,
-    )
+    setWorkspaceMenu({ group, point })
   }
 
   /**
-   * 对话框确认后真正执行工作区重命名/删除。
-   *
-   * 原生菜单只「请求」动作，真正的执行与校验在本插件的对话框中完成：
-   * 这样重名、空名、未改动三种情况都能就地提示，而不是直接打到宿主去报错。
-   * 菜单项 id 来自宿主贡献（`rename` / `delete`），这里通过
-   * `WorkspaceDialogs` 的 `request` 状态间接决定，不会与宿主文案耦合。
+   * 把分组摊成一次工作区动作请求。
+   * @param group 分组。
+   * @param action 动作类型。
+   * @returns 请求；未分组桶没有工作区 id，返回 null。
    */
+  const workspaceRequest = (group: GroupNode, action: 'rename' | 'delete'): WorkspaceActionRequest | null => {
+    if (group.workspaceId === undefined) return null
+    // 重命名对话框要区分「没改动」与「改成目录名」：这里给宿主里存的原始标题。
+    const stored = items.find((workspace) => workspace.workspaceId === group.workspaceId)?.title ?? ''
+    return {
+      action,
+      workspaceId: group.workspaceId,
+      displayTitle: group.label,
+      storedTitle: stored,
+    }
+  }
+
+  /** 工作区菜单项：顺序与原生一致（重命名 → 在文件夹显示 → 删除工作区）。 */
+  const workspaceMenuItems: readonly MenuItem[] = [
+    { kind: 'item', id: 'rename', label: t('rename'), icon: <IconEdit size={14} /> },
+    { kind: 'item', id: 'reveal', label: t('workspace.reveal'), icon: <IconFolderOpen size={14} /> },
+    { kind: 'separator', id: 'workspace-delete-sep' },
+    { kind: 'item', id: 'delete', label: t('delete.workspace'), icon: <IconTrash size={14} />, danger: true },
+  ]
+
+  /**
+   * 处理工作区菜单的选择。
+   *
+   * 菜单先关闭再执行：重命名/删除要弹模态对话框，留着弹层会抢焦点。
+   *
+   * @param id 菜单项 id。
+   */
+  const onWorkspaceMenuSelect = (id: string): void => {
+    const current = workspaceMenu
+    setWorkspaceMenu(null)
+    if (current === null) return
+    const group = current.group
+    if (id === 'reveal') {
+      props
+        .revealWorkspace(group.workspaceId ?? '', group.cwd ?? '')
+        .then((opened) => {
+          if (!opened) props.notify(t('toast.revealUnavailable'), 'warn')
+        })
+        .catch(() => {
+          props.notify(t('toast.revealUnavailable'), 'warn')
+        })
+      return
+    }
+    if (id !== 'rename' && id !== 'delete') return
+    const request = workspaceRequest(group, id)
+    if (request !== null) setWorkspaceAction(request)
+  }
+
   /** rail 态点击搜索：展开侧边栏并准备聚焦。 */
   const railSearch = (): void => {
     setSearchOnExpand(true)
@@ -1026,15 +1105,11 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
                   props.startSession(workspaceId)
                 }
           }
-          menu={
+          onMenu={
             workspaceId === undefined
               ? undefined
-              : {
-                  label: t('actions.workspace.aria', { name: group.label }),
-                  items: workspaceMenuItems(),
-                  onSelect: (id) => {
-                    onWorkspaceMenu(group, id)
-                  },
+              : (point) => {
+                  openWorkspaceMenu(group, point)
                 }
           }
           drag={
@@ -1222,71 +1297,67 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
 
   return (
     <div className="fh-ws">
-      <div className="fh-ws-head">
+      <div className={`fh-ws-head${searchOpen ? ' fh-ws-head-open' : ''}`}>
         {searchOpen || normalizedQuery !== '' ? null : (
           <span className="fh-ws-label">
             {view.groupBy === 'flat' ? t('section.sessions') : t('section.workspaces')}
           </span>
         )}
-        <div
-          ref={searchBox}
-          className={`fh-ws-search${searchOpen ? ' fh-ws-search-open' : ''}`}
-          onClick={() => {
-            if (searchOpen) return
-            openSearch()
-          }}
-        >
-          {searchOpen ? (
-            <>
-              <IconSearch size={12} />
-              <input
-                ref={searchInput}
-                className="fh-ws-search-input"
-                type="text"
-                value={query}
-                placeholder={t('search.placeholder')}
-                aria-label={t('search.placeholder')}
-                maxLength={SEARCH_QUERY_MAX_CODE_UNITS}
-                onChange={(event) => {
-                  setQuery(sanitizeQuery(event.currentTarget.value))
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Escape') return
-                  event.preventDefault()
-                  setQuery('')
-                  setSearchOpen(false)
-                }}
-              />
-              <button
-                type="button"
-                className="fh-icon-button"
-                title={t('search.clear')}
-                aria-label={t('search.clear')}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  setQuery('')
-                  setSearchOpen(false)
-                }}
-              >
-                <IconClose size={12} />
-              </button>
-            </>
-          ) : (
+        {/* 收起态只留一个图标按钮，紧挨右侧动作（所以天然右对齐）；展开后换成占满整行的输入框。 */}
+        {searchOpen ? (
+          <div
+            ref={searchBox}
+            className="fh-ws-search"
+            onClick={() => {
+              focusSearch()
+            }}
+          >
+            <IconSearch size={14} />
+            <input
+              ref={searchInput}
+              className="fh-ws-search-input"
+              type="text"
+              value={query}
+              placeholder={t('search.placeholder')}
+              aria-label={t('search.placeholder')}
+              maxLength={SEARCH_QUERY_MAX_CODE_UNITS}
+              onChange={(event) => {
+                setQuery(sanitizeQuery(event.currentTarget.value))
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Escape') return
+                event.preventDefault()
+                setQuery('')
+                setSearchOpen(false)
+              }}
+            />
             <button
               type="button"
               className="fh-icon-button"
-              title={t('search')}
-              aria-label={t('search.aria')}
-              aria-expanded={false}
+              title={t('search.clear')}
+              aria-label={t('search.clear')}
               onClick={(event) => {
+                // 清除按钮在输入框容器内：别让冒泡把焦点又抢回已经要卸载的 input。
                 event.stopPropagation()
-                openSearch()
+                setQuery('')
+                setSearchOpen(false)
               }}
             >
-              <IconSearch size={14} />
+              <IconClose size={12} />
             </button>
-          )}
-        </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="fh-icon-button"
+            title={t('search')}
+            aria-label={t('search.aria')}
+            aria-expanded={false}
+            onClick={openSearch}
+          >
+            <IconSearch size={14} />
+          </button>
+        )}
         <div className="fh-ws-head-actions">
           <Menu
             label={t('viewOptions.label')}
@@ -1322,8 +1393,8 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
                   key: section.id,
                   t: section.t === undefined ? t : section.t,
                   now,
-                  model: { groups, rows: groups.flatMap((group) => group.sessions) },
-                  rows: groups.flatMap((group) => group.sessions),
+                  model: { groups, rows: sectionRows },
+                  rows: sectionRows,
                   currentSessionId: current ?? null,
                   snapshot: {
                     items,
@@ -1345,6 +1416,16 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
           </>
         )}
       </div>
+      <PointMenu
+        open={workspaceMenu !== null}
+        point={workspaceMenu === null ? null : workspaceMenu.point}
+        label={t('actions.workspace.aria', { name: workspaceMenu === null ? '' : workspaceMenu.group.label })}
+        items={workspaceMenuItems}
+        onSelect={onWorkspaceMenuSelect}
+        onClose={() => {
+          setWorkspaceMenu(null)
+        }}
+      />
       <WorkspaceDialogs
         request={workspaceAction}
         workspaces={workspaces}

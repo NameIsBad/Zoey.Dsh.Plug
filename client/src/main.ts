@@ -68,6 +68,12 @@ import type {
  * 后三项是任务提醒的数据源：`sessions`（会话标题）、`remote`（失败事件）、
  * `uiSession`（运行状态与待交互）。写进 inject 是为了让 apply 等到它们就绪，
  * 否则任务提醒可能因为取服务时服务还没注册而整块失效。
+ *
+ * `remote.commands` 必须单独声明：`remote` 是门面服务，命令执行是它的一个
+ * facet，Cordis 对 facet 的访问同样做 inject 校验——只写 `remote` 时
+ * `ctx.remote.commands` 会抛「cannot get property "remote.commands" without
+ * inject」。压缩按钮正是靠这条通道执行 `/compact`，漏了它按钮会在渲染时抛错、
+ * 被插槽错误边界下线（表现为「按钮不见了」）。
  */
 export const inject: readonly string[] = [
   'slots',
@@ -76,7 +82,10 @@ export const inject: readonly string[] = [
   'workspaces',
   'sessions',
   'remote',
+  'remote.commands',
   'uiSession',
+  // 侧边栏行与分组共用宿主的右键菜单服务（菜单项由原生插件贡献）。
+  'contextMenus',
 ]
 
 /** 侧边栏分组清单（按 order 升序渲染）。 */
@@ -366,6 +375,28 @@ export function apply(ctx: ClientContext): void {
                 if (service === undefined) throw new Error('workspaces service is unavailable')
                 await service.delete(workspaceId)
               },
+              // 「在文件夹显示」是原生 open-in-app 插件贡献的菜单动作，宿主没有
+              // 暴露对应服务；这里解析一次工作区菜单，借它的 select 触发同一条动作。
+              revealWorkspace: async (workspaceId: string, path: string) => {
+                const menus = ctx.get?.('contextMenus') as ContextMenusService | undefined
+                const resolution = menus?.resolve?.({
+                  kind: 'workspace',
+                  value: { workspaceId, path, displayTitle: '' },
+                })
+                if (resolution === undefined) return false
+                try {
+                  await resolution.ready
+                  const reveal = resolution.source
+                    .getSnapshot()
+                    .find((item) => item.id.endsWith('/reveal') && item.disabled !== true)
+                  if (reveal === undefined) return false
+                  resolution.select(reveal.id)
+                  return true
+                } finally {
+                  // select 会自行释放；未选中时这里负责收掉回调。
+                  resolution.dispose()
+                }
+              },
               insertWorkspaceBefore: async (workspaceId: string, beforeWorkspaceId?: string) => {
                 const service = workspaces()
                 if (service === undefined) throw new Error('workspaces service is unavailable')
@@ -445,7 +476,7 @@ export function apply(ctx: ClientContext): void {
                 // 形态与原生右键完全一致；这里只负责把目标交出去。
                 const menus = ctx.get?.('contextMenus') as ContextMenusService | undefined
                 if (menus === undefined) {
-                  pushNotice(tSidebar('shell.fallback'), 'warn')
+                  pushNotice(tSidebar('toast.menuUnavailable'), 'warn')
                   return
                 }
                 const value =

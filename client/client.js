@@ -48,107 +48,160 @@ module.exports = __toCommonJS(main_exports);
 
 // client/src/shell/icons.tsx
 function Stroke(props) {
-  const size = props.size ?? 16;
   return /* @__PURE__ */ h(
     "svg",
     {
-      width: size,
-      height: size,
-      viewBox: "0 0 16 16",
+      width: props.size ?? 16,
+      height: props.size ?? 16,
+      viewBox: "0 0 24 24",
       className: props.className,
       "aria-hidden": true,
       focusable: false,
       fill: "none",
       stroke: "currentColor",
-      strokeWidth: 1.3,
+      strokeWidth: 1.8,
       strokeLinecap: "round",
       strokeLinejoin: "round"
     },
     props.children
   );
 }
-function IconSearch(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("circle", { cx: 7, cy: 7, r: 4.2 }), /* @__PURE__ */ h("path", { d: "M10.2 10.2 L13.4 13.4" }));
-}
-function IconClose(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M4 4 L12 12 M12 4 L4 12" }));
-}
-function IconSliders(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M2.5 5 H13.5 M2.5 11 H13.5" }), /* @__PURE__ */ h("circle", { cx: 6, cy: 5, r: 1.6, fill: "currentColor", stroke: "none" }), /* @__PURE__ */ h("circle", { cx: 10, cy: 11, r: 1.6, fill: "currentColor", stroke: "none" }));
-}
-function IconFolderOpen(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M1.8 12.2 V4.4 A1 1 0 0 1 2.8 3.4 H6.2 L7.6 4.8 H13.2 A1 1 0 0 1 14.2 5.8 V6.6" }), /* @__PURE__ */ h("path", { d: "M1.8 12.2 L3.4 7.2 A1 1 0 0 1 4.4 6.5 H14.4 L12.8 12.2 Z" }));
-}
-function IconFolderClose(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M1.8 4.4 A1 1 0 0 1 2.8 3.4 H6.2 L7.6 4.8 H13.2 A1 1 0 0 1 14.2 5.8 V11.4 A1 1 0 0 1 13.2 12.4 H2.8 A1 1 0 0 1 1.8 11.4 Z" }));
-}
-function IconTriangleRight(props) {
+function Solid(props) {
   return /* @__PURE__ */ h(
     "svg",
     {
-      width: props.size ?? 8,
-      height: props.size ?? 8,
-      viewBox: "0 0 8 8",
-      className: props.className,
-      "aria-hidden": true,
-      focusable: false
-    },
-    /* @__PURE__ */ h("path", { d: "M2.2 1 L6 4 L2.2 7 Z", fill: "currentColor" })
-  );
-}
-function IconNewChat(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M13.6 9.2 A1.6 1.6 0 0 1 12 10.8 H5.2 L2.4 13 V3 A1.6 1.6 0 0 1 4 1.4 H8" }), /* @__PURE__ */ h("path", { d: "M11.6 2.2 V6.2 M9.6 4.2 H13.6" }));
-}
-function IconProjectAdd(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M1.8 12.2 V4.4 A1 1 0 0 1 2.8 3.4 H6.2 L7.6 4.8 H13.2 A1 1 0 0 1 14.2 5.8 V7.4" }), /* @__PURE__ */ h("path", { d: "M1.8 12.2 H8.6" }), /* @__PURE__ */ h("path", { d: "M11.8 8.2 V13.4 M9.2 10.8 H14.4" }));
-}
-function IconArchive(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M1.8 3.6 H14.2 V5.6 H1.8 Z" }), /* @__PURE__ */ h("path", { d: "M2.6 5.6 V12.4 A0.8 0.8 0 0 0 3.4 13.2 H12.6 A0.8 0.8 0 0 0 13.4 12.4 V5.6" }), /* @__PURE__ */ h("path", { d: "M6.2 8.2 H9.8" }));
-}
-function IconUnarchive(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M1.8 3.6 H14.2 V5.6 H1.8 Z" }), /* @__PURE__ */ h("path", { d: "M2.6 5.6 V12.4 A0.8 0.8 0 0 0 3.4 13.2 H12.6 A0.8 0.8 0 0 0 13.4 12.4 V5.6" }), /* @__PURE__ */ h("path", { d: "M8 12 V7.2 M6 9.2 L8 7.2 L10 9.2" }));
-}
-function IconPinFill(props) {
-  return /* @__PURE__ */ h(
-    "svg",
-    {
-      width: props.size ?? 14,
-      height: props.size ?? 14,
-      viewBox: "0 0 16 16",
+      width: props.size ?? 16,
+      height: props.size ?? 16,
+      viewBox: "0 0 24 24",
       className: props.className,
       "aria-hidden": true,
       focusable: false,
       fill: "currentColor"
     },
-    /* @__PURE__ */ h("path", { d: "M10.2 1.6 14.4 5.8 12.6 6.6 12 10 7.8 10.8 4.8 13.8 4 13 7 10 7.8 5.8 11 5 Z" })
+    props.children
   );
 }
+function IconSearch(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("circle", { cx: 11, cy: 11, r: 7.2 }), /* @__PURE__ */ h("path", { d: "m20.5 20.5-3.9-3.9" }));
+}
+function IconClose(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M18 6 6 18" }), /* @__PURE__ */ h("path", { d: "m6 6 12 12" }));
+}
+function IconSliders(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M21 4h-7" }), /* @__PURE__ */ h("path", { d: "M10 4H3" }), /* @__PURE__ */ h("path", { d: "M21 12h-9" }), /* @__PURE__ */ h("path", { d: "M8 12H3" }), /* @__PURE__ */ h("path", { d: "M21 20h-5" }), /* @__PURE__ */ h("path", { d: "M12 20H3" }), /* @__PURE__ */ h("path", { d: "M14 2v4" }), /* @__PURE__ */ h("path", { d: "M8 10v4" }), /* @__PURE__ */ h("path", { d: "M16 18v4" }));
+}
+function IconFolderOpen(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" }));
+}
+function IconFolderClose(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" }));
+}
+function IconNewChat(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" }), /* @__PURE__ */ h("path", { d: "M12 7v6" }), /* @__PURE__ */ h("path", { d: "M9 10h6" }));
+}
+function IconProjectAdd(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" }), /* @__PURE__ */ h("path", { d: "M12 10v6" }), /* @__PURE__ */ h("path", { d: "M9 13h6" }));
+}
+function IconArchive(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("rect", { x: 2, y: 3, width: 20, height: 5, rx: 1 }), /* @__PURE__ */ h("path", { d: "M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" }), /* @__PURE__ */ h("path", { d: "M10 12h4" }));
+}
+function IconUnarchive(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("rect", { x: 2, y: 3, width: 20, height: 5, rx: 1 }), /* @__PURE__ */ h("path", { d: "M4 8v11a2 2 0 0 0 2 2h2" }), /* @__PURE__ */ h("path", { d: "M20 8v11a2 2 0 0 1-2 2h-2" }), /* @__PURE__ */ h("path", { d: "m9 15 3-3 3 3" }), /* @__PURE__ */ h("path", { d: "M12 12v9" }));
+}
+function IconPinFill(props) {
+  return /* @__PURE__ */ h(Solid, { ...props }, /* @__PURE__ */ h("path", { d: "M12 17v5", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", fill: "none" }), /* @__PURE__ */ h("path", { d: "M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" }));
+}
 function IconClock(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("circle", { cx: 8, cy: 8, r: 5.6 }), /* @__PURE__ */ h("path", { d: "M8 4.8 V8 L10.2 9.4" }));
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("circle", { cx: 12, cy: 12, r: 9 }), /* @__PURE__ */ h("path", { d: "M12 7v5l3.2 1.9" }));
 }
 function IconChevronsUpDown(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M4.6 6 L8 2.8 L11.4 6" }), /* @__PURE__ */ h("path", { d: "M4.6 10 L8 13.2 L11.4 10" }));
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "m7 15 5 5 5-5" }), /* @__PURE__ */ h("path", { d: "m7 9 5-5 5 5" }));
 }
 function IconFlatList(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M2.4 4 H13.6 M2.4 8 H13.6 M2.4 12 H13.6" }));
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M9 6h12" }), /* @__PURE__ */ h("path", { d: "M9 12h12" }), /* @__PURE__ */ h("path", { d: "M9 18h12" }), /* @__PURE__ */ h("path", { d: "M3.5 6h.01" }), /* @__PURE__ */ h("path", { d: "M3.5 12h.01" }), /* @__PURE__ */ h("path", { d: "M3.5 18h.01" }));
 }
 function IconWorkspaceTree(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M2.6 3.4 H13.4 M5.6 8 H13.4 M5.6 12.6 H13.4" }), /* @__PURE__ */ h("path", { d: "M2.6 8 V12.6" }), /* @__PURE__ */ h("circle", { cx: 2.6, cy: 3.4, r: 0.9, fill: "currentColor", stroke: "none" }));
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M21 12h-9" }), /* @__PURE__ */ h("path", { d: "M21 6H9" }), /* @__PURE__ */ h("path", { d: "M21 18h-9" }), /* @__PURE__ */ h("path", { d: "M3 6v4c0 1.1.9 2 2 2h4" }), /* @__PURE__ */ h("path", { d: "M3 10v6c0 1.1.9 2 2 2h4" }));
 }
 function IconArchiveOff(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M1.8 3.6 H11.4 M14.2 3.6 H14.2" }), /* @__PURE__ */ h("path", { d: "M2.6 5.6 V12.4 A0.8 0.8 0 0 0 3.4 13.2 H12.6 A0.8 0.8 0 0 0 13.4 12.4 V5.6" }), /* @__PURE__ */ h("path", { d: "M2 2 L14 14" }));
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("rect", { x: 2, y: 3, width: 20, height: 5, rx: 1 }), /* @__PURE__ */ h("path", { d: "M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" }), /* @__PURE__ */ h("path", { d: "m9.5 17 5-5" }), /* @__PURE__ */ h("path", { d: "m9.5 12 5 5" }));
 }
 function IconQueue(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M2.4 3.6 H13.6 M2.4 7 H13.6 M2.4 10.4 H9.6" }), /* @__PURE__ */ h("path", { d: "M10.4 13 H14.4" }));
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("rect", { x: 2, y: 3, width: 20, height: 5, rx: 1 }), /* @__PURE__ */ h("path", { d: "M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" }), /* @__PURE__ */ h("path", { d: "M9 13h6" }), /* @__PURE__ */ h("path", { d: "M9 17h6" }));
 }
 function IconArchiveCheck(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M1.8 3.6 H14.2 V5.6 H1.8 Z" }), /* @__PURE__ */ h("path", { d: "M2.6 5.6 V12.4 A0.8 0.8 0 0 0 3.4 13.2 H12.6 A0.8 0.8 0 0 0 13.4 12.4 V5.6" }), /* @__PURE__ */ h("path", { d: "M6.2 8.6 L7.6 10 L10 7.4" }));
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("rect", { x: 2, y: 3, width: 20, height: 5, rx: 1 }), /* @__PURE__ */ h("path", { d: "M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" }), /* @__PURE__ */ h("path", { d: "m9 13.5 2 2 4-4" }));
+}
+function IconEdit(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M21.2 6.8a2 2 0 0 0-2.8-2.8L3.8 16.2a2 2 0 0 0-.5.8l-1.3 4.3a.5.5 0 0 0 .6.6l4.3-1.3a2 2 0 0 0 .8-.5z" }), /* @__PURE__ */ h("path", { d: "m15 5 4 4" }));
+}
+function IconTrash(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M3 6h18" }), /* @__PURE__ */ h("path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" }), /* @__PURE__ */ h("path", { d: "M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" }), /* @__PURE__ */ h("path", { d: "M10 11v6" }), /* @__PURE__ */ h("path", { d: "M14 11v6" }));
 }
 function IconArrowUp(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M8 13 V3.4 M4.4 7 L8 3.4 L11.6 7" }));
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "m5 12 7-7 7 7" }), /* @__PURE__ */ h("path", { d: "M12 19V5" }));
 }
 
 // client/src/shell/menu.tsx
+function moveFocus(event) {
+  const buttons = Array.from(
+    event.currentTarget.querySelectorAll('[role="menuitem"]:not([disabled])')
+  );
+  if (buttons.length === 0) return;
+  const active = document.activeElement;
+  const index = buttons.findIndex((button) => button === active);
+  const focusAt = (next) => {
+    const wrapped = (next % buttons.length + buttons.length) % buttons.length;
+    buttons[wrapped]?.focus();
+  };
+  switch (event.key) {
+    case "ArrowDown":
+      event.preventDefault();
+      focusAt(index === -1 ? 0 : index + 1);
+      return;
+    case "ArrowUp":
+      event.preventDefault();
+      focusAt(index === -1 ? buttons.length - 1 : index - 1);
+      return;
+    case "Home":
+      event.preventDefault();
+      focusAt(0);
+      return;
+    case "End":
+      event.preventDefault();
+      focusAt(buttons.length - 1);
+      return;
+    default:
+      return;
+  }
+}
+function MenuItems(props) {
+  return /* @__PURE__ */ h(Fragment, null, props.items.map((item) => {
+    if (item.kind === "separator") return /* @__PURE__ */ h("div", { key: item.id, className: "fh-menu-sep", role: "separator" });
+    if (item.kind === "label") {
+      return /* @__PURE__ */ h("div", { key: item.id, className: "fh-menu-label", role: "presentation" }, item.text);
+    }
+    return /* @__PURE__ */ h(
+      "button",
+      {
+        key: item.id,
+        type: "button",
+        role: "menuitem",
+        className: [
+          "fh-menu-item",
+          item.selected === true ? "fh-menu-item-selected" : "",
+          item.danger === true ? "fh-menu-item-danger" : ""
+        ].filter((part) => part !== "").join(" "),
+        disabled: item.disabled === true,
+        onClick: () => {
+          props.onPick(item.id);
+        }
+      },
+      /* @__PURE__ */ h("span", { className: "fh-menu-item-icon" }, item.icon ?? null),
+      /* @__PURE__ */ h("span", { className: "fh-menu-item-label" }, item.label)
+    );
+  }));
+}
 function Menu(props) {
   const id = `fh-menu-${React.useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const trigger = React.useRef(null);
@@ -161,37 +214,10 @@ function Menu(props) {
       top: box.bottom + 4
     });
   };
-  const onKeyDown = (event) => {
-    const buttons = Array.from(
-      event.currentTarget.querySelectorAll('[role="menuitem"]:not([disabled])')
-    );
-    if (buttons.length === 0) return;
-    const active = document.activeElement;
-    const index = buttons.findIndex((button) => button === active);
-    const focusAt = (next) => {
-      const wrapped = (next % buttons.length + buttons.length) % buttons.length;
-      buttons[wrapped]?.focus();
-    };
-    switch (event.key) {
-      case "ArrowDown":
-        event.preventDefault();
-        focusAt(index === -1 ? 0 : index + 1);
-        return;
-      case "ArrowUp":
-        event.preventDefault();
-        focusAt(index === -1 ? buttons.length - 1 : index - 1);
-        return;
-      case "Home":
-        event.preventDefault();
-        focusAt(0);
-        return;
-      case "End":
-        event.preventDefault();
-        focusAt(buttons.length - 1);
-        return;
-      default:
-        return;
-    }
+  const pick = (itemId) => {
+    const popover = document.getElementById(id);
+    if (popover instanceof HTMLElement && popover.matches(":popover-open")) popover.hidePopover();
+    props.onSelect(itemId);
   };
   return /* @__PURE__ */ h(Fragment, null, /* @__PURE__ */ h(
     "button",
@@ -220,42 +246,64 @@ function Menu(props) {
       onToggle: (event) => {
         if (event.nativeEvent.newState === "open") place();
       },
-      onKeyDown
+      onKeyDown: moveFocus
     },
-    props.items.map((item) => {
-      if (item.kind === "separator") return /* @__PURE__ */ h("div", { key: item.id, className: "fh-menu-sep", role: "separator" });
-      if (item.kind === "label") {
-        return /* @__PURE__ */ h("div", { key: item.id, className: "fh-menu-label", role: "presentation" }, item.text);
-      }
-      return /* @__PURE__ */ h(
-        "button",
-        {
-          key: item.id,
-          type: "button",
-          role: "menuitem",
-          className: [
-            "fh-menu-item",
-            item.selected === true ? "fh-menu-item-selected" : "",
-            item.danger === true ? "fh-menu-item-danger" : ""
-          ].filter((part) => part !== "").join(" "),
-          disabled: item.disabled === true,
-          onClick: () => {
-            props.onSelect(item.id);
-            const popover = document.getElementById(id);
-            if (popover !== null && typeof popover.hidePopover === "function") {
-              ;
-              popover.hidePopover();
-            }
-          }
-        },
-        /* @__PURE__ */ h("span", { className: "fh-menu-item-icon" }, item.icon ?? null),
-        /* @__PURE__ */ h("span", { className: "fh-menu-item-label" }, item.label)
-      );
-    })
+    /* @__PURE__ */ h(MenuItems, { items: props.items, onPick: pick })
   ));
 }
+function PointMenu(props) {
+  const id = `fh-menu-${React.useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const panel = React.useRef(null);
+  const returnFocus = React.useRef(null);
+  const pick = (itemId) => {
+    const element = panel.current;
+    if (element !== null && element.matches(":popover-open")) element.hidePopover();
+    props.onSelect(itemId);
+  };
+  React.useEffect(() => {
+    const element = panel.current;
+    if (element === null) return;
+    const isOpen = element.matches(":popover-open");
+    const point = props.point;
+    if (!props.open || point === null) {
+      if (isOpen) element.hidePopover();
+      return;
+    }
+    if (!isOpen) {
+      returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      element.style.left = "0px";
+      element.style.top = "0px";
+      element.showPopover();
+    }
+    const box = element.getBoundingClientRect();
+    const left = Math.max(8, Math.min(point.x, window.innerWidth - box.width - 8));
+    const top = Math.max(8, Math.min(point.y, window.innerHeight - box.height - 8));
+    element.style.left = `${left}px`;
+    element.style.top = `${top}px`;
+    const first = element.querySelector('[role="menuitem"]:not([disabled])');
+    first?.focus({ preventScroll: true });
+  }, [props.open, props.point]);
+  return /* @__PURE__ */ h(
+    "div",
+    {
+      ref: panel,
+      id,
+      popover: "auto",
+      role: "menu",
+      "aria-label": props.label,
+      className: "fh-menu",
+      onToggle: (event) => {
+        if (event.nativeEvent.newState !== "closed") return;
+        returnFocus.current?.focus({ preventScroll: true });
+        props.onClose();
+      },
+      onKeyDown: moveFocus
+    },
+    /* @__PURE__ */ h(MenuItems, { items: props.items, onPick: pick })
+  );
+}
 function IconMore() {
-  return /* @__PURE__ */ h("svg", { width: 14, height: 14, viewBox: "0 0 16 16", "aria-hidden": true, focusable: false, fill: "currentColor" }, /* @__PURE__ */ h("circle", { cx: 3.4, cy: 8, r: 1.25 }), /* @__PURE__ */ h("circle", { cx: 8, cy: 8, r: 1.25 }), /* @__PURE__ */ h("circle", { cx: 12.6, cy: 8, r: 1.25 }));
+  return /* @__PURE__ */ h("svg", { width: 14, height: 14, viewBox: "0 0 24 24", "aria-hidden": true, focusable: false, fill: "currentColor" }, /* @__PURE__ */ h("circle", { cx: "5", cy: "12", r: "1.7" }), /* @__PURE__ */ h("circle", { cx: "12", cy: "12", r: "1.7" }), /* @__PURE__ */ h("circle", { cx: "19", cy: "12", r: "1.7" }));
 }
 
 // client/src/shell/rows.tsx
@@ -420,9 +468,19 @@ function ProjectRow(props) {
         draggable: drag?.enabled === true,
         onClick: props.onToggle,
         onKeyDown: (event) => {
+          if (event.key === "ContextMenu" || event.key === "F10" && event.shiftKey) {
+            event.preventDefault();
+            const box = event.currentTarget.getBoundingClientRect();
+            props.onMenu?.({ x: box.left, y: box.bottom });
+            return;
+          }
           if (event.key !== "Enter" && event.key !== " ") return;
           event.preventDefault();
           props.onToggle();
+        },
+        onContextMenu: props.onMenu === void 0 ? void 0 : (event) => {
+          event.preventDefault();
+          props.onMenu?.({ x: event.clientX, y: event.clientY });
         },
         onDragStart: drag?.enabled === true ? (event) => {
           event.dataTransfer.effectAllowed = "move";
@@ -447,18 +505,20 @@ function ProjectRow(props) {
         }
       },
       /* @__PURE__ */ h("span", { className: `fh-row-folder${props.active ? " fh-row-folder-active" : ""}` }, group.expanded ? /* @__PURE__ */ h(IconFolderOpen, { size: 16 }) : /* @__PURE__ */ h(IconFolderClose, { size: 16 })),
-      /* @__PURE__ */ h("span", { className: "fh-row-chevron" }, /* @__PURE__ */ h(IconTriangleRight, { className: group.expanded ? "fh-chevron-open" : void 0 })),
       /* @__PURE__ */ h("span", { className: "fh-row-title" }, label),
-      /* @__PURE__ */ h("span", { className: "fh-row-actions", onClick: (event) => event.stopPropagation() }, props.menu === void 0 ? null : /* @__PURE__ */ h(
-        Menu,
+      /* @__PURE__ */ h("span", { className: "fh-row-actions", onClick: (event) => event.stopPropagation() }, props.onMenu === void 0 ? null : /* @__PURE__ */ h(
+        "button",
         {
-          label: props.menu.label,
-          icon: /* @__PURE__ */ h(IconMore, null),
+          type: "button",
           className: "fh-icon-button",
-          items: props.menu.items,
-          onSelect: props.menu.onSelect,
-          align: "end"
-        }
+          title: props.t("actions.workspace.aria", { name: label }),
+          "aria-label": props.t("actions.workspace.aria", { name: label }),
+          onClick: (event) => {
+            const box = event.currentTarget.getBoundingClientRect();
+            props.onMenu?.({ x: box.left, y: box.bottom });
+          }
+        },
+        /* @__PURE__ */ h(IconMore, null)
       ), props.onCreate === void 0 ? null : /* @__PURE__ */ h(
         "button",
         {
@@ -580,7 +640,8 @@ function SessionRow(props) {
         },
         title
       ),
-      node.blank ? null : /* @__PURE__ */ h("span", { className: "fh-row-rest" }, /* @__PURE__ */ h("span", { className: "fh-row-time" }, primary.trailingLabel ?? timeLabel(node.updatedAt, props.now, props.t)), node.pinned && !node.archived ? /* @__PURE__ */ h(
+      primary.trailingLabel === void 0 ? null : /* @__PURE__ */ h("span", { className: "fh-row-badge", title: primary.label, role: "img", "aria-label": primary.label }, primary.trailingLabel),
+      node.blank ? null : /* @__PURE__ */ h("span", { className: "fh-row-rest" }, primary.trailingLabel === void 0 ? /* @__PURE__ */ h("span", { className: "fh-row-time" }, timeLabel(node.updatedAt, props.now, props.t)) : null, node.pinned && !node.archived ? /* @__PURE__ */ h(
         "span",
         {
           className: "fh-row-pin",
@@ -1791,6 +1852,10 @@ function WorkspaceBrowser(props) {
     }),
     [list, orderedWorkspaces, rowState, statuses, expandedGroups, orderedUngrouped2]
   );
+  const sectionRows = React.useMemo(
+    () => visibleSessionIds(list, archivedSessionIds, view.archivedFilter).map((id) => list.byId[id]).filter((session) => session !== void 0),
+    [list, archivedSessionIds, view.archivedFilter]
+  );
   const currentGroup = current === void 0 ? void 0 : orderedWorkspaces.find((workspace) => workspace.sessionIds.includes(current))?.workspaceId ?? UNGROUPED_KEY;
   React.useEffect(() => {
     if (!wide || currentGroup === void 0) return;
@@ -1979,6 +2044,7 @@ function WorkspaceBrowser(props) {
     });
   };
   const [workspaceAction, setWorkspaceAction] = React.useState(null);
+  const [workspaceMenu, setWorkspaceMenu] = React.useState(null);
   const canBrowse = props.canBrowseDirectories;
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const [adding, setAdding] = React.useState(false);
@@ -2133,20 +2199,42 @@ function WorkspaceBrowser(props) {
   const openSessionMenu = (node, point) => {
     openSessionMenuAt(node.id, node.title, point);
   };
-  const workspaceMenuItems = () => [
-    { kind: "item", id: "rename", label: t("rename") },
-    { kind: "item", id: "delete", label: t("delete.workspace"), danger: true }
-  ];
-  const onWorkspaceMenu = (group, id) => {
+  const openWorkspaceMenu = (group, point) => {
     if (group.workspaceId === void 0) return;
-    const action = id === "rename" ? "rename" : "delete";
-    const workspace = workspaces.find((candidate) => candidate.workspaceId === group.workspaceId);
-    setWorkspaceAction({
+    setWorkspaceMenu({ group, point });
+  };
+  const workspaceRequest = (group, action) => {
+    if (group.workspaceId === void 0) return null;
+    const stored = items.find((workspace) => workspace.workspaceId === group.workspaceId)?.title ?? "";
+    return {
       action,
       workspaceId: group.workspaceId,
       displayTitle: group.label,
-      storedTitle: workspace?.title ?? group.label
-    });
+      storedTitle: stored
+    };
+  };
+  const workspaceMenuItems = [
+    { kind: "item", id: "rename", label: t("rename"), icon: /* @__PURE__ */ h(IconEdit, { size: 14 }) },
+    { kind: "item", id: "reveal", label: t("workspace.reveal"), icon: /* @__PURE__ */ h(IconFolderOpen, { size: 14 }) },
+    { kind: "separator", id: "workspace-delete-sep" },
+    { kind: "item", id: "delete", label: t("delete.workspace"), icon: /* @__PURE__ */ h(IconTrash, { size: 14 }), danger: true }
+  ];
+  const onWorkspaceMenuSelect = (id) => {
+    const current2 = workspaceMenu;
+    setWorkspaceMenu(null);
+    if (current2 === null) return;
+    const group = current2.group;
+    if (id === "reveal") {
+      props.revealWorkspace(group.workspaceId ?? "", group.cwd ?? "").then((opened) => {
+        if (!opened) props.notify(t("toast.revealUnavailable"), "warn");
+      }).catch(() => {
+        props.notify(t("toast.revealUnavailable"), "warn");
+      });
+      return;
+    }
+    if (id !== "rename" && id !== "delete") return;
+    const request = workspaceRequest(group, id);
+    if (request !== null) setWorkspaceAction(request);
   };
   const railSearch = () => {
     setSearchOnExpand(true);
@@ -2264,12 +2352,8 @@ function WorkspaceBrowser(props) {
           props.viewStore.actions.setGroupExpanded(group.key, true);
           props.startSession(workspaceId);
         },
-        menu: workspaceId === void 0 ? void 0 : {
-          label: t("actions.workspace.aria", { name: group.label }),
-          items: workspaceMenuItems(),
-          onSelect: (id) => {
-            onWorkspaceMenu(group, id);
-          }
+        onMenu: workspaceId === void 0 ? void 0 : (point) => {
+          openWorkspaceMenu(group, point);
         },
         drag: workspaceId === void 0 ? void 0 : {
           enabled: true,
@@ -2395,17 +2479,17 @@ function WorkspaceBrowser(props) {
   }
   const rootGroups = parents.size === 0 ? groups : groups.filter((group) => parents.get(group.key) === void 0);
   const listRef = scroller?.bindScrollerRef;
-  return /* @__PURE__ */ h("div", { className: "fh-ws" }, /* @__PURE__ */ h("div", { className: "fh-ws-head" }, searchOpen || normalizedQuery !== "" ? null : /* @__PURE__ */ h("span", { className: "fh-ws-label" }, view.groupBy === "flat" ? t("section.sessions") : t("section.workspaces")), /* @__PURE__ */ h(
+  return /* @__PURE__ */ h("div", { className: "fh-ws" }, /* @__PURE__ */ h("div", { className: `fh-ws-head${searchOpen ? " fh-ws-head-open" : ""}` }, searchOpen || normalizedQuery !== "" ? null : /* @__PURE__ */ h("span", { className: "fh-ws-label" }, view.groupBy === "flat" ? t("section.sessions") : t("section.workspaces")), searchOpen ? /* @__PURE__ */ h(
     "div",
     {
       ref: searchBox,
-      className: `fh-ws-search${searchOpen ? " fh-ws-search-open" : ""}`,
+      className: "fh-ws-search",
       onClick: () => {
-        if (searchOpen) return;
-        openSearch();
+        focusSearch();
       }
     },
-    searchOpen ? /* @__PURE__ */ h(Fragment, null, /* @__PURE__ */ h(IconSearch, { size: 12 }), /* @__PURE__ */ h(
+    /* @__PURE__ */ h(IconSearch, { size: 14 }),
+    /* @__PURE__ */ h(
       "input",
       {
         ref: searchInput,
@@ -2425,7 +2509,8 @@ function WorkspaceBrowser(props) {
           setSearchOpen(false);
         }
       }
-    ), /* @__PURE__ */ h(
+    ),
+    /* @__PURE__ */ h(
       "button",
       {
         type: "button",
@@ -2439,21 +2524,18 @@ function WorkspaceBrowser(props) {
         }
       },
       /* @__PURE__ */ h(IconClose, { size: 12 })
-    )) : /* @__PURE__ */ h(
-      "button",
-      {
-        type: "button",
-        className: "fh-icon-button",
-        title: t("search"),
-        "aria-label": t("search.aria"),
-        "aria-expanded": false,
-        onClick: (event) => {
-          event.stopPropagation();
-          openSearch();
-        }
-      },
-      /* @__PURE__ */ h(IconSearch, { size: 14 })
     )
+  ) : /* @__PURE__ */ h(
+    "button",
+    {
+      type: "button",
+      className: "fh-icon-button",
+      title: t("search"),
+      "aria-label": t("search.aria"),
+      "aria-expanded": false,
+      onClick: openSearch
+    },
+    /* @__PURE__ */ h(IconSearch, { size: 14 })
   ), /* @__PURE__ */ h("div", { className: "fh-ws-head-actions" }, /* @__PURE__ */ h(
     Menu,
     {
@@ -2480,8 +2562,8 @@ function WorkspaceBrowser(props) {
       key: section.id,
       t: section.t === void 0 ? t : section.t,
       now,
-      model: { groups, rows: groups.flatMap((group) => group.sessions) },
-      rows: groups.flatMap((group) => group.sessions),
+      model: { groups, rows: sectionRows },
+      rows: sectionRows,
       currentSessionId: current ?? null,
       snapshot: {
         items,
@@ -2495,6 +2577,18 @@ function WorkspaceBrowser(props) {
       openSessionMenu: openSessionMenuAt
     })
   ), view.groupBy === "flat" ? renderFlat() : groups.length === 0 ? renderEmpty() : rootGroups.map((group) => renderGroup(group, 0)))), /* @__PURE__ */ h(
+    PointMenu,
+    {
+      open: workspaceMenu !== null,
+      point: workspaceMenu === null ? null : workspaceMenu.point,
+      label: t("actions.workspace.aria", { name: workspaceMenu === null ? "" : workspaceMenu.group.label }),
+      items: workspaceMenuItems,
+      onSelect: onWorkspaceMenuSelect,
+      onClose: () => {
+        setWorkspaceMenu(null);
+      }
+    }
+  ), /* @__PURE__ */ h(
     WorkspaceDialogs,
     {
       request: workspaceAction,
@@ -2543,7 +2637,9 @@ var SIDEBAR_STYLES = `
   color: var(--dsw-alias-label-primary);
 }
 
-/* ---- \u533A\u5934\uFF1A\u6807\u9898 / \u641C\u7D22 / \u89C6\u56FE\u83DC\u5355 / \u6DFB\u52A0\u5DE5\u4F5C\u533A ---- */
+/* ---- \u533A\u5934\uFF1A\u6807\u9898 / \u641C\u7D22 / \u89C6\u56FE\u83DC\u5355 / \u6DFB\u52A0\u5DE5\u4F5C\u533A ----
+   \u6536\u8D77\u6001\uFF1A\u6807\u9898\u6491\u6EE1\u5DE6\u4FA7\uFF0C\u641C\u7D22\u56FE\u6807\u7D27\u6328\u53F3\u4FA7\u52A8\u4F5C\uFF0C\u6240\u4EE5\u56FE\u6807\u5929\u7136\u53F3\u5BF9\u9F50\u3002
+   \u5C55\u5F00\u6001\uFF1A\u6807\u9898\u4E0D\u6E32\u67D3\u3001\u52A8\u4F5C\u7531 .fh-ws-head-open \u9690\u85CF\uFF0C\u8F93\u5165\u6846\u5403\u6389\u6574\u884C\u3002 */
 .fh-ws-head {
   flex: none;
   display: flex;
@@ -2562,25 +2658,27 @@ var SIDEBAR_STYLES = `
   font-size: 13px;
   line-height: 20px;
 }
+/* \u641C\u7D22\u5C55\u5F00\u540E\u7684\u6574\u884C\u8F93\u5165\u6846\uFF1A32px \u9AD8\u30018px \u5706\u89D2\u30011px \u4E3B\u9898\u63CF\u8FB9\uFF0C\u56FE\u6807\u5728\u5DE6\u3001\u6E05\u9664\u5728\u53F3\u3002 */
 .fh-ws-search {
   flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
-  height: 28px;
-  padding: 0 2px 0 6px;
-  border-radius: 6px;
-  border: 1px solid transparent;
+  gap: 0;
+  height: 32px;
+  padding: 0 4px 0 0;
+  border-radius: 8px;
+  /* \u63CF\u8FB9\u4F18\u5148\u7528\u7EC4\u4EF6\u5E93\u7684\u8FB9\u6846 token\uFF1B\u4E07\u4E00\u4E3B\u9898\u6CA1\u5B9A\u4E49\uFF0C\u518D\u4ECE\u4E3B\u6587\u5B57\u8272\u6D3E\u751F\u4E00\u5C42\u3002 */
+  border: 1px solid var(--dsw-alias-border-l4, color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent));
   color: var(--dsw-alias-label-secondary);
-  cursor: pointer;
-}
-.fh-ws-search:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); }
-.fh-ws-search.fh-ws-search-open {
-  border-color: color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
-  background: transparent;
   cursor: text;
 }
+.fh-ws-search:focus-within {
+  border-color: color-mix(in srgb, var(--dsw-alias-label-primary) 32%, transparent);
+}
+/* \u653E\u5927\u955C\u5360\u4F4F\u8F93\u5165\u6846\u5DE6\u7AEF\uFF1B\u53F3\u4FA7\u6E05\u9664\u6309\u94AE\u6CBF\u7528 .fh-icon-button \u7684 24px \u65B9\u6846\u3002 */
+.fh-ws-search > svg { flex: none; margin: 0 6px 0 8px; }
 .fh-ws-search-input {
   flex: 1 1 auto;
   min-width: 0;
@@ -2591,9 +2689,13 @@ var SIDEBAR_STYLES = `
   color: var(--dsw-alias-label-primary);
   font: inherit;
   font-size: 13px;
+  line-height: 18px;
   outline: none;
 }
 .fh-ws-search-input::placeholder { color: var(--dsw-alias-label-secondary); }
+/* \u5C55\u5F00\u641C\u7D22\u65F6\u628A\u6574\u884C\u8BA9\u7ED9\u8F93\u5165\u6846\uFF1A\u53F3\u4FA7\u7684\u89C6\u56FE\u83DC\u5355\u4E0E\u300C\u6DFB\u52A0\u5DE5\u4F5C\u533A\u300D\u4E00\u5E76\u6536\u6389\u3002 */
+.fh-ws-head-open { gap: 0; }
+.fh-ws-head-open .fh-ws-head-actions { display: none; }
 .fh-ws-head-actions { flex: none; display: inline-flex; align-items: center; gap: 2px; }
 
 /* ---- \u56FE\u6807\u6309\u94AE\uFF08\u884C\u5C3E\u3001\u533A\u5934\u3001\u5BF9\u8BDD\u6846\u5171\u7528\u51E0\u4F55\uFF09 ---- */
@@ -2658,26 +2760,14 @@ var SIDEBAR_STYLES = `
   align-items: center;
   justify-content: center;
   color: var(--dsw-alias-label-secondary);
+  transition: color 120ms ease;
 }
 .fh-row-folder-active { color: var(--dsw-alias-brand-primary); }
-.fh-ws-folder > svg,
-.fh-row-chevron > svg { position: absolute; }
 
-.fh-ws-chevron, .fh-row-chevron {
-  position: relative;
-  flex: none;
-  width: 8px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--dsw-alias-label-secondary);
-}
-.fh-ws-chevron { top: 5px; left: -10px; transition: transform 120ms ease; }
-.fh-ws-chevron-open, .fh-chevron-open { transform: rotate(90deg); }
-.fh-ws-group-head:hover .fh-ws-chevron, .fh-workspace-row:hover .fh-row-chevron {
-  color: var(--dsw-alias-label-primary);
-}
+/* \u5C55\u5F00/\u6536\u8D77\u53EA\u7528\u56FE\u6807\u672C\u8EAB\u533A\u5206\uFF08\u6587\u4EF6\u5939\u300C\u655E\u5F00\u300D\u4E0E\u300C\u5408\u8D77\u300D\uFF09\uFF0C\u4E0D\u518D\u53E0\u52A0\u5C0F\u4E09\u89D2\u3002 */
+.fh-workspace-row:hover .fh-row-folder,
+.fh-ws-group-head:hover .fh-ws-folder { color: var(--dsw-alias-label-primary); }
+.fh-workspace-row:hover .fh-row-folder-active { color: var(--dsw-alias-brand-primary); }
 
 .fh-ws-group-title, .fh-row-title {
   flex: 1 1 auto;
@@ -2744,11 +2834,42 @@ var SIDEBAR_STYLES = `
   color: var(--dsw-alias-label-secondary);
 }
 .fh-ws-time, .fh-row-time { font-size: 10px; line-height: 16px; font-variant-numeric: tabular-nums; }
+/* \u7B49\u5F85\u56DE\u7B54 / \u7B49\u5F85\u786E\u8BA4\uFF1A\u7425\u73C0\u80F6\u56CA\uFF0C\u6BD4\u540C\u8272\u5C0F\u5B57\u66F4\u9192\u76EE\uFF0C\u4E14\u4E0D\u4F9D\u8D56\u60AC\u505C\u624D\u770B\u89C1\u3002 */
+.fh-row-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-state-warn-primary) 38%, transparent);
+  background: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 16%, transparent);
+  color: var(--dsw-alias-state-warn-primary);
+  font-size: 10px;
+  line-height: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fh-row-badge::before {
+  content: '';
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: fh-badge-pulse 1.6s ease-in-out infinite;
+}
+@keyframes fh-badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
 .fh-ws-actions, .fh-row-actions { display: none; flex: none; align-items: center; gap: 2px; }
 .fh-ws-row:hover .fh-ws-rest, .fh-session-row:hover .fh-row-rest,
 .fh-session-row:focus-within .fh-row-rest { display: none; }
 .fh-ws-row:hover .fh-ws-actions, .fh-session-row:hover .fh-row-actions,
-.fh-session-row:focus-within .fh-row-actions { display: inline-flex; }
+.fh-session-row:focus-within .fh-row-actions,
+.fh-workspace-row:hover .fh-row-actions, .fh-workspace-row:focus-within .fh-row-actions { display: inline-flex; }
 .fh-ws-row-archived .fh-ws-title, .fh-row-archived .fh-row-title { color: var(--dsw-alias-label-secondary); }
 .fh-ws-pin, .fh-row-pin { color: var(--dsw-alias-label-secondary); display: inline-flex; }
 .fh-row-anchor { position: relative; display: block; }
@@ -3077,7 +3198,8 @@ var SIDEBAR_STYLES = `
   .fh-ws-actions, .fh-row-actions { display: inline-flex; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .fh-ws-chevron, .fh-row-chevron { transition: none; }
+  .fh-row-folder, .fh-ws-folder { transition: none; }
+  .fh-row-badge::before { animation: none; }
   .fh-dot-spinner, .fh-ws-spinner { animation: none; }
 }
 `;
@@ -3108,6 +3230,7 @@ var zh = {
   "viewOptions.showArchived": "\u663E\u793A\u5F52\u6863",
   "viewOptions.onlyArchived": "\u53EA\u770B\u5F52\u6863",
   "workspace.add": "\u6DFB\u52A0\u5DE5\u4F5C\u533A",
+  "workspace.reveal": "\u5728\u6587\u4EF6\u5939\u663E\u793A",
   "actions.newSession": "\u65B0\u5EFA\u4F1A\u8BDD",
   "actions.newSession.aria": "\u5728\u300C{name}\u300D\u65B0\u5EFA\u4F1A\u8BDD",
   "actions.workspace.aria": "\u300C{name}\u300D\u7684\u5DE5\u4F5C\u533A\u9009\u9879",
@@ -3148,6 +3271,8 @@ var zh = {
   "toast.archiveFailed": "\u5F52\u6863\u5931\u8D25",
   "toast.addFailed": "\u6DFB\u52A0\u5DE5\u4F5C\u533A\u5931\u8D25\uFF1A{message}",
   "toast.pickTimeout": "\u6CA1\u6709\u7B49\u5230\u76EE\u5F55\u9009\u62E9\u7ED3\u679C\uFF0C\u5DF2\u53D6\u6D88\u8FD9\u6B21\u6DFB\u52A0\uFF1B\u53EF\u4EE5\u518D\u70B9\u4E00\u6B21\u52A0\u53F7\u91CD\u8BD5\u3002",
+  "toast.menuUnavailable": "\u7CFB\u7EDF\u83DC\u5355\u670D\u52A1\u672A\u5C31\u7EEA\uFF0C\u6682\u65F6\u65E0\u6CD5\u6253\u5F00\u53F3\u952E\u83DC\u5355\uFF1B\u8BF7\u7A0D\u540E\u91CD\u8BD5\u3002",
+  "toast.revealUnavailable": "\u5BBF\u4E3B\u6CA1\u6709\u63D0\u4F9B\u6253\u5F00\u6587\u4EF6\u7BA1\u7406\u5668\u7684\u80FD\u529B\uFF0C\u6682\u65F6\u65E0\u6CD5\u5728\u6587\u4EF6\u5939\u91CC\u663E\u793A\u3002",
   rename: "\u91CD\u547D\u540D",
   cancel: "\u53D6\u6D88",
   close: "\u5173\u95ED",
@@ -3195,6 +3320,7 @@ var en = {
   "viewOptions.showArchived": "Show archived",
   "viewOptions.onlyArchived": "Only archived",
   "workspace.add": "Add workspace",
+  "workspace.reveal": "Show in folder",
   "actions.newSession": "New session",
   "actions.newSession.aria": "New session in {name}",
   "actions.workspace.aria": "Workspace actions for {name}",
@@ -3235,6 +3361,8 @@ var en = {
   "toast.archiveFailed": "Could not archive the session",
   "toast.addFailed": "Could not add the workspace: {message}",
   "toast.pickTimeout": "The directory chooser did not answer; this attempt was cancelled. Click + to try again.",
+  "toast.menuUnavailable": "The system menu service is not ready yet, so the context menu cannot open. Try again shortly.",
+  "toast.revealUnavailable": "The host offers no file-manager action, so this folder cannot be shown right now.",
   rename: "Rename",
   cancel: "Cancel",
   close: "Close",
@@ -3515,6 +3643,9 @@ var zh2 = {
   "time.unknown": "\u2014",
   "status.running": "\u8FD0\u884C\u4E2D",
   "status.waiting": "\u5F85\u786E\u8BA4",
+  "status.answer": "\u5F85\u56DE\u7B54",
+  "status.approval": "\u5F85\u786E\u8BA4",
+  "status.planReview": "\u5F85\u5BA1\u9605",
   "status.done": "\u6709\u65B0\u7ED3\u679C",
   "status.idle": "\u7A7A\u95F2",
   "settings.title": "\u6700\u8FD1\u4EFB\u52A1",
@@ -3535,6 +3666,9 @@ var en2 = {
   "time.unknown": "\u2014",
   "status.running": "Running",
   "status.waiting": "Waiting for you",
+  "status.answer": "Answer",
+  "status.approval": "Review",
+  "status.planReview": "Review plan",
   "status.done": "New result",
   "status.idle": "Idle",
   "settings.title": "Recent tasks",
@@ -3553,7 +3687,9 @@ function limitOf(value) {
   return Number.isFinite(count) && count >= 1 ? Math.floor(count) : Number.POSITIVE_INFINITY;
 }
 function recentAcrossProjects(rows, limit, activeIds) {
-  const sorted = [...rows].filter((session) => session !== void 0 && session !== null).sort((left, right) => {
+  const sorted = [...rows].filter(
+    (session) => session !== void 0 && session !== null && session.blank !== true && Number(session.updatedAt) > 0
+  ).sort((left, right) => {
     const delta = (Number(right.updatedAt) || 0) - (Number(left.updatedAt) || 0);
     if (delta !== 0) return delta;
     return String(left.id).localeCompare(String(right.id));
@@ -3603,14 +3739,25 @@ function relativeLabel(instant, now, t) {
   if (age < day) return t("time.hours", { count: Math.floor(age / hour) });
   return t("time.days", { count: Math.floor(age / day) });
 }
+function sessionStatus(statuses, sessionId) {
+  if (statuses === void 0 || statuses === null) return void 0;
+  return typeof statuses.get === "function" ? statuses.get(sessionId) : statuses[sessionId];
+}
 function statusOf(statuses, sessionId) {
-  if (statuses === void 0 || statuses === null) return null;
-  const status = typeof statuses.get === "function" ? statuses.get(sessionId) : statuses[sessionId];
+  const status = sessionStatus(statuses, sessionId);
   if (status === void 0 || status === null) return null;
   if (status.pendingInteraction !== void 0) return { tone: "warn", key: "status.waiting" };
   if (status.running === true) return { tone: "live", key: "status.running" };
   if (status.completionUnread === true) return { tone: "done", key: "status.done" };
   return null;
+}
+function pendingBadge(status, t) {
+  if (status === void 0 || status === null || status.pendingInteraction === void 0) return null;
+  const kind = typeof status.pendingInteraction === "object" && status.pendingInteraction !== null ? status.pendingInteraction.kind : void 0;
+  if (kind === "question") return t("status.answer");
+  if (kind === "approval") return t("status.approval");
+  if (kind === "plan-review") return t("status.planReview");
+  return t("status.waiting");
 }
 function RecentTasksSection(props) {
   const { t, now, snapshot, openSession } = props;
@@ -3647,40 +3794,25 @@ function RecentTasksSection(props) {
     if (session.blank === true) return t("row.new");
     return session.displayTitle || session.title || t("row.untitled");
   };
-  const chevron = h(
-    "svg",
-    {
-      className: collapsed ? "fh-ws-chevron" : "fh-ws-chevron fh-ws-chevron-open",
-      width: 10,
-      height: 10,
-      viewBox: "0 0 10 10",
-      "aria-hidden": true,
-      focusable: false
-    },
-    h("path", {
-      d: "M3.4 1.8 L7 5 L3.4 8.2",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: 1.5,
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    })
-  );
-  const clock = h(
+  const lead = h(
     "svg",
     {
       width: 16,
       height: 16,
-      viewBox: "0 0 16 16",
+      viewBox: "0 0 24 24",
       "aria-hidden": true,
       focusable: false,
       fill: "none",
       stroke: "currentColor",
-      strokeWidth: 1.3,
-      strokeLinecap: "round"
+      strokeWidth: 1.8,
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
     },
-    h("path", { d: "M13.2 8 A5.2 5.2 0 1 1 11.6 4.3" }),
-    h("path", { d: "M8 5.2 V8 L10 9.1" })
+    ...collapsed ? [
+      h("path", { d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" }),
+      h("path", { d: "M3 3v5h5" }),
+      h("path", { d: "M12 7v5l4 2" })
+    ] : [h("circle", { cx: 12, cy: 12, r: 9 }), h("path", { d: "M12 7v5l3.2 1.9" })]
   );
   const header = h(
     "div",
@@ -3697,12 +3829,13 @@ function RecentTasksSection(props) {
         toggle();
       }
     },
-    h("span", { className: "fh-ws-folder" }, chevron, clock),
+    h("span", { className: "fh-ws-folder" }, lead),
     h("span", { className: "fh-ws-group-title" }, t("title")),
     rows.length === 0 ? null : h("span", { className: "fh-ws-count" }, String(rows.length))
   );
   const rowElement = (session) => {
     const status = statusOf(statuses, session.id);
+    const badge = pendingBadge(sessionStatus(statuses, session.id), t);
     const selected = props.currentSessionId !== null && props.currentSessionId === session.id;
     const showMenu = (point) => {
       if (typeof props.openSessionMenu !== "function") return;
@@ -3747,10 +3880,12 @@ function RecentTasksSection(props) {
         statusIcon(status, t(status === null ? "status.idle" : status.key))
       ),
       h("span", { className: "fh-ws-title" }, titleOf(session)),
+      // 等待交互的胶囊独立成列：悬停让位给操作按钮的是时间，不是它。
+      badge === null ? null : h("span", { className: "fh-row-badge", title: badge }, badge),
       h(
         "span",
         { className: "fh-ws-rest" },
-        h(
+        badge !== null ? null : h(
           "time",
           {
             className: "fh-ws-time",
@@ -5284,15 +5419,17 @@ async function postDesktopNotice(input) {
     const response = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ title: input.title, body: input.body })
+      body: JSON.stringify({ title: input.title, body: input.body, tag: input.tag })
     });
     if (response.ok) {
       const payload = await response.json();
-      if (payload.ok === true && payload.shown === true) return true;
+      if (payload.blocked === true) return { delivered: false, blocked: true };
+      if (payload.duplicate === true) return { delivered: true, blocked: false };
+      if (payload.ok === true && payload.shown === true) return { delivered: true, blocked: false };
     }
   } catch (_error) {
   }
-  return showDesktopNotice(input);
+  return { delivered: showDesktopNotice(input), blocked: false };
 }
 function closeDesktopNotices() {
   for (const notice of openNotices) {
@@ -5314,20 +5451,16 @@ var DEFAULT_NOTIFY_PREFERENCES = {
 };
 var STORAGE_KEY4 = "dsh-feature-hub.task-notify";
 var listeners5 = /* @__PURE__ */ new Set();
+var storageSubscribers = 0;
+function emit2() {
+  for (const listener of listeners5) listener();
+}
 function booleanOf2(value, fallback) {
   return typeof value === "boolean" ? value : fallback;
 }
-function readNotifyPreferences() {
-  let parsed;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY4);
-    if (raw === null || raw === "") return DEFAULT_NOTIFY_PREFERENCES;
-    parsed = JSON.parse(raw);
-  } catch (_error) {
-    return DEFAULT_NOTIFY_PREFERENCES;
-  }
-  if (parsed === null || typeof parsed !== "object") return DEFAULT_NOTIFY_PREFERENCES;
-  const record = parsed;
+function preferencesOf(value) {
+  if (value === null || typeof value !== "object") return DEFAULT_NOTIFY_PREFERENCES;
+  const record = value;
   return {
     enabled: booleanOf2(record.enabled, DEFAULT_NOTIFY_PREFERENCES.enabled),
     completed: booleanOf2(record.completed, DEFAULT_NOTIFY_PREFERENCES.completed),
@@ -5336,19 +5469,82 @@ function readNotifyPreferences() {
     system: booleanOf2(record.system, DEFAULT_NOTIFY_PREFERENCES.system)
   };
 }
+function sameNotifyPreferences(left, right) {
+  return left.enabled === right.enabled && left.completed === right.completed && left.failed === right.failed && left.asked === right.asked && left.system === right.system;
+}
+function readNotifyPreferences() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY4);
+    if (raw === null || raw === "") return DEFAULT_NOTIFY_PREFERENCES;
+    const parsed = JSON.parse(raw);
+    return preferencesOf(parsed);
+  } catch (_error) {
+    return DEFAULT_NOTIFY_PREFERENCES;
+  }
+}
 function writeNotifyPreferences(preferences) {
   try {
     window.localStorage.setItem(STORAGE_KEY4, JSON.stringify(preferences));
   } catch (_error) {
   }
-  for (const listener of listeners5) listener();
+  emit2();
   return preferences;
 }
 function subscribeNotifyPreferences(listener) {
   listeners5.add(listener);
+  storageSubscribers += 1;
+  if (storageSubscribers === 1) bindStorageListener();
   return () => {
     listeners5.delete(listener);
+    storageSubscribers -= 1;
+    if (storageSubscribers === 0) unbindStorageListener();
   };
+}
+function bindStorageListener() {
+  if (typeof window === "undefined") return;
+  if (typeof window.addEventListener !== "function") return;
+  window.addEventListener("storage", onStorage);
+}
+function unbindStorageListener() {
+  if (typeof window === "undefined") return;
+  if (typeof window.removeEventListener !== "function") return;
+  window.removeEventListener("storage", onStorage);
+}
+function onStorage(event) {
+  if (event.key !== null && event.key !== STORAGE_KEY4) return;
+  emit2();
+}
+async function pullNotifyPreferences() {
+  try {
+    const response = await fetch(notifyPrefsUrl(), {
+      method: "GET",
+      headers: { accept: "application/json" }
+    });
+    if (!response.ok) return null;
+    const payload = await response.json();
+    if (payload.ok !== true) return null;
+    return { stored: payload.stored === true, prefs: preferencesOf(payload.prefs) };
+  } catch (_error) {
+    return null;
+  }
+}
+async function pushNotifyPreferences(preferences) {
+  try {
+    const response = await fetch(notifyPrefsUrl(), {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify(preferences)
+    });
+    if (!response.ok) return false;
+    const payload = await response.json();
+    return payload.ok === true;
+  } catch (_error) {
+    return false;
+  }
+}
+function notifyPrefsUrl() {
+  const base = typeof document === "undefined" ? "http://dsh.internal/" : document.baseURI;
+  return new URL("feature-hub/notify/prefs", base).href;
 }
 
 // client/src/features/task-notify/engine.ts
@@ -5399,7 +5595,7 @@ function createTaskNotifyEngine(ctx, t) {
   const running = /* @__PURE__ */ new Map();
   const failures = /* @__PURE__ */ new Map();
   const recent = /* @__PURE__ */ new Map();
-  const emit2 = () => {
+  const emit3 = () => {
     for (const listener of listeners6) listener();
   };
   const clearTimer = (id) => {
@@ -5412,7 +5608,7 @@ function createTaskNotifyEngine(ctx, t) {
     clearTimer(id);
     if (!toasts.some((notice) => notice.id === id)) return;
     toasts = toasts.filter((notice) => notice.id !== id);
-    emit2();
+    emit3();
   };
   const open = (sessionId) => {
     try {
@@ -5454,7 +5650,7 @@ function createTaskNotifyEngine(ctx, t) {
       for (const dropped of toasts.slice(0, toasts.length - MAX_TOASTS)) clearTimer(dropped.id);
       toasts = toasts.slice(-MAX_TOASTS);
     }
-    emit2();
+    emit3();
     timers.set(
       notice.id,
       setTimeout(() => {
@@ -5463,16 +5659,17 @@ function createTaskNotifyEngine(ctx, t) {
     );
   };
   const deliver = (kind, sessionId, detail, ask) => {
-    if (!preferences.enabled) return;
-    if (kind === "completed" && !preferences.completed) return;
-    if (kind === "failed" && !preferences.failed) return;
-    if (kind === "asked" && !preferences.asked) return;
+    const current = readNotifyPreferences();
+    if (!current.enabled) return;
+    if (kind === "completed" && !current.completed) return;
+    if (kind === "failed" && !current.failed) return;
+    if (kind === "asked" && !current.asked) return;
+    const now = Date.now();
     const row = rowOf(sessionId);
     if (row !== void 0) {
       if (row.origin === "subagent" || row.parentId !== void 0 || row.blank === true) return;
     }
     const stamp = `${kind}:${sessionId}`;
-    const now = Date.now();
     if (now - (recent.get(stamp) ?? 0) < DEDUPE_MS) return;
     recent.set(stamp, now);
     pruneRecent(now);
@@ -5487,7 +5684,7 @@ function createTaskNotifyEngine(ctx, t) {
       ask,
       createdAt: now
     };
-    if (preferences.system) {
+    if (current.system) {
       void postDesktopNotice({
         title: t(`desktop.${kind}`),
         body: bodyOf(notice, t),
@@ -5495,8 +5692,10 @@ function createTaskNotifyEngine(ctx, t) {
         onClick: () => {
           open(sessionId);
         }
-      }).then((delivered) => {
-        if (!delivered && !disposed) pushToast(notice);
+      }).then((result) => {
+        if (disposed || result.blocked || result.delivered) return;
+        if (!readNotifyPreferences().enabled) return;
+        pushToast(notice);
       });
     } else {
       pushToast(notice);
@@ -5587,9 +5786,27 @@ function createTaskNotifyEngine(ctx, t) {
   }
   disposers.push(
     subscribeNotifyPreferences(() => {
-      preferences = readNotifyPreferences();
+      const next = readNotifyPreferences();
+      const wasEnabled = preferences.enabled;
+      preferences = next;
+      if (wasEnabled && !next.enabled) {
+        for (const timer of timers.values()) clearTimeout(timer);
+        timers.clear();
+        toasts = [];
+        emit3();
+        closeDesktopNotices();
+      }
     })
   );
+  void pullNotifyPreferences().then((host) => {
+    if (disposed || host === null) return;
+    const local = readNotifyPreferences();
+    if (!host.stored) {
+      if (!sameNotifyPreferences(local, DEFAULT_NOTIFY_PREFERENCES)) void pushNotifyPreferences(local);
+      return;
+    }
+    if (!sameNotifyPreferences(local, host.prefs)) writeNotifyPreferences(host.prefs);
+  });
   if (preferences.system) {
     void requestDesktopNotifyPermission();
   }
@@ -5643,7 +5860,7 @@ var zh6 = {
   "settings.title": "\u4EFB\u52A1\u63D0\u9192",
   "settings.description": "\u4EFB\u52A1\u5B8C\u6210\u3001\u5931\u8D25\u6216\u7B49\u5F85\u4F60\u56DE\u5E94\u65F6\u5F39 Windows \u7CFB\u7EDF\u901A\u77E5\uFF0C\u5E76\u7559\u5728\u901A\u77E5\u4E2D\u5FC3\uFF1B\u7A97\u53E3\u6700\u5C0F\u5316\u6216\u5173\u95ED\u5230\u6258\u76D8\u65F6\u4E5F\u80FD\u6536\u5230\u3002",
   "notify.enabled": "\u542F\u7528\u4EFB\u52A1\u63D0\u9192",
-  "notify.enabledHint": "\u603B\u5F00\u5173\uFF1B\u5173\u95ED\u540E\u4E0D\u518D\u51FA\u73B0\u4EFB\u4F55\u63D0\u9192\u3002",
+  "notify.enabledHint": "\u603B\u5F00\u5173\uFF1B\u5173\u95ED\u540E\u6240\u6709\u7A97\u53E3\u90FD\u4E0D\u518D\u51FA\u73B0\u4EFB\u4F55\u63D0\u9192\uFF0C\u7ACB\u5373\u751F\u6548\u3002",
   "notify.completed": "\u4EFB\u52A1\u5B8C\u6210\u65F6\u63D0\u9192",
   "notify.completedHint": "\u4E00\u8F6E\u56DE\u7B54\u6B63\u5E38\u7ED3\u675F\u65F6\u63D0\u9192\u3002",
   "notify.failed": "\u4EFB\u52A1\u5931\u8D25\u65F6\u63D0\u9192",
@@ -5679,7 +5896,7 @@ var en6 = {
   "settings.title": "Task notices",
   "settings.description": "Windows notifications are raised when a task completes, fails, or waits for you, and stay in the notification center; they also arrive while the window is minimized or closed to the tray.",
   "notify.enabled": "Enable task notices",
-  "notify.enabledHint": "Master switch; turning it off hides every notice.",
+  "notify.enabledHint": "Master switch; turning it off silences every window at once.",
   "notify.completed": "Notify when a task completes",
   "notify.completedHint": "Shown when a turn ends normally.",
   "notify.failed": "Notify when a task fails",
@@ -5908,7 +6125,7 @@ var taskNotify = {
 };
 
 // client/src/features/task-notify/settings.ts
-var { useState: useState9 } = React;
+var { useEffect: useEffect6, useState: useState9 } = React;
 function NotifyToggleRow(props) {
   return h(
     "div",
@@ -5940,9 +6157,11 @@ function TaskNotifySettings(props) {
   const [notify, setNotify] = useState9(readNotifyPreferences);
   const [permission, setPermission] = useState9(desktopNotifyPermission);
   const [tested, setTested] = useState9(false);
+  useEffect6(() => subscribeNotifyPreferences(() => setNotify(readNotifyPreferences())), []);
   const setNotifyPref = (key, value) => {
     const next = { ...notify, [key]: value };
     setNotify(writeNotifyPreferences(next));
+    void pushNotifyPreferences(next);
   };
   const sendTest = () => {
     void (async () => {
@@ -5952,13 +6171,12 @@ function TaskNotifySettings(props) {
         setTested(false);
         return;
       }
-      setTested(
-        await postDesktopNotice({
-          title: t("notify.testTitle"),
-          body: t("notify.testBody"),
-          tag: "feature-hub:test"
-        })
-      );
+      const sent = await postDesktopNotice({
+        title: t("notify.testTitle"),
+        body: t("notify.testBody"),
+        tag: "feature-hub:test"
+      });
+      setTested(sent.delivered);
     })();
   };
   return h(
@@ -6203,7 +6421,10 @@ var inject = [
   "workspaces",
   "sessions",
   "remote",
-  "uiSession"
+  "remote.commands",
+  "uiSession",
+  // 侧边栏行与分组共用宿主的右键菜单服务（菜单项由原生插件贡献）。
+  "contextMenus"
 ];
 var SECTIONS = [recentTasksSection];
 var CONTROLS = [gitBranchFeature];
@@ -6429,6 +6650,25 @@ function apply(ctx) {
               if (service === void 0) throw new Error("workspaces service is unavailable");
               await service.delete(workspaceId);
             },
+            // 「在文件夹显示」是原生 open-in-app 插件贡献的菜单动作，宿主没有
+            // 暴露对应服务；这里解析一次工作区菜单，借它的 select 触发同一条动作。
+            revealWorkspace: async (workspaceId, path) => {
+              const menus = ctx.get?.("contextMenus");
+              const resolution = menus?.resolve?.({
+                kind: "workspace",
+                value: { workspaceId, path, displayTitle: "" }
+              });
+              if (resolution === void 0) return false;
+              try {
+                await resolution.ready;
+                const reveal = resolution.source.getSnapshot().find((item) => item.id.endsWith("/reveal") && item.disabled !== true);
+                if (reveal === void 0) return false;
+                resolution.select(reveal.id);
+                return true;
+              } finally {
+                resolution.dispose();
+              }
+            },
             insertWorkspaceBefore: async (workspaceId, beforeWorkspaceId) => {
               const service = workspaces();
               if (service === void 0) throw new Error("workspaces service is unavailable");
@@ -6497,7 +6737,7 @@ function apply(ctx) {
             openContextMenu: (target, point) => {
               const menus = ctx.get?.("contextMenus");
               if (menus === void 0) {
-                pushNotice(tSidebar("shell.fallback"), "warn");
+                pushNotice(tSidebar("toast.menuUnavailable"), "warn");
                 return;
               }
               const value = target.kind === "session" ? { sessionId: target.sessionId, displayTitle: target.displayTitle } : {

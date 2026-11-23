@@ -16,15 +16,12 @@ import type * as ReactTypes from 'react'
 import {
   IconArchive,
   IconPinFill,
-  IconTriangleRight,
   IconUnarchive,
   IconFolderClose,
   IconFolderOpen,
   IconNewChat,
 } from './icons'
 import { IconMore } from './menu'
-import { Menu } from './menu'
-import type { MenuItem } from './menu'
 import type { GroupNode, SearchResultNode, SessionNode } from './tree'
 
 /** 一次菜单请求：目标类型、业务对象与视口坐标。 */
@@ -410,9 +407,6 @@ export function ProjectRow(props: ProjectRowProps): ReactTypes.JSX.Element {
         <span className={`fh-row-folder${props.active ? ' fh-row-folder-active' : ''}`}>
           {group.expanded ? <IconFolderOpen size={16} /> : <IconFolderClose size={16} />}
         </span>
-        <span className="fh-row-chevron">
-          <IconTriangleRight className={group.expanded ? 'fh-chevron-open' : undefined} />
-        </span>
         <span className="fh-row-title">{label}</span>
         <span className="fh-row-actions" onClick={(event) => event.stopPropagation()}>
           {props.onMenu === undefined ? null : (
@@ -637,11 +631,17 @@ export function SessionRow(props: SessionRowProps): ReactTypes.JSX.Element {
         >
           {title}
         </span>
+        {/* 等待交互的胶囊独立成列：悬停让位给操作按钮的是时间与置顶，不是它。 */}
+        {primary.trailingLabel === undefined ? null : (
+          <span className="fh-row-badge" title={primary.label} role="img" aria-label={primary.label}>
+            {primary.trailingLabel}
+          </span>
+        )}
         {node.blank ? null : (
           <span className="fh-row-rest">
-            <span className="fh-row-time">
-              {primary.trailingLabel ?? timeLabel(node.updatedAt, props.now, props.t)}
-            </span>
+            {primary.trailingLabel === undefined ? (
+              <span className="fh-row-time">{timeLabel(node.updatedAt, props.now, props.t)}</span>
+            ) : null}
             {node.pinned && !node.archived ? (
               <span
                 className="fh-row-pin"

@@ -22,7 +22,7 @@ export const zh = {
   'settings.description':
     '任务完成、失败或等待你回应时弹 Windows 系统通知，并留在通知中心；窗口最小化或关闭到托盘时也能收到。',
   'notify.enabled': '启用任务提醒',
-  'notify.enabledHint': '总开关；关闭后不再出现任何提醒。',
+  'notify.enabledHint': '总开关；关闭后所有窗口都不再出现任何提醒，立即生效。',
   'notify.completed': '任务完成时提醒',
   'notify.completedHint': '一轮回答正常结束时提醒。',
   'notify.failed': '任务失败时提醒',
@@ -61,7 +61,7 @@ export const en: Record<keyof typeof zh, string> = {
   'settings.description':
     'Windows notifications are raised when a task completes, fails, or waits for you, and stay in the notification center; they also arrive while the window is minimized or closed to the tray.',
   'notify.enabled': 'Enable task notices',
-  'notify.enabledHint': 'Master switch; turning it off hides every notice.',
+  'notify.enabledHint': 'Master switch; turning it off silences every window at once.',
   'notify.completed': 'Notify when a task completes',
   'notify.completedHint': 'Shown when a turn ends normally.',
   'notify.failed': 'Notify when a task fails',

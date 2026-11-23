@@ -9,4 +9,7 @@ acl-*.ps1
 # 日志
 *.log
 browser-screenshots
+
+# 临时导出的参考源码/脚本（不属于插件代码）
 tmp
+tmp-*

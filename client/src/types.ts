@@ -173,6 +173,26 @@ export interface WorkspaceService {
   unpinSession(sessionId: string): Promise<void>
 }
 
+/** 右键菜单里的一条动作（本插件只读 id 与可用性）。 */
+export interface ContextMenuActionView {
+  /** 解析后的动作 id（`<provider>/<action>`）。 */
+  readonly id: string
+  /** 置灰不可点。 */
+  readonly disabled?: boolean
+}
+
+/** 一次菜单解析（`resolve` 的返回值）：动作列表、选中与释放。 */
+export interface ContextMenuResolution {
+  /** 各贡献者依次给的动作；异步贡献结束后会更新。 */
+  readonly source: { getSnapshot(): readonly ContextMenuActionView[] }
+  /** 所有贡献者都完成后结算。 */
+  readonly ready: Promise<void>
+  /** 选中一条动作（执行它的 run；同一次解析只能选一次）。 */
+  select(id: string): void
+  /** 取消未完成的查询并丢弃回调。 */
+  dispose(): void
+}
+
 /** 宿主右键菜单服务里本插件用到的子集（`ctx.get('contextMenus')`）。 */
 export interface ContextMenusService {
   /**
@@ -181,6 +201,16 @@ export interface ContextMenusService {
    * @param point 视口坐标。
    */
   open(target: unknown, point: { readonly x: number; readonly y: number }): void
+  /**
+   * 解析某个目标可用的动作，但不打开菜单。
+   *
+   * 用来借原生贡献的动作（例如「在文件夹显示」）：宿主没有暴露那个服务，
+   * 只能通过菜单贡献自己的回调触发。
+   *
+   * @param target 捕获的目标（`{ kind, value }`）。
+   * @returns 一次性的解析结果；宿主不提供时缺省。
+   */
+  resolve?(target: unknown): ContextMenuResolution
 }
 
 /** 本插件用到的客户端上下文（Cordis 服务的结构化子集）。 */

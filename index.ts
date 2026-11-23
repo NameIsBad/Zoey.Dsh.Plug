@@ -6,13 +6,20 @@
  *
  *   GET  /feature-hub/git?cwd=<绝对目录>        读取分支状态
  *   POST /feature-hub/git  { cwd, action, ... }  读取、切换或创建分支
- *   POST /feature-hub/notify { title, body }     弹一条 Windows 系统通知
+ *   GET  /feature-hub/notify/prefs               读取「任务提醒」偏好
+ *   POST /feature-hub/notify/prefs { enabled, … } 保存「任务提醒」偏好
+ *   POST /feature-hub/notify { title, body, tag } 弹一条 Windows 系统通知
  *
  * 通知为什么要绕到 Host：渲染进程的 `Notification` 在 `dsh-app://` 页面上
  * 能构造、权限也显示 granted，但不会进入 Windows 通知中心；而 Host 用
  * PowerShell 调 WinRT（AUMID 用 Electron 默认的 `electron.app.<应用名>`，
  * 与安装器的开始菜单快捷方式一致）可以正常投递，并且窗口最小化 / 关闭到
  * 托盘时 Host 仍在运行。
+ *
+ * 提醒偏好也放在 Host：同一个应用可能同时有多个渲染进程（主窗口、浏览器
+ * 镜像页、远程访问的客户端），各自的 localStorage 互不相通；把偏好落到
+ * `$DSH_HOME/feature-hub/notify-prefs.json` 后，`/notify` 自己就能按总开关
+ * 拒绝对任何客户端弹通知，「关掉开关」才是全局生效的。
  *
  * 安全边界：
  *   - 路由先做认证检查，未认证请求拿不到任何能力；
@@ -24,11 +31,12 @@
  */
 
 import { execFile, spawn } from 'node:child_process'
-import { statSync } from 'node:fs'
-import { basename, extname, isAbsolute } from 'node:path'
+import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { basename, dirname, extname, isAbsolute, join } from 'node:path'
 import { promisify } from 'node:util'
 
-import type { GitActionInput, RepoState } from './types/wire'
+import type { GitActionInput, NotifyPrefs, RepoState } from './types/wire'
 
 const runFile = promisify(execFile)
 
@@ -41,12 +49,28 @@ const GIT_TIMEOUT_MS = 10_000
 /** 允许创建的分支名：与 git 的 ref 规则大致对齐，同时挡住注入字符。 */
 const BRANCH_NAME = /^[A-Za-z0-9._/-]{1,120}$/
 
-/** 通知标题/正文的长度上限，避免一次请求把环境变量撑爆。 */
+/** 通知标题/正文/分组标识的长度上限，避免一次请求把环境变量撑爆。 */
 const NOTIFY_TITLE_MAX = 120
 const NOTIFY_BODY_MAX = 300
+const NOTIFY_TAG_MAX = 200
+
+/** 同一 tag 的重复投递合并窗口：多个窗口对同一事件各发一次时只弹一条。 */
+const NOTIFY_DEDUPE_MS = 2_000
 
 /** PowerShell 弹 toast 的超时：脚本起不来时别把 HTTP 请求挂死。 */
 const TOAST_TIMEOUT_MS = 15_000
+
+/** 没有存过偏好时的默认值：全部开启，功能装好即可见。 */
+const DEFAULT_NOTIFY_PREFS: NotifyPrefs = {
+  enabled: true,
+  completed: true,
+  failed: true,
+  asked: true,
+  system: true,
+}
+
+/** 最近弹过的通知 tag → 时间戳；只在 Host 进程内存在，用来合并多窗口的重复投递。 */
+const recentNotifyTags = new Map<string, number>()
 
 /**
  * 在 Windows 上弹一条原生通知的 PowerShell 脚本（固定内容）。
@@ -155,7 +179,135 @@ function showWindowsToast(title: string, body: string): Promise<boolean> {
 }
 
 /**
- * 处理 `/feature-hub/notify`：校验参数并投递通知。
+ * 「任务提醒」偏好文件的位置。
+ *
+ * 放在 `$DSH_HOME/feature-hub/` 下（默认 `~/.dsh`），与 profile 无关：
+ * 同一台机器上的所有渲染进程、所有 profile 共享同一份开关，才符合「总开关」
+ * 的语义。DSH 没给环境变量时退回用户目录，避免写到相对路径上。
+ * @returns 偏好文件的绝对路径。
+ */
+function notifyPrefsFile(): string {
+  const home =
+    process.env.DSH_HOME === undefined || process.env.DSH_HOME === ''
+      ? join(homedir(), '.dsh')
+      : process.env.DSH_HOME
+  return join(home, 'feature-hub', 'notify-prefs.json')
+}
+
+/** 把一个未知值收敛成布尔；不是布尔时用回退值。 */
+function booleanOr(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback
+}
+
+/**
+ * 读取 Host 上保存的提醒偏好。
+ * @returns `stored` 表示文件是否真的存在（false 时调用方可以把自己那份推上来做初始值）；
+ *   `prefs` 是逐字段校验后的偏好，文件缺失或损坏时全是默认值。
+ */
+function readNotifyPrefs(): { stored: boolean; prefs: NotifyPrefs } {
+  let raw: string
+  try {
+    raw = readFileSync(notifyPrefsFile(), 'utf8')
+  } catch (_error) {
+    return { stored: false, prefs: DEFAULT_NOTIFY_PREFS }
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (parsed === null || typeof parsed !== 'object') return { stored: true, prefs: DEFAULT_NOTIFY_PREFS }
+    const record = parsed as Record<string, unknown>
+    return {
+      stored: true,
+      prefs: {
+        enabled: booleanOr(record.enabled, DEFAULT_NOTIFY_PREFS.enabled),
+        completed: booleanOr(record.completed, DEFAULT_NOTIFY_PREFS.completed),
+        failed: booleanOr(record.failed, DEFAULT_NOTIFY_PREFS.failed),
+        asked: booleanOr(record.asked, DEFAULT_NOTIFY_PREFS.asked),
+        system: booleanOr(record.system, DEFAULT_NOTIFY_PREFS.system),
+      },
+    }
+  } catch (_error) {
+    return { stored: true, prefs: DEFAULT_NOTIFY_PREFS }
+  }
+}
+
+/**
+ * 保存提醒偏好并回读实际内容。
+ * @param prefs 完整偏好。
+ * @returns 实际生效的偏好（读不出来时返回入参）。
+ * @throws 目录或文件无法写入时抛错（调用方会把它折成 JSON 错误）。
+ */
+function writeNotifyPrefs(prefs: NotifyPrefs): NotifyPrefs {
+  const file = notifyPrefsFile()
+  mkdirSync(dirname(file), { recursive: true })
+  writeFileSync(file, `${JSON.stringify(prefs)}\n`, 'utf8')
+  return prefs
+}
+
+/**
+ * 把请求体里出现的布尔字段合并进当前偏好；没出现的字段保持原值。
+ * @param current 当前偏好。
+ * @param body 请求体（字段类型未知）。
+ * @returns 合并后的完整偏好。
+ */
+function mergeNotifyPrefs(current: NotifyPrefs, body: Record<string, unknown>): NotifyPrefs {
+  return {
+    enabled: booleanOr(body.enabled, current.enabled),
+    completed: booleanOr(body.completed, current.completed),
+    failed: booleanOr(body.failed, current.failed),
+    asked: booleanOr(body.asked, current.asked),
+    system: booleanOr(body.system, current.system),
+  }
+}
+
+/**
+ * 判断同一个 tag 是否刚刚弹过，并顺手清掉过期记录。
+ * @param tag 调用方给的事件分组标识。
+ * @param now 当前时间。
+ * @returns 命中合并窗口时返回 true。
+ */
+function isDuplicateTag(tag: string, now: number): boolean {
+  if (recentNotifyTags.size > 200) {
+    for (const [key, stamp] of recentNotifyTags) {
+      if (now - stamp > 60_000) recentNotifyTags.delete(key)
+    }
+  }
+  const previous = recentNotifyTags.get(tag)
+  if (previous !== undefined && now - previous < NOTIFY_DEDUPE_MS) return true
+  recentNotifyTags.set(tag, now)
+  return false
+}
+
+/**
+ * 处理 `/feature-hub/notify/prefs`：读取或保存提醒偏好。
+ * @param req 已通过认证的请求。
+ * @param res 响应对象。
+ */
+async function prefsRoute(req: HostRequest, res: HostResponse): Promise<void> {
+  try {
+    if (req.method === 'GET') {
+      const { stored, prefs } = readNotifyPrefs()
+      json(res, 200, { ok: true, stored, prefs })
+      return
+    }
+    if (req.method !== 'POST') {
+      json(res, 405, { ok: false, error: { code: 'method-not-allowed', message: 'use GET or POST' } })
+      return
+    }
+    const body = await readJson(req)
+    const saved = writeNotifyPrefs(mergeNotifyPrefs(readNotifyPrefs().prefs, body))
+    json(res, 200, { ok: true, stored: true, prefs: saved })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    json(res, 200, { ok: false, error: { code: 'prefs-failed', message } })
+  }
+}
+
+/**
+ * 处理 `/feature-hub/notify`：按 Host 上的偏好决定是否投递通知。
+ *
+ * 三道门依次是：总开关（关了就谁也别弹）、分组去重（同一事件的多个客户端
+ * 只弹一次）、系统通知开关（关了就不弹 toast，由客户端退回窗口内提醒）。
+ *
  * @param req 已通过认证的请求。
  * @param res 响应对象。
  */
@@ -166,6 +318,20 @@ async function notifyRoute(req: HostRequest, res: HostResponse): Promise<void> {
   }
   try {
     const body = await readJson(req)
+    const { prefs } = readNotifyPrefs()
+    if (!prefs.enabled) {
+      json(res, 200, { ok: true, shown: false, blocked: true })
+      return
+    }
+    const tag = typeof body.tag === 'string' ? body.tag.trim().slice(0, NOTIFY_TAG_MAX) : ''
+    if (tag !== '' && isDuplicateTag(tag, Date.now())) {
+      json(res, 200, { ok: true, shown: false, duplicate: true })
+      return
+    }
+    if (!prefs.system) {
+      json(res, 200, { ok: true, shown: false })
+      return
+    }
     const title = typeof body.title === 'string' ? body.title.trim().slice(0, NOTIFY_TITLE_MAX) : ''
     const text = typeof body.body === 'string' ? body.body.trim().slice(0, NOTIFY_BODY_MAX) : ''
     if (title === '') throw new Error('title is required')
@@ -337,6 +503,10 @@ export function apply(ctx: HostContext): void {
           const url = new URL(req.url === undefined ? '/' : req.url, 'http://dsh.internal')
           if (url.pathname === `${ROUTE_PREFIX}/notify`) {
             await notifyRoute(req, res)
+            return
+          }
+          if (url.pathname === `${ROUTE_PREFIX}/notify/prefs`) {
+            await prefsRoute(req, res)
             return
           }
           if (url.pathname !== `${ROUTE_PREFIX}/git`) {

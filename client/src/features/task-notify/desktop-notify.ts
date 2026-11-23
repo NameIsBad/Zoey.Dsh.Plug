@@ -92,32 +92,45 @@ export function showDesktopNotice(input: DesktopNoticeInput): boolean {
   }
 }
 
+/** 一次投递的结果。 */
+export interface DesktopNoticeResult {
+  /** 是否真的弹出了通知（Host 原生 toast，或渲染进程兜底）。 */
+  readonly delivered: boolean
+  /** 被 Host 上的总开关拦下：调用方不应再退到窗口内提醒。 */
+  readonly blocked: boolean
+}
+
 /**
  * 优先通过 Host 路由投递一条 Windows 原生通知，失败时退回渲染进程通知。
  *
  * Host 侧用 PowerShell + WinRT 投递，AUMID 与本应用开始菜单快捷方式一致，
  * 所以能真正进入 Windows 通知中心；窗口最小化或关闭到托盘时 Host 仍在运行。
+ * Host 还会按全局偏好做门禁：总开关关掉时返回 `blocked`，此时连窗口内提醒
+ * 都不该出现——否则「关了开关还在提醒」又会在别的窗口里重演。
  *
  * @param input 标题、正文与点击动作。
- * @returns 是否成功投递；Host 与渲染进程都失败时返回 false。
+ * @returns 投递结果；Host 与渲染进程都没弹出来时 `delivered` 为 false。
  */
-export async function postDesktopNotice(input: DesktopNoticeInput): Promise<boolean> {
+export async function postDesktopNotice(input: DesktopNoticeInput): Promise<DesktopNoticeResult> {
   try {
     const base = typeof document === 'undefined' ? 'http://dsh.internal/' : document.baseURI
     const url = new URL('feature-hub/notify', base).href
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json' },
-      body: JSON.stringify({ title: input.title, body: input.body }),
+      body: JSON.stringify({ title: input.title, body: input.body, tag: input.tag }),
     })
     if (response.ok) {
       const payload = (await response.json()) as NotifyPayload
-      if (payload.ok === true && payload.shown === true) return true
+      if (payload.blocked === true) return { delivered: false, blocked: true }
+      // 命中去重窗口说明另一个窗口刚为同一事件弹过，不该再补一条窗口内提醒。
+      if (payload.duplicate === true) return { delivered: true, blocked: false }
+      if (payload.ok === true && payload.shown === true) return { delivered: true, blocked: false }
     }
   } catch (_error) {
     // Host 不可达（例如纯网页部署）：继续用渲染进程通知兜底。
   }
-  return showDesktopNotice(input)
+  return { delivered: showDesktopNotice(input), blocked: false }
 }
 
 /**

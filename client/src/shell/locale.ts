@@ -38,6 +38,7 @@ export const zh: Readonly<Record<string, string>> = {
   'viewOptions.onlyArchived': '只看归档',
 
   'workspace.add': '添加工作区',
+  'workspace.reveal': '在文件夹显示',
   'actions.newSession': '新建会话',
   'actions.newSession.aria': '在「{name}」新建会话',
   'actions.workspace.aria': '「{name}」的工作区选项',
@@ -85,6 +86,8 @@ export const zh: Readonly<Record<string, string>> = {
   'toast.archiveFailed': '归档失败',
   'toast.addFailed': '添加工作区失败：{message}',
   'toast.pickTimeout': '没有等到目录选择结果，已取消这次添加；可以再点一次加号重试。',
+  'toast.menuUnavailable': '系统菜单服务未就绪，暂时无法打开右键菜单；请稍后重试。',
+  'toast.revealUnavailable': '宿主没有提供打开文件管理器的能力，暂时无法在文件夹里显示。',
 
   rename: '重命名',
   cancel: '取消',
@@ -140,6 +143,7 @@ export const en: Readonly<Record<string, string>> = {
   'viewOptions.onlyArchived': 'Only archived',
 
   'workspace.add': 'Add workspace',
+  'workspace.reveal': 'Show in folder',
   'actions.newSession': 'New session',
   'actions.newSession.aria': 'New session in {name}',
   'actions.workspace.aria': 'Workspace actions for {name}',
@@ -188,6 +192,10 @@ export const en: Readonly<Record<string, string>> = {
   'toast.addFailed': 'Could not add the workspace: {message}',
   'toast.pickTimeout':
     'The directory chooser did not answer; this attempt was cancelled. Click + to try again.',
+  'toast.menuUnavailable':
+    'The system menu service is not ready yet, so the context menu cannot open. Try again shortly.',
+  'toast.revealUnavailable':
+    'The host offers no file-manager action, so this folder cannot be shown right now.',
 
   rename: 'Rename',
   cancel: 'Cancel',

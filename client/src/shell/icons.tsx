@@ -2,43 +2,56 @@ import type * as ReactTypes from 'react'
 /**
  * 侧边栏浏览区用到的图标。
  *
- * 全部是内联 SVG，`stroke`/`fill` 用 `currentColor`，因此跟随主题文字色，
- * 不需要为浅色/深色各写一套。尺寸默认 14px（行内按钮）或 16px（区头），
- * 调用方可以覆盖。原生用的是 primitives 包的图标组件；这里不能引用那个包，
- * 所以按同样的观感重画，几何尺寸对齐原生（14/16/24px）。
+ * 统一采用 **Lucide** 的几何（24×24 网格、圆头圆角、均匀 1.8 描边），
+ * 这样侧边栏里的放大镜、滑杆、文件夹、消息、归档、垃圾桶等图标观感一致，
+ * 也和页面里原生控件的现代线性风格接近。全部是内联 SVG，颜色走
+ * `currentColor`，跟随主题文字色，不需要为浅色/深色各写一套。
+ *
+ * 为什么不能直接依赖图标包：客户端模块表只给 React，运行时 import 任何 npm 包
+ * 都会在浏览器里失败；所以这里按 Lucide（ISC 许可）的形状手写路径，
+ * 保持 24 网格后由调用方用 `size` 缩到 12/14/16/18。
  */
 
 /** 图标公共入参。 */
 export interface IconProps {
-  /** 边长（像素）；缺省按各自默认值。 */
+  /** 边长（像素）；缺省 16。 */
   readonly size?: number
   /** 额外类名。 */
   readonly className?: string
 }
 
-/**
- * 画一个 16 宫格描边图标的公共外壳。
- * @param props 尺寸与类名。
- * @param children 路径节点。
- * @returns 图标元素。
- */
-function Stroke(
-  props: IconProps & { readonly children: ReactTypes.ReactNode; readonly size?: number },
-): ReactTypes.JSX.Element {
-  const size = props.size ?? 16
+/** 描边图标的公共外壳；`viewBox` 固定 24，保证所有图标几何一致。 */
+function Stroke(props: IconProps & { readonly children: ReactTypes.ReactNode }): ReactTypes.JSX.Element {
   return (
     <svg
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
+      width={props.size ?? 16}
+      height={props.size ?? 16}
+      viewBox="0 0 24 24"
       className={props.className}
       aria-hidden
       focusable={false}
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.3}
+      strokeWidth={1.8}
       strokeLinecap="round"
       strokeLinejoin="round"
+    >
+      {props.children}
+    </svg>
+  )
+}
+
+/** 实心图标的公共外壳（图钉、省略号这类小记号）。 */
+function Solid(props: IconProps & { readonly children: ReactTypes.ReactNode }): ReactTypes.JSX.Element {
+  return (
+    <svg
+      width={props.size ?? 16}
+      height={props.size ?? 16}
+      viewBox="0 0 24 24"
+      className={props.className}
+      aria-hidden
+      focusable={false}
+      fill="currentColor"
     >
       {props.children}
     </svg>
@@ -49,8 +62,8 @@ function Stroke(
 export function IconSearch(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <circle cx={7} cy={7} r={4.2} />
-      <path d="M10.2 10.2 L13.4 13.4" />
+      <circle cx={11} cy={11} r={7.2} />
+      <path d="m20.5 20.5-3.9-3.9" />
     </Stroke>
   )
 }
@@ -59,28 +72,38 @@ export function IconSearch(props: IconProps): ReactTypes.JSX.Element {
 export function IconClose(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M4 4 L12 12 M12 4 L4 12" />
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
     </Stroke>
   )
 }
 
-/** 两根滑杆：视图选项（分组/排序/归档过滤）。 */
+/** 滑杆：视图选项（分组/排序/归档过滤）。 */
 export function IconSliders(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M2.5 5 H13.5 M2.5 11 H13.5" />
-      <circle cx={6} cy={5} r={1.6} fill="currentColor" stroke="none" />
-      <circle cx={10} cy={11} r={1.6} fill="currentColor" stroke="none" />
+      <path d="M21 4h-7" />
+      <path d="M10 4H3" />
+      <path d="M21 12h-9" />
+      <path d="M8 12H3" />
+      <path d="M21 20h-5" />
+      <path d="M12 20H3" />
+      <path d="M14 2v4" />
+      <path d="M8 10v4" />
+      <path d="M16 18v4" />
     </Stroke>
   )
 }
 
-/** 打开的文件夹。 */
+/**
+ * 展开的文件夹：正面敞开、能看到内层，和合起的文件夹一眼可分。
+ *
+ * 这是「展开态」的左图标；收起态用 {@link IconFolderClose}。
+ */
 export function IconFolderOpen(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M1.8 12.2 V4.4 A1 1 0 0 1 2.8 3.4 H6.2 L7.6 4.8 H13.2 A1 1 0 0 1 14.2 5.8 V6.6" />
-      <path d="M1.8 12.2 L3.4 7.2 A1 1 0 0 1 4.4 6.5 H14.4 L12.8 12.2 Z" />
+      <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
     </Stroke>
   )
 }
@@ -89,24 +112,8 @@ export function IconFolderOpen(props: IconProps): ReactTypes.JSX.Element {
 export function IconFolderClose(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M1.8 4.4 A1 1 0 0 1 2.8 3.4 H6.2 L7.6 4.8 H13.2 A1 1 0 0 1 14.2 5.8 V11.4 A1 1 0 0 1 13.2 12.4 H2.8 A1 1 0 0 1 1.8 11.4 Z" />
+      <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
     </Stroke>
-  )
-}
-
-/** 右向三角：分组折叠指示（展开时转 90°）。 */
-export function IconTriangleRight(props: IconProps): ReactTypes.JSX.Element {
-  return (
-    <svg
-      width={props.size ?? 8}
-      height={props.size ?? 8}
-      viewBox="0 0 8 8"
-      className={props.className}
-      aria-hidden
-      focusable={false}
-    >
-      <path d="M2.2 1 L6 4 L2.2 7 Z" fill="currentColor" />
-    </svg>
   )
 }
 
@@ -114,8 +121,9 @@ export function IconTriangleRight(props: IconProps): ReactTypes.JSX.Element {
 export function IconNewChat(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M13.6 9.2 A1.6 1.6 0 0 1 12 10.8 H5.2 L2.4 13 V3 A1.6 1.6 0 0 1 4 1.4 H8" />
-      <path d="M11.6 2.2 V6.2 M9.6 4.2 H13.6" />
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <path d="M12 7v6" />
+      <path d="M9 10h6" />
     </Stroke>
   )
 }
@@ -124,31 +132,33 @@ export function IconNewChat(props: IconProps): ReactTypes.JSX.Element {
 export function IconProjectAdd(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M1.8 12.2 V4.4 A1 1 0 0 1 2.8 3.4 H6.2 L7.6 4.8 H13.2 A1 1 0 0 1 14.2 5.8 V7.4" />
-      <path d="M1.8 12.2 H8.6" />
-      <path d="M11.8 8.2 V13.4 M9.2 10.8 H14.4" />
+      <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+      <path d="M12 10v6" />
+      <path d="M9 13h6" />
     </Stroke>
   )
 }
 
-/** 归档箱。 */
+/** 归档箱：把会话归档。 */
 export function IconArchive(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M1.8 3.6 H14.2 V5.6 H1.8 Z" />
-      <path d="M2.6 5.6 V12.4 A0.8 0.8 0 0 0 3.4 13.2 H12.6 A0.8 0.8 0 0 0 13.4 12.4 V5.6" />
-      <path d="M6.2 8.2 H9.8" />
+      <rect x={2} y={3} width={20} height={5} rx={1} />
+      <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+      <path d="M10 12h4" />
     </Stroke>
   )
 }
 
-/** 取消归档。 */
+/** 取消归档：归档箱里的内容回到列表。 */
 export function IconUnarchive(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M1.8 3.6 H14.2 V5.6 H1.8 Z" />
-      <path d="M2.6 5.6 V12.4 A0.8 0.8 0 0 0 3.4 13.2 H12.6 A0.8 0.8 0 0 0 13.4 12.4 V5.6" />
-      <path d="M8 12 V7.2 M6 9.2 L8 7.2 L10 9.2" />
+      <rect x={2} y={3} width={20} height={5} rx={1} />
+      <path d="M4 8v11a2 2 0 0 0 2 2h2" />
+      <path d="M20 8v11a2 2 0 0 1-2 2h-2" />
+      <path d="m9 15 3-3 3 3" />
+      <path d="M12 12v9" />
     </Stroke>
   )
 }
@@ -156,17 +166,10 @@ export function IconUnarchive(props: IconProps): ReactTypes.JSX.Element {
 /** 置顶图钉（实心）。 */
 export function IconPinFill(props: IconProps): ReactTypes.JSX.Element {
   return (
-    <svg
-      width={props.size ?? 14}
-      height={props.size ?? 14}
-      viewBox="0 0 16 16"
-      className={props.className}
-      aria-hidden
-      focusable={false}
-      fill="currentColor"
-    >
-      <path d="M10.2 1.6 14.4 5.8 12.6 6.6 12 10 7.8 10.8 4.8 13.8 4 13 7 10 7.8 5.8 11 5 Z" />
-    </svg>
+    <Solid {...props}>
+      <path d="M12 17v5" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" fill="none" />
+      <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
+    </Solid>
   )
 }
 
@@ -174,8 +177,8 @@ export function IconPinFill(props: IconProps): ReactTypes.JSX.Element {
 export function IconClock(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <circle cx={8} cy={8} r={5.6} />
-      <path d="M8 4.8 V8 L10.2 9.4" />
+      <circle cx={12} cy={12} r={9} />
+      <path d="M12 7v5l3.2 1.9" />
     </Stroke>
   )
 }
@@ -184,8 +187,8 @@ export function IconClock(props: IconProps): ReactTypes.JSX.Element {
 export function IconChevronsUpDown(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M4.6 6 L8 2.8 L11.4 6" />
-      <path d="M4.6 10 L8 13.2 L11.4 10" />
+      <path d="m7 15 5 5 5-5" />
+      <path d="m7 9 5-5 5 5" />
     </Stroke>
   )
 }
@@ -194,7 +197,12 @@ export function IconChevronsUpDown(props: IconProps): ReactTypes.JSX.Element {
 export function IconFlatList(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M2.4 4 H13.6 M2.4 8 H13.6 M2.4 12 H13.6" />
+      <path d="M9 6h12" />
+      <path d="M9 12h12" />
+      <path d="M9 18h12" />
+      <path d="M3.5 6h.01" />
+      <path d="M3.5 12h.01" />
+      <path d="M3.5 18h.01" />
     </Stroke>
   )
 }
@@ -203,9 +211,11 @@ export function IconFlatList(props: IconProps): ReactTypes.JSX.Element {
 export function IconWorkspaceTree(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M2.6 3.4 H13.4 M5.6 8 H13.4 M5.6 12.6 H13.4" />
-      <path d="M2.6 8 V12.6" />
-      <circle cx={2.6} cy={3.4} r={0.9} fill="currentColor" stroke="none" />
+      <path d="M21 12h-9" />
+      <path d="M21 6H9" />
+      <path d="M21 18h-9" />
+      <path d="M3 6v4c0 1.1.9 2 2 2h4" />
+      <path d="M3 10v6c0 1.1.9 2 2 2h4" />
     </Stroke>
   )
 }
@@ -214,9 +224,10 @@ export function IconWorkspaceTree(props: IconProps): ReactTypes.JSX.Element {
 export function IconArchiveOff(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M1.8 3.6 H11.4 M14.2 3.6 H14.2" />
-      <path d="M2.6 5.6 V12.4 A0.8 0.8 0 0 0 3.4 13.2 H12.6 A0.8 0.8 0 0 0 13.4 12.4 V5.6" />
-      <path d="M2 2 L14 14" />
+      <rect x={2} y={3} width={20} height={5} rx={1} />
+      <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+      <path d="m9.5 17 5-5" />
+      <path d="m9.5 12 5 5" />
     </Stroke>
   )
 }
@@ -225,8 +236,10 @@ export function IconArchiveOff(props: IconProps): ReactTypes.JSX.Element {
 export function IconQueue(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M2.4 3.6 H13.6 M2.4 7 H13.6 M2.4 10.4 H9.6" />
-      <path d="M10.4 13 H14.4" />
+      <rect x={2} y={3} width={20} height={5} rx={1} />
+      <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+      <path d="M9 13h6" />
+      <path d="M9 17h6" />
     </Stroke>
   )
 }
@@ -235,9 +248,9 @@ export function IconQueue(props: IconProps): ReactTypes.JSX.Element {
 export function IconArchiveCheck(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M1.8 3.6 H14.2 V5.6 H1.8 Z" />
-      <path d="M2.6 5.6 V12.4 A0.8 0.8 0 0 0 3.4 13.2 H12.6 A0.8 0.8 0 0 0 13.4 12.4 V5.6" />
-      <path d="M6.2 8.6 L7.6 10 L10 7.4" />
+      <rect x={2} y={3} width={20} height={5} rx={1} />
+      <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+      <path d="m9 13.5 2 2 4-4" />
     </Stroke>
   )
 }
@@ -246,8 +259,8 @@ export function IconArchiveCheck(props: IconProps): ReactTypes.JSX.Element {
 export function IconEdit(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M9.6 2.8 L13.2 6.4 L6 13.6 H2.4 V10 Z" />
-      <path d="M8.4 4 L12 7.6" />
+      <path d="M21.2 6.8a2 2 0 0 0-2.8-2.8L3.8 16.2a2 2 0 0 0-.5.8l-1.3 4.3a.5.5 0 0 0 .6.6l4.3-1.3a2 2 0 0 0 .8-.5z" />
+      <path d="m15 5 4 4" />
     </Stroke>
   )
 }
@@ -256,9 +269,11 @@ export function IconEdit(props: IconProps): ReactTypes.JSX.Element {
 export function IconTrash(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M2.6 4.4 H13.4" />
-      <path d="M5.4 4.4 V2.8 H10.6 V4.4" />
-      <path d="M4 4.4 L4.8 13.2 H11.2 L12 4.4" />
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
     </Stroke>
   )
 }
@@ -267,7 +282,8 @@ export function IconTrash(props: IconProps): ReactTypes.JSX.Element {
 export function IconArrowUp(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M8 13 V3.4 M4.4 7 L8 3.4 L11.6 7" />
+      <path d="m5 12 7-7 7 7" />
+      <path d="M12 19V5" />
     </Stroke>
   )
 }

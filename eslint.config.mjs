@@ -16,8 +16,16 @@ import tseslint from 'typescript-eslint'
 export default tseslint.config(
   {
     // 生成物、依赖与「参考副本」不检查。
-    // tmp/ 下放的是从已安装 DSH 拷出来的原生源码，只用于对照实现，不是本仓库代码。
-    ignores: ['client/client.js', 'index.js', 'node_modules/**', 'tmp/**', 'types/dsh-client.generated.d.ts'],
+    // tmp/ 与根目录 tmp-* 放的是从已安装 DSH 拷出来的原生源码或临时脚本，
+    // 只用于对照实现，不是本仓库代码。
+    ignores: [
+      'client/client.js',
+      'index.js',
+      'node_modules/**',
+      'tmp/**',
+      'tmp-*',
+      'types/dsh-client.generated.d.ts',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

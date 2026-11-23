@@ -175,7 +175,7 @@ declare global {
     readonly t: Translate
     /** 外壳的时钟（相对时间用）。 */
     readonly now: number
-    /** 全部可见会话。 */
+    /** 全部可见会话（草稿 / 子代理 / 归档已按列表口径过滤；与项目分组的展开、折叠无关）。 */
     readonly rows: readonly SessionSummary[]
     /** 原始快照，供分组自行投影。 */
     readonly snapshot: {

@@ -21,7 +21,9 @@ export const SIDEBAR_STYLES = `
   color: var(--dsw-alias-label-primary);
 }
 
-/* ---- 区头：标题 / 搜索 / 视图菜单 / 添加工作区 ---- */
+/* ---- 区头：标题 / 搜索 / 视图菜单 / 添加工作区 ----
+   收起态：标题撑满左侧，搜索图标紧挨右侧动作，所以图标天然右对齐。
+   展开态：标题不渲染、动作由 .fh-ws-head-open 隐藏，输入框吃掉整行。 */
 .fh-ws-head {
   flex: none;
   display: flex;
@@ -40,25 +42,27 @@ export const SIDEBAR_STYLES = `
   font-size: 13px;
   line-height: 20px;
 }
+/* 搜索展开后的整行输入框：32px 高、8px 圆角、1px 主题描边，图标在左、清除在右。 */
 .fh-ws-search {
   flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
-  height: 28px;
-  padding: 0 2px 0 6px;
-  border-radius: 6px;
-  border: 1px solid transparent;
+  gap: 0;
+  height: 32px;
+  padding: 0 4px 0 0;
+  border-radius: 8px;
+  /* 描边优先用组件库的边框 token；万一主题没定义，再从主文字色派生一层。 */
+  border: 1px solid var(--dsw-alias-border-l4, color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent));
   color: var(--dsw-alias-label-secondary);
-  cursor: pointer;
-}
-.fh-ws-search:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); }
-.fh-ws-search.fh-ws-search-open {
-  border-color: color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
-  background: transparent;
   cursor: text;
 }
+.fh-ws-search:focus-within {
+  border-color: color-mix(in srgb, var(--dsw-alias-label-primary) 32%, transparent);
+}
+/* 放大镜占住输入框左端；右侧清除按钮沿用 .fh-icon-button 的 24px 方框。 */
+.fh-ws-search > svg { flex: none; margin: 0 6px 0 8px; }
 .fh-ws-search-input {
   flex: 1 1 auto;
   min-width: 0;
@@ -69,9 +73,13 @@ export const SIDEBAR_STYLES = `
   color: var(--dsw-alias-label-primary);
   font: inherit;
   font-size: 13px;
+  line-height: 18px;
   outline: none;
 }
 .fh-ws-search-input::placeholder { color: var(--dsw-alias-label-secondary); }
+/* 展开搜索时把整行让给输入框：右侧的视图菜单与「添加工作区」一并收掉。 */
+.fh-ws-head-open { gap: 0; }
+.fh-ws-head-open .fh-ws-head-actions { display: none; }
 .fh-ws-head-actions { flex: none; display: inline-flex; align-items: center; gap: 2px; }
 
 /* ---- 图标按钮（行尾、区头、对话框共用几何） ---- */
@@ -136,26 +144,14 @@ export const SIDEBAR_STYLES = `
   align-items: center;
   justify-content: center;
   color: var(--dsw-alias-label-secondary);
+  transition: color 120ms ease;
 }
 .fh-row-folder-active { color: var(--dsw-alias-brand-primary); }
-.fh-ws-folder > svg,
-.fh-row-chevron > svg { position: absolute; }
 
-.fh-ws-chevron, .fh-row-chevron {
-  position: relative;
-  flex: none;
-  width: 8px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--dsw-alias-label-secondary);
-}
-.fh-ws-chevron { top: 5px; left: -10px; transition: transform 120ms ease; }
-.fh-ws-chevron-open, .fh-chevron-open { transform: rotate(90deg); }
-.fh-ws-group-head:hover .fh-ws-chevron, .fh-workspace-row:hover .fh-row-chevron {
-  color: var(--dsw-alias-label-primary);
-}
+/* 展开/收起只用图标本身区分（文件夹「敞开」与「合起」），不再叠加小三角。 */
+.fh-workspace-row:hover .fh-row-folder,
+.fh-ws-group-head:hover .fh-ws-folder { color: var(--dsw-alias-label-primary); }
+.fh-workspace-row:hover .fh-row-folder-active { color: var(--dsw-alias-brand-primary); }
 
 .fh-ws-group-title, .fh-row-title {
   flex: 1 1 auto;
@@ -222,11 +218,42 @@ export const SIDEBAR_STYLES = `
   color: var(--dsw-alias-label-secondary);
 }
 .fh-ws-time, .fh-row-time { font-size: 10px; line-height: 16px; font-variant-numeric: tabular-nums; }
+/* 等待回答 / 等待确认：琥珀胶囊，比同色小字更醒目，且不依赖悬停才看见。 */
+.fh-row-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-state-warn-primary) 38%, transparent);
+  background: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 16%, transparent);
+  color: var(--dsw-alias-state-warn-primary);
+  font-size: 10px;
+  line-height: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fh-row-badge::before {
+  content: '';
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: fh-badge-pulse 1.6s ease-in-out infinite;
+}
+@keyframes fh-badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
 .fh-ws-actions, .fh-row-actions { display: none; flex: none; align-items: center; gap: 2px; }
 .fh-ws-row:hover .fh-ws-rest, .fh-session-row:hover .fh-row-rest,
 .fh-session-row:focus-within .fh-row-rest { display: none; }
 .fh-ws-row:hover .fh-ws-actions, .fh-session-row:hover .fh-row-actions,
-.fh-session-row:focus-within .fh-row-actions { display: inline-flex; }
+.fh-session-row:focus-within .fh-row-actions,
+.fh-workspace-row:hover .fh-row-actions, .fh-workspace-row:focus-within .fh-row-actions { display: inline-flex; }
 .fh-ws-row-archived .fh-ws-title, .fh-row-archived .fh-row-title { color: var(--dsw-alias-label-secondary); }
 .fh-ws-pin, .fh-row-pin { color: var(--dsw-alias-label-secondary); display: inline-flex; }
 .fh-row-anchor { position: relative; display: block; }
@@ -555,7 +582,8 @@ export const SIDEBAR_STYLES = `
   .fh-ws-actions, .fh-row-actions { display: inline-flex; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .fh-ws-chevron, .fh-row-chevron { transition: none; }
+  .fh-row-folder, .fh-ws-folder { transition: none; }
+  .fh-row-badge::before { animation: none; }
   .fh-dot-spinner, .fh-ws-spinner { animation: none; }
 }
 `

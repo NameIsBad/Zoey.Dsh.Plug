@@ -16,12 +16,22 @@
  *
  * 重要取舍：
  *   - 首次快照只用来建立基线，避免刷新页面时把「当前正在运行/等待」当成新事件；
+ *   - 每次投递前都重新读一遍开关：别的窗口关掉总开关后，本引擎缓存的旧值不再生效；
  *   - 失败提醒之后 5 秒内同一会话的「完成」不再提醒，否则一次报错会弹两条；
  *   - 同一会话同一类事件 2 秒内只提醒一次，挡住错误事件的连发。
  */
 
 import { closeDesktopNotices, postDesktopNotice, requestDesktopNotifyPermission } from './desktop-notify'
-import { readNotifyPreferences, subscribeNotifyPreferences, type NotifyPreferences } from './preferences'
+import {
+  DEFAULT_NOTIFY_PREFERENCES,
+  pullNotifyPreferences,
+  pushNotifyPreferences,
+  readNotifyPreferences,
+  sameNotifyPreferences,
+  subscribeNotifyPreferences,
+  writeNotifyPreferences,
+  type NotifyPreferences,
+} from './preferences'
 import type { ClientContext } from '../../types'
 
 /** 一条提醒属于哪一类事件。 */
@@ -308,17 +318,20 @@ export function createTaskNotifyEngine(ctx: ClientContext, t: Translate): TaskNo
     detail: string | null,
     ask: TaskAskKind | null,
   ): void => {
-    if (!preferences.enabled) return
-    if (kind === 'completed' && !preferences.completed) return
-    if (kind === 'failed' && !preferences.failed) return
-    if (kind === 'asked' && !preferences.asked) return
+    // 现读开关：别的窗口或浏览器镜像页刚关掉总开关时，本引擎缓存的那份是旧的，
+    // 只靠订阅更新会漏掉跨 origin、跨进程的写入。
+    const current = readNotifyPreferences()
+    if (!current.enabled) return
+    if (kind === 'completed' && !current.completed) return
+    if (kind === 'failed' && !current.failed) return
+    if (kind === 'asked' && !current.asked) return
+    const now = Date.now()
     const row = rowOf(sessionId)
     // 子代理是主任务的内部步骤，草稿还没有任何内容：提醒它们只会造成噪音。
     if (row !== undefined) {
       if (row.origin === 'subagent' || row.parentId !== undefined || row.blank === true) return
     }
     const stamp = `${kind}:${sessionId}`
-    const now = Date.now()
     if (now - (recent.get(stamp) ?? 0) < DEDUPE_MS) return
     recent.set(stamp, now)
     pruneRecent(now)
@@ -336,7 +349,7 @@ export function createTaskNotifyEngine(ctx: ClientContext, t: Translate): TaskNo
     }
     // 用户要的是 Windows 级别的通知：优先交给 Host 用 PowerShell 投递原生
     // toast；Host 与渲染进程都发不出去时，窗口内提醒是唯一还能看到结果的地方。
-    if (preferences.system) {
+    if (current.system) {
       void postDesktopNotice({
         title: t(`desktop.${kind}`),
         body: bodyOf(notice, t),
@@ -344,8 +357,11 @@ export function createTaskNotifyEngine(ctx: ClientContext, t: Translate): TaskNo
         onClick: () => {
           open(sessionId)
         },
-      }).then((delivered) => {
-        if (!delivered && !disposed) pushToast(notice)
+      }).then((result) => {
+        if (disposed || result.blocked || result.delivered) return
+        // 投递这几百毫秒里开关可能刚被关掉：这种情况不再补一条窗口内提醒。
+        if (!readNotifyPreferences().enabled) return
+        pushToast(notice)
       })
     } else {
       pushToast(notice)
@@ -464,9 +480,32 @@ export function createTaskNotifyEngine(ctx: ClientContext, t: Translate): TaskNo
 
   disposers.push(
     subscribeNotifyPreferences(() => {
-      preferences = readNotifyPreferences()
+      const next = readNotifyPreferences()
+      const wasEnabled = preferences.enabled
+      preferences = next
+      // 关掉总开关要立刻收走已经摆在屏幕上的提醒，否则它会再停留 8 秒。
+      if (wasEnabled && !next.enabled) {
+        for (const timer of timers.values()) clearTimeout(timer)
+        timers.clear()
+        toasts = []
+        emit()
+        closeDesktopNotices()
+      }
     }),
   )
+
+  // 与 Host 上的全局偏好对齐：其它窗口可能改过开关，Host 有记录时以它为准。
+  // Host 还没存过（首次安装）时，只有本地这份被用户改过才推上去——刚装好的
+  // 默认值不该抢着写入全局状态，否则一个刚打开的窗口就能把别人关掉的开关顶回开。
+  void pullNotifyPreferences().then((host) => {
+    if (disposed || host === null) return
+    const local = readNotifyPreferences()
+    if (!host.stored) {
+      if (!sameNotifyPreferences(local, DEFAULT_NOTIFY_PREFERENCES)) void pushNotifyPreferences(local)
+      return
+    }
+    if (!sameNotifyPreferences(local, host.prefs)) writeNotifyPreferences(host.prefs)
+  })
 
   // 桌面端默认允许系统通知；遇到未授权的环境主动申请一次。
   // 申请失败只意味着继续走窗口内兜底，不会影响任务本身。

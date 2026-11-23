@@ -32,12 +32,28 @@ export interface GitPayload {
   readonly error?: { readonly code: string; readonly message: string }
 }
 
+/** 任务提醒的全部偏好；Host 是这份数据的唯一真相，客户端只做缓存。 */
+export interface NotifyPrefs {
+  /** 总开关；关闭后任何客户端都不许再弹提醒。 */
+  readonly enabled: boolean
+  /** 任务完成时提醒。 */
+  readonly completed: boolean
+  /** 任务失败时提醒。 */
+  readonly failed: boolean
+  /** 等待用户确认或回答时提醒。 */
+  readonly asked: boolean
+  /** 使用 Windows 系统通知；关闭时只留窗口内提醒。 */
+  readonly system: boolean
+}
+
 /** `/feature-hub/notify` 的请求体。 */
 export interface NotifyInput {
   /** 通知标题（Host 会裁剪到 120 字）。 */
   readonly title: string
   /** 通知正文（Host 会裁剪到 300 字）。 */
   readonly body?: string
+  /** 同一事件的分组标识；Host 用它合并多个客户端对同一事件的重复投递。 */
+  readonly tag?: string
 }
 
 /** `/feature-hub/notify` 的响应外壳。 */
@@ -46,6 +62,22 @@ export interface NotifyPayload {
   readonly ok: boolean
   /** 是否成功交给 Windows 通知平台。 */
   readonly shown?: boolean
+  /** 被偏好拦下（总开关关了）：调用方不应再退到窗口内提醒。 */
+  readonly blocked?: boolean
+  /** 命中去重窗口：同样的 tag 刚刚弹过。 */
+  readonly duplicate?: boolean
+  /** 失败时的错误码与可直接展示的原文。 */
+  readonly error?: { readonly code: string; readonly message: string }
+}
+
+/** `/feature-hub/notify/prefs` 的响应外壳（GET 与 POST 共用）。 */
+export interface NotifyPrefsPayload {
+  /** 是否成功处理请求。 */
+  readonly ok: boolean
+  /** Host 上是否已经有一份存下来的偏好；false 表示调用方可以把自己那份推上来做初始值。 */
+  readonly stored?: boolean
+  /** 当前生效的偏好。 */
+  readonly prefs?: NotifyPrefs
   /** 失败时的错误码与可直接展示的原文。 */
   readonly error?: { readonly code: string; readonly message: string }
 }

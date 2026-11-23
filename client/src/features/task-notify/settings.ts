@@ -11,12 +11,18 @@ import {
   requestDesktopNotifyPermission,
   type DesktopNotifyPermission,
 } from './desktop-notify'
-import { readNotifyPreferences, writeNotifyPreferences, type NotifyPreferences } from './preferences'
+import {
+  pushNotifyPreferences,
+  readNotifyPreferences,
+  subscribeNotifyPreferences,
+  writeNotifyPreferences,
+  type NotifyPreferences,
+} from './preferences'
 import { TASK_NOTIFY_NS } from './index'
 import { en, zh } from './locale'
 import type { ReactElement } from 'react'
 
-const { useState } = React
+const { useEffect, useState } = React
 
 /** 一行「文案在左、开关在右」的偏好行。 */
 interface NotifyToggleRowProps {
@@ -75,10 +81,14 @@ export function TaskNotifySettings(props: FeatureSettingsProps): ReactElement {
   const [permission, setPermission] = useState<DesktopNotifyPermission>(desktopNotifyPermission)
   const [tested, setTested] = useState(false)
 
-  /** 改写一个提醒开关；整体写回，保证存储里是一份完整偏好。 */
+  // 别的窗口（或浏览器镜像页）改了开关时，这块面板要跟着变，否则会显示旧状态。
+  useEffect(() => subscribeNotifyPreferences(() => setNotify(readNotifyPreferences())), [])
+
+  /** 改写一个提醒开关：本地立即生效并持久化，同时推给 Host 让所有窗口同步。 */
   const setNotifyPref = (key: keyof NotifyPreferences, value: boolean): void => {
     const next: NotifyPreferences = { ...notify, [key]: value }
     setNotify(writeNotifyPreferences(next))
+    void pushNotifyPreferences(next)
   }
 
   /** 在用户手势里申请系统通知授权，并经 Host 发送一条测试通知。 */
@@ -90,13 +100,12 @@ export function TaskNotifySettings(props: FeatureSettingsProps): ReactElement {
         setTested(false)
         return
       }
-      setTested(
-        await postDesktopNotice({
-          title: t('notify.testTitle'),
-          body: t('notify.testBody'),
-          tag: 'feature-hub:test',
-        }),
-      )
+      const sent = await postDesktopNotice({
+        title: t('notify.testTitle'),
+        body: t('notify.testBody'),
+        tag: 'feature-hub:test',
+      })
+      setTested(sent.delivered)
     })()
   }
 

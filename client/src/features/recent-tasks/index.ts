@@ -10,8 +10,11 @@
  *      进行中会话按时间补进来，因此实际条数可能大于 N，徽标显示真实条数；
  *   2. 本轮会话所在的行要显示选中态，和它在所属项目里的高亮一致。
  *
- * 数据来源：外壳从插槽标准 hooks 取得快照后传入（`rows` 为全部可见会话），
- * 本功能只做投影与渲染，不查询 Host、不写会话数据。
+ * 另外，项目折叠只是导航状态：外壳传进来的 `rows` 是全部可见会话，
+ * 不会因为某个项目被折叠就少掉它的任务。
+ *
+ * 数据来源：外壳从插槽标准 hooks 取得快照后传入（`rows` 为全部可见会话，
+ * 与项目分组的展开/折叠无关），本功能只做投影与渲染，不查询 Host、不写会话数据。
  *
  * 目录约定：本功能独占一个文件夹——`index.ts`（组件与描述对象）、`locale.ts`（中英文字典）、`styles.ts`（样式）。
  */
@@ -47,7 +50,7 @@ function limitOf(value: unknown): number {
  * @param rows 全部可见会话（已由外壳过滤掉草稿、子代理与归档）。
  * @param limit 需要保留的条数（默认不限）。
  * @param activeIds 进行中的会话 id 集合；这些行不会被条数裁掉。
- * @returns 按活动时间倒序的行。
+ * @returns 按活动时间倒序的行；没有任何用户消息的空白会话不会进入最近任务。
  */
 export function recentAcrossProjects(
   rows: readonly SessionSummary[],
@@ -55,7 +58,10 @@ export function recentAcrossProjects(
   activeIds?: ReadonlySet<string>,
 ): SessionSummary[] {
   const sorted = [...rows]
-    .filter((session): session is SessionSummary => session !== undefined && session !== null)
+    .filter(
+      (session): session is SessionSummary =>
+        session !== undefined && session !== null && session.blank !== true && Number(session.updatedAt) > 0,
+    )
     .sort((left, right) => {
       const delta = (Number(right.updatedAt) || 0) - (Number(left.updatedAt) || 0)
       if (delta !== 0) return delta
@@ -131,25 +137,59 @@ function relativeLabel(instant: number, now: number, t: Translate): string {
 }
 
 /**
- * 读取一个会话的状态描述。
+ * 读取一个会话的原始状态项。
  *
  * 状态快照可能是 Map，也可能是普通对象（取决于装载方式），两种都兼容。
  *
  * @param statuses 状态快照。
  * @param sessionId 会话 id。
+ * @returns 状态项；没有数据时返回 undefined。
+ */
+function sessionStatus(
+  statuses: SessionStatusSnapshot | undefined,
+  sessionId: string,
+): SessionStatus | undefined {
+  if (statuses === undefined || statuses === null) return undefined
+  return typeof (statuses as ReadonlyMap<string, SessionStatus>).get === 'function'
+    ? (statuses as ReadonlyMap<string, SessionStatus>).get(sessionId)
+    : (statuses as Readonly<Record<string, SessionStatus>>)[sessionId]
+}
+
+/**
+ * 读取一个会话的状态描述。
+ * @param statuses 状态快照。
+ * @param sessionId 会话 id。
  * @returns 状态描述；空闲或没有数据时返回 null。
  */
 function statusOf(statuses: SessionStatusSnapshot | undefined, sessionId: string): StatusMeta | null {
-  if (statuses === undefined || statuses === null) return null
-  const status =
-    typeof (statuses as ReadonlyMap<string, SessionStatus>).get === 'function'
-      ? (statuses as ReadonlyMap<string, SessionStatus>).get(sessionId)
-      : (statuses as Readonly<Record<string, SessionStatus>>)[sessionId]
+  const status = sessionStatus(statuses, sessionId)
   if (status === undefined || status === null) return null
   if (status.pendingInteraction !== undefined) return { tone: 'warn', key: 'status.waiting' }
   if (status.running === true) return { tone: 'live', key: 'status.running' }
   if (status.completionUnread === true) return { tone: 'done', key: 'status.done' }
   return null
+}
+
+/**
+ * 等待交互时的胶囊文案。
+ *
+ * 与项目分组里的会话行保持一致：按交互类型给出「待回答 / 待确认 / 待审阅」，
+ * 让「最近任务」也一眼看出哪条会话在等人。
+ *
+ * @param status 原始状态项。
+ * @param t 本功能的翻译函数。
+ * @returns 胶囊文案；没有等待交互时返回 null。
+ */
+function pendingBadge(status: SessionStatus | undefined, t: Translate): string | null {
+  if (status === undefined || status === null || status.pendingInteraction === undefined) return null
+  const kind =
+    typeof status.pendingInteraction === 'object' && status.pendingInteraction !== null
+      ? (status.pendingInteraction as { readonly kind?: unknown }).kind
+      : undefined
+  if (kind === 'question') return t('status.answer')
+  if (kind === 'approval') return t('status.approval')
+  if (kind === 'plan-review') return t('status.planReview')
+  return t('status.waiting')
 }
 
 /**
@@ -197,47 +237,35 @@ export function RecentTasksSection(props: SidebarSectionProps): ReactElement {
   const open = (sessionId: string): void => {
     if (typeof openSession === 'function') openSession(sessionId)
   }
-  /** 行标题：草稿显示「新会话」，无标题显示「未命名会话」。 */
+  /** 行标题：草稿兜底「新会话」（列表已过滤空白会话），无标题显示「未命名会话」。 */
   const titleOf = (session: SessionSummary): string => {
     if (session.blank === true) return t('row.new')
     return session.displayTitle || session.title || t('row.untitled')
   }
 
-  const chevron = h(
-    'svg',
-    {
-      className: collapsed ? 'fh-ws-chevron' : 'fh-ws-chevron fh-ws-chevron-open',
-      width: 10,
-      height: 10,
-      viewBox: '0 0 10 10',
-      'aria-hidden': true,
-      focusable: false,
-    },
-    h('path', {
-      d: 'M3.4 1.8 L7 5 L3.4 8.2',
-      fill: 'none',
-      stroke: 'currentColor',
-      strokeWidth: 1.5,
-      strokeLinecap: 'round',
-      strokeLinejoin: 'round',
-    }),
-  )
-
-  const clock = h(
+  // 不再画小三角：收起/展开用同一套 Lucide 线性图标区分——
+  // 展开是「时钟」，收起是「历史」（带反向箭头），两者的轮廓一眼可分。
+  const lead = h(
     'svg',
     {
       width: 16,
       height: 16,
-      viewBox: '0 0 16 16',
+      viewBox: '0 0 24 24',
       'aria-hidden': true,
       focusable: false,
       fill: 'none',
       stroke: 'currentColor',
-      strokeWidth: 1.3,
+      strokeWidth: 1.8,
       strokeLinecap: 'round',
+      strokeLinejoin: 'round',
     },
-    h('path', { d: 'M13.2 8 A5.2 5.2 0 1 1 11.6 4.3' }),
-    h('path', { d: 'M8 5.2 V8 L10 9.1' }),
+    ...(collapsed
+      ? [
+          h('path', { d: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8' }),
+          h('path', { d: 'M3 3v5h5' }),
+          h('path', { d: 'M12 7v5l4 2' }),
+        ]
+      : [h('circle', { cx: 12, cy: 12, r: 9 }), h('path', { d: 'M12 7v5l3.2 1.9' })]),
   )
 
   const header = h(
@@ -255,14 +283,15 @@ export function RecentTasksSection(props: SidebarSectionProps): ReactElement {
         toggle()
       },
     },
-    h('span', { className: 'fh-ws-folder' }, chevron, clock),
+    h('span', { className: 'fh-ws-folder' }, lead),
     h('span', { className: 'fh-ws-group-title' }, t('title')),
     rows.length === 0 ? null : h('span', { className: 'fh-ws-count' }, String(rows.length)),
   )
 
-  /** 一行会话：状态位 + 标题 + 相对时间，当前会话带选中态。 */
+  /** 一行会话：状态位 + 标题 + 相对时间；等待交互时把时间换成琥珀胶囊。 */
   const rowElement = (session: SessionSummary): ReactElement => {
     const status = statusOf(statuses, session.id)
+    const badge = pendingBadge(sessionStatus(statuses, session.id), t)
     const selected = props.currentSessionId !== null && props.currentSessionId === session.id
     /**
      * 在行的下沿打开原生会话菜单。
@@ -313,20 +342,24 @@ export function RecentTasksSection(props: SidebarSectionProps): ReactElement {
         statusIcon(status, t(status === null ? 'status.idle' : status.key)),
       ),
       h('span', { className: 'fh-ws-title' }, titleOf(session)),
+      // 等待交互的胶囊独立成列：悬停让位给操作按钮的是时间，不是它。
+      badge === null ? null : h('span', { className: 'fh-row-badge', title: badge }, badge),
       h(
         'span',
         { className: 'fh-ws-rest' },
-        h(
-          'time',
-          {
-            className: 'fh-ws-time',
-            dateTime: isoOf(session.updatedAt),
-            title: Number.isFinite(Number(session.updatedAt))
-              ? new Date(Number(session.updatedAt)).toLocaleString()
-              : undefined,
-          },
-          relativeLabel(session.updatedAt, now, t),
-        ),
+        badge !== null
+          ? null
+          : h(
+              'time',
+              {
+                className: 'fh-ws-time',
+                dateTime: isoOf(session.updatedAt),
+                title: Number.isFinite(Number(session.updatedAt))
+                  ? new Date(Number(session.updatedAt)).toLocaleString()
+                  : undefined,
+              },
+              relativeLabel(session.updatedAt, now, t),
+            ),
       ),
     )
   }
