@@ -14,6 +14,8 @@ declare global {
   const React: typeof ReactTypes
   /** 与 React 一起注入的 `React.createElement`。 */
   const h: typeof ReactTypes.createElement
+  /** 与 React 一起注入的 `React.Fragment`：JSX 片段语法编译成 `Fragment`。 */
+  const Fragment: typeof ReactTypes.Fragment
 
   /** 客户端会话列表里的一行（来自 api-session-controller）。 */
   interface SessionSummary {
@@ -49,6 +51,52 @@ declare global {
     readonly byId: Readonly<Record<string, SessionSummary>>
     /** 列表加载阶段。 */
     readonly phase: string
+    /**
+     * 各会话的投影值（含子代理目录）。
+     *
+     * 原生用 `projectionsBySession[sessionId].values.subagentCatalog` 统计
+     * 「有几个子代理正在跑」；宿主精简投影时这个字段可能缺省，所以是可选。
+     */
+    readonly projectionsBySession?: Readonly<
+      Record<
+        string,
+        {
+          readonly values?: {
+            readonly subagentCatalog?: readonly { readonly id: string }[]
+          }
+        }
+      >
+    >
+  }
+
+  /** 一次会话内容检索的命中项（`sessions.search` 的返回元素）。 */
+  interface SessionSearchResultItem {
+    /** 命中的会话 id。 */
+    readonly sessionId: string
+    /** 命中片段（宿主截好的纯文本）。 */
+    readonly snippet?: string
+  }
+
+  /** 目录选择器里的一级目录项。 */
+  interface DirectoryEntry {
+    /** 目录名（不含路径）。 */
+    readonly name: string
+    /** 绝对路径。 */
+    readonly path: string
+    /** 是否是隐藏目录（点开头）。 */
+    readonly hidden?: boolean
+  }
+
+  /** 一层目录的读取结果。 */
+  interface DirectoryListing {
+    /** 当前目录的绝对路径。 */
+    readonly path: string
+    /** 宿主账户的家目录。 */
+    readonly home: string
+    /** 子目录（已按名称排序）。 */
+    readonly entries: readonly DirectoryEntry[]
+    /** 从根到当前目录的面包屑。 */
+    readonly crumbs: readonly DirectoryEntry[]
   }
 
   /** 一个已注册的工作区（来自 api-workspace-controller）。 */
@@ -88,9 +136,9 @@ declare global {
     /** 是否正在执行。 */
     readonly running?: boolean | undefined
     /** 是否存在等待用户回答的交互。 */
-    readonly pendingInteraction?: unknown
+    readonly pendingInteraction?: { readonly kind?: string } | undefined
     /** 是否有未读的完成结果。 */
-    readonly completionUnread?: boolean
+    readonly completionUnread?: boolean | undefined
   }
 
   /** 状态快照：不同装载方式下可能是 Map，也可能是普通对象。 */
@@ -142,6 +190,18 @@ declare global {
     readonly openSession: (sessionId: string) => void
     /** 当前打开的会话 id（用于选中态）。 */
     readonly currentSessionId: string | null
+    /**
+     * 在指定视口坐标打开宿主原生的会话右键菜单。
+     *
+     * 由外壳注入：分组只交出「哪条会话 + 弹在哪里」，菜单项（重命名、分叉、
+     * 复制 ID、归档、置顶）全部由宿主插件贡献，因此分组不必知道菜单内容。
+     * 宿主没提供右键能力时缺省，分组应自行忽略右键。
+     */
+    readonly openSessionMenu?: (
+      sessionId: string,
+      displayTitle: string,
+      point: { readonly x: number; readonly y: number },
+    ) => void
   }
 
   /** `sidebar.workspaces` 占位槽占用者收到的 props。 */
@@ -178,6 +238,18 @@ declare global {
     readonly useSessionStatus: <S>(selector: (snapshot: SessionStatusSnapshot) => S) => S
     /** 主面板信息选择器。 */
     readonly usePanelInfo: <S>(selector: (info: { readonly activePanelId: string | null }) => S) => S
+    /**
+     * 会话级权限查询（`session/rename`、`workspace/insertSessionBefore` 等）。
+     *
+     * 宿主提供；精简装载时可能缺省，缺省一律按「允许」处理。
+     */
+    readonly useSessionAccess?: (sessionId: string, action: string) => boolean
+    /**
+     * 工作区级权限查询（`workspace/rename`、`workspace/delete` 等）。
+     *
+     * 与 {@link useSessionAccess} 同样可能缺省。
+     */
+    readonly useWorkspaceAccess?: (workspaceId: string, action: string) => boolean
     /** 右键菜单工具。 */
     readonly useContextMenu: () => UseContextMenu
     /** 侧边栏滚动绑定钩子（把本区域接入外壳的滚动接力）。 */
@@ -241,6 +313,120 @@ declare global {
     readonly pressureTokens?: number
     /** 当前路由的上下文窗口容量。 */
     readonly contextWindow?: number
+  }
+
+  /**
+   * 会话累计 token 用量投影（`tokenUsage`）。
+   *
+   * 四个桶互不重叠：推理 token 已计入 `outputTokens`，不重复累加。
+   */
+  interface TokenUsage {
+    /** 未命中缓存的输入 token。 */
+    readonly uncachedInputTokens: number
+    /** 输出（含推理）token。 */
+    readonly outputTokens: number
+    /** 命中缓存的输入 token。 */
+    readonly cacheReadTokens: number
+    /** 写入缓存的输入 token。 */
+    readonly cacheWriteTokens: number
+  }
+
+  /**
+   * 全会话统计投影（`sessionStats`）。
+   *
+   * 只有挂载了 `@deepseek-ai/dsh-session-stats` 的组合才有这个键；
+   * 桌面默认组合没有它，读取结果为 `undefined`，消费方必须自己准备回退。
+   */
+  interface SessionStats {
+    /** 含至少一个已关闭步的轮次数。 */
+    readonly turns: number
+    /** 已关闭的步数。 */
+    readonly steps: number
+    /** 组装出消息的步的模型墙钟时间之和（毫秒）。 */
+    readonly llmMs: number
+    /** 工具调用墙钟时间之和（毫秒）。 */
+    readonly toolMs: number
+    /** 首 token 延迟之和（毫秒）。 */
+    readonly ttftMs: number
+    /** 上报过首 token 的步数。 */
+    readonly ttftSteps: number
+    /** 解码墙钟时间之和（毫秒）。 */
+    readonly decodeMs: number
+    /** 与 `decodeMs` 同时上报的输出 token 之和。 */
+    readonly decodeTokens: number
+  }
+
+  /** 一个助手节点记录下来的计时事实。 */
+  interface AssistantTiming {
+    /** 本步 `step/start` 时间；窗口截断时为 null。 */
+    readonly stepStartTime: number | null
+    /** 首个非空增量时间；没有记录时为 null。 */
+    readonly firstTokenTime: number | null
+    /** 最终助手消息时间。 */
+    readonly completedTime: number
+  }
+
+  /** Chat 快照里本插件读取的节点最小形状（`kind` 判别联合的窄视图）。 */
+  interface ChatNodeView {
+    /** 节点类别，例如 `assistant`、`user`、`tool-result`。 */
+    readonly kind: string
+    /** 所属轮次；不是每个类别都有。 */
+    readonly turn?: number
+    /** 事件时间戳（毫秒）。 */
+    readonly time: number
+    /** 计时事实。 */
+    readonly timing?: AssistantTiming
+    /** 提供方上报的原始用量对象。 */
+    readonly usage?: unknown
+  }
+
+  /** Chat 快照里本插件读取的部分（`uiChat` 视图）。 */
+  interface ChatSnapshotView {
+    /** 已加载窗口里的节点、轮次时间与进行中的调用。 */
+    readonly legacy: {
+      /** 会话节点（按 seq 顺序）。 */
+      readonly nodes: readonly ChatNodeView[]
+      /** 每轮起止时间（毫秒）；`endTime` 在执行中缺失。 */
+      readonly turnTimings: ReadonlyMap<number, { readonly startTime: number; readonly endTime?: number }>
+    }
+  }
+
+  /**
+   * 本插件读取的投影键与它们的值类型。
+   *
+   * `sessionStats` 是可选的：只有挂载了对应投影单元的装配才有这个键，
+   * 因此 `undefined` 是合法读数，消费方必须准备回退。
+   */
+  interface SessionProjectionValues {
+    /** 会话累计 token 用量。 */
+    readonly tokenUsage: TokenUsage
+    /** 上下文压力与窗口容量。 */
+    readonly contextPressure: ContextPressure
+    /** 全会话统计；未挂载该单元时为 `undefined`。 */
+    readonly sessionStats?: SessionStats
+  }
+
+  /**
+   * 输入框上方整行插槽（`conversation.input.dock`）控件的 props。
+   *
+   * 这个插槽没有 `slotInject` 契约，只能拿到标准 props；投影与 Chat 快照都
+   * 通过标准 selector hook 读取。
+   */
+  interface ComposerDockProps {
+    /** 当前会话 id。 */
+    readonly sessionId: string
+    /** 本功能字典的翻译函数。 */
+    readonly t: Translate
+    /** 会话列表选择器。 */
+    readonly useSessions: <S>(selector: (snapshot: SessionListState) => S) => S
+    /** 工作区快照选择器。 */
+    readonly useWorkspaces: <S>(selector: (snapshot: WorkspaceSnapshot) => S) => S
+    /** Chat 快照选择器（宿主 `useChat`）。 */
+    readonly useChat: <S>(selector: (snapshot: ChatSnapshotView) => S) => S
+    /** 会话投影读取器；键缺失时返回 `undefined`。 */
+    readonly useProjection: <K extends keyof SessionProjectionValues>(
+      key: K,
+    ) => SessionProjectionValues[K] | undefined
   }
 
   /** 设置页（`settings.section`）收到的 props。 */

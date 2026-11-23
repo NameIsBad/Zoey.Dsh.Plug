@@ -7,7 +7,8 @@
  *     `window.__ModuleLoader__.load({ id, factory(require) })` module per
  *     package, so esbuild emits a CJS bundle and this script wraps it in that
  *     envelope. React is never imported: the loader supplies it, and the
- *     wrapper puts it in scope as `React`/`h`.
+ *     wrapper puts it in scope as `React`/`h`; `.tsx` sources compile through
+ *     `jsxFactory: h` and `jsxFragment: Fragment`, so JSX needs no runtime.
  *   - **Host** (`index.js`): plain ESM for Node, transpiled only (no bundling),
  *     so `node:` imports stay intact.
  *
@@ -39,6 +40,9 @@ async function buildClient() {
     target: 'es2022',
     logLevel: 'warning',
     legalComments: 'none',
+    jsx: 'transform',
+    jsxFactory: 'h',
+    jsxFragment: 'Fragment',
   })
   const body = result.outputFiles[0]?.text ?? ''
   const artifact = [
@@ -48,6 +52,7 @@ async function buildClient() {
     '  factory(require) {',
     "    const React = require('react')",
     '    const h = React.createElement',
+    '    const Fragment = React.Fragment',
     '    const module = { exports: {} }',
     '    const exports = module.exports',
     '    ;(function (module, exports, require, React, h) {',

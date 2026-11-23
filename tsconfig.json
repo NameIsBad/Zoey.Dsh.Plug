@@ -14,7 +14,10 @@
     "skipLibCheck": true,
     "noEmit": true,
     "types": [],
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react",
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "Fragment"
   },
-  "include": ["client/src/**/*.ts", "types/**/*.d.ts"]
+  "include": ["client/src/**/*.ts", "client/src/**/*.tsx", "types/**/*.d.ts"]
 }

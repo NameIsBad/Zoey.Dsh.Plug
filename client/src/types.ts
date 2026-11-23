@@ -60,6 +60,19 @@ export interface RightControlDescriptor {
   readonly enabled?: boolean
 }
 
+/**
+ * 输入框上方整行插槽（`conversation.input.dock`）的功能描述对象
+ * （main.ts 的 DOCKS 清单元素）。会话内容末尾的读数就挂在这里。
+ */
+export interface DockDescriptor {
+  readonly id: string
+  readonly order: number
+  readonly locale: LocaleSpec
+  readonly styles?: string
+  readonly component: (props: ComposerDockProps) => unknown
+  readonly enabled?: boolean
+}
+
 /** 设置页的功能描述对象。 */
 export interface SettingsDescriptor {
   readonly id: string
@@ -107,6 +120,69 @@ export interface SidebarModel {
   readonly rows: readonly SessionSummary[]
 }
 
+/** 宿主会话服务里本插件用到的子集（`ctx.get('sessions')`）。 */
+export interface SessionService {
+  /** 检索会话（元数据 + 内容）。 */
+  search(
+    query: string,
+    signal: AbortSignal,
+  ): Promise<
+    | {
+        readonly ok: true
+        readonly value: {
+          readonly items: readonly SessionSearchResultItem[]
+          readonly hasMore: boolean
+        }
+      }
+    | { readonly ok: false; readonly error: { readonly code: string; readonly message: string } }
+  >
+  /** 宿主规定的搜索结果上限。 */
+  readonly searchResultLimit: number
+  /**
+   * 在持有某个会话期间执行一次操作。
+   * @param target 会话目标（id 字符串）。
+   * @param options 持有来源。
+   * @param operation 拿到引用后的操作。
+   */
+  using<T>(
+    target: string,
+    options: { readonly source: string },
+    operation: (reference: {
+      readonly binding: { readonly session: { rename(title: string): Promise<void> } }
+    }) => T | Promise<T>,
+  ): Promise<T>
+}
+
+/** 宿主工作区服务里本插件用到的子集（`ctx.get('workspaces')`）。 */
+export interface WorkspaceService {
+  /** 登记一个目录为工作区。 */
+  create(input: { readonly path: string }): Promise<WorkspaceView>
+  /** 重命名工作区。 */
+  rename(workspaceId: string, title: string): Promise<WorkspaceView>
+  /** 删除工作区登记（不动目录与会话日志）。 */
+  delete(workspaceId: string): Promise<void>
+  /** 在注册顺序里移动工作区；缺省锚点表示移到末尾。 */
+  insertBefore(workspaceId: string, beforeWorkspaceId?: string): Promise<void>
+  /** 归档会话；运行中的会话会被宿主拒绝。 */
+  archiveSession(sessionId: string, options?: { readonly stopActivity?: boolean }): Promise<void>
+  /** 取消归档。 */
+  unarchiveSession(sessionId: string): Promise<void>
+  /** 置顶。 */
+  pinSession(sessionId: string): Promise<void>
+  /** 取消置顶。 */
+  unpinSession(sessionId: string): Promise<void>
+}
+
+/** 宿主右键菜单服务里本插件用到的子集（`ctx.get('contextMenus')`）。 */
+export interface ContextMenusService {
+  /**
+   * 在指定视口坐标打开共享右键菜单。
+   * @param target 捕获的目标（`{ kind, value }`）。
+   * @param point 视口坐标。
+   */
+  open(target: unknown, point: { readonly x: number; readonly y: number }): void
+}
+
 /** 本插件用到的客户端上下文（Cordis 服务的结构化子集）。 */
 export interface ClientContext {
   /** 注册一个随卸载回收的副作用。 */
@@ -133,11 +209,11 @@ export interface ClientContext {
   uiWorkspace: {
     openSession(sessionId: string): void
     startSession(workspaceId?: string): void
+    /** 系统目录对话框；取消返回 null。 */
     pickDirectory(): Promise<string | null>
-  }
-  workspaces: {
-    create(input: { readonly path: string }): Promise<{ readonly workspaceId: string } | undefined>
-    /** 把某个工作区移动到另一个工作区之前；缺省锚点表示移到末尾。 */
-    insertBefore(workspaceId: string, beforeWorkspaceId?: string): Promise<unknown>
+    /** 读取一层目录（内置浏览器式选择器用）；宿主不提供时缺省。 */
+    listDirectory?(path?: string): Promise<DirectoryListing>
+    /** 新建子目录；宿主不提供时缺省。 */
+    createDirectory?(path: string, name: string): Promise<string>
   }
 }

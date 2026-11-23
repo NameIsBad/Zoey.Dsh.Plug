@@ -156,8 +156,14 @@ plugin.apply(ctx)
 
 check(
   'registers the sidebar occupant, the settings page, its icon, both composer controls, and the notice overlay',
-  registrations.length === 6,
+  registrations.length === 8,
   String(registrations.length),
+)
+check(
+  'the frame-wide overlay carries the sidebar rename dialog and notices',
+  registrations.some(
+    (entry) => entry.options.name === 'shell.overlay' && entry.options.id === 'feature-hub.shell-overlays',
+  ),
 )
 const compactEntry = registrations.find((entry) => entry.options.name === 'conversation.input.right')
 check(
@@ -199,6 +205,162 @@ check(
   'the compact button stays out below the configured threshold',
   belowThreshold === null,
   JSON.stringify(belowThreshold === null ? null : belowThreshold.children[0].props),
+)
+
+// 用量状态条：会话内容末尾（输入框正上方）的实时读数。
+const usageEntry = registrations.find(
+  (entry) => entry.options.name === 'conversation.input.dock' && entry.options.id === 'token-usage',
+)
+check(
+  'the usage bar occupies conversation.input.dock with its own id',
+  usageEntry !== undefined && typeof usageEntry.component === 'function',
+  JSON.stringify(usageEntry === undefined ? null : usageEntry.options),
+)
+const usageDict = dictionaries.get('feature-hub.token-usage')
+const tUsage = (key, params) => {
+  const text = usageDict === undefined ? key : (usageDict.zh[key] ?? key)
+  return String(text).replace(/\{(\w+)\}/g, (match, name) =>
+    params !== undefined && name in params ? String(params[name]) : match,
+  )
+}
+const NOW = 1_800_000_000_000
+const renderUsage = (overrides) => {
+  const options = overrides === undefined ? {} : overrides
+  return usageEntry.component({
+    sessionId: 's-1',
+    t: tUsage,
+    useSessions: (selector) =>
+      selector({ byId: { 's-1': { id: 's-1', running: options.running === true } } }),
+    useWorkspaces: () => undefined,
+    useProjection: (key) => (options.projections === undefined ? undefined : options.projections[key]),
+    useChat: (selector) =>
+      selector({
+        legacy: {
+          nodes: options.nodes === undefined ? [] : options.nodes,
+          turnTimings: options.turnTimings === undefined ? new Map() : options.turnTimings,
+        },
+      }),
+  })
+}
+sandbox.window.localStorage.getItem = () => null
+const emptyUsage = renderUsage()
+check(
+  'the usage bar renders nothing before any accounting exists',
+  emptyUsage === null,
+  JSON.stringify(emptyUsage),
+)
+
+const fullUsage = renderUsage({
+  projections: {
+    tokenUsage: {
+      uncachedInputTokens: 1_000,
+      outputTokens: 2_000,
+      cacheReadTokens: 3_000,
+      cacheWriteTokens: 0,
+    },
+    contextPressure: { projectedTokens: 30_000, contextWindow: 100_000 },
+  },
+  nodes: [
+    {
+      kind: 'assistant',
+      turn: 2,
+      time: NOW,
+      usage: { outputTokens: 100 },
+      timing: { stepStartTime: NOW - 2_000, firstTokenTime: NOW - 1_000, completedTime: NOW },
+    },
+  ],
+  turnTimings: new Map([[2, { startTime: NOW - 5_000, endTime: NOW }]]),
+})
+const metricIds = (element) =>
+  element === null
+    ? []
+    : element.children
+        .filter((child) => child.props !== undefined && child.props.reading !== undefined)
+        .map((child) => child.props.reading.key)
+check(
+  'the usage bar shows tokens, speed, first token, elapsed, and context by default',
+  metricIds(fullUsage).join(',') === 'tokens,speed,ttft,elapsed,context',
+  JSON.stringify(metricIds(fullUsage)),
+)
+const valueOf = (key) => {
+  const item = fullUsage.children.find(
+    (child) =>
+      child.props !== undefined && child.props.reading !== undefined && child.props.reading.key === key,
+  )
+  return item === undefined ? undefined : item.props.reading.value
+}
+check(
+  'consumed tokens sum the three prompt buckets and output',
+  valueOf('tokens') === '6K',
+  String(valueOf('tokens')),
+)
+check('turn speed excludes the first-token wait', valueOf('speed') === '100', String(valueOf('speed')))
+check(
+  'first-token latency comes from the recorded step timing',
+  valueOf('ttft') === '1s',
+  String(valueOf('ttft')),
+)
+check('elapsed time comes from the turn boundaries', valueOf('elapsed') === '5s', String(valueOf('elapsed')))
+check('context occupancy matches the composer ring', valueOf('context') === '30%', String(valueOf('context')))
+
+// 时长按量级换写法：一轮跑十几分钟时 `945s` 不好读，必须写成 `15m45s`。
+check(
+  'long turns read as minutes and seconds',
+  plugin.formatSeconds(945_000) === '15m45s',
+  plugin.formatSeconds(945_000),
+)
+check(
+  'very long turns read as hours and minutes',
+  plugin.formatSeconds(3_780_000) === '1h03m',
+  plugin.formatSeconds(3_780_000),
+)
+check('short waits keep one decimal', plugin.formatSeconds(1_500) === '1.5s', plugin.formatSeconds(1_500))
+
+// 偏好：关掉某项后那一段必须真的消失（设置面板写的就是这份值）。
+sandbox.window.localStorage.getItem = () =>
+  JSON.stringify({ showSpeed: false, showContext: false, exactTokens: true })
+const partial = renderUsage({
+  projections: {
+    tokenUsage: {
+      uncachedInputTokens: 1_000,
+      outputTokens: 2_000,
+      cacheReadTokens: 3_000,
+      cacheWriteTokens: 0,
+    },
+    contextPressure: { projectedTokens: 30_000, contextWindow: 100_000 },
+  },
+})
+const partialIds = metricIds(partial)
+check(
+  'turning a metric off removes only that reading',
+  partialIds.join(',') === 'tokens',
+  JSON.stringify(partialIds),
+)
+check(
+  'exactTokens switches the count to grouped digits',
+  partial !== null &&
+    partial.children.some(
+      (child) =>
+        child.props !== undefined &&
+        child.props.reading !== undefined &&
+        child.props.reading.value === '6,000',
+    ),
+  partial === null ? 'null' : JSON.stringify(partial.children.map((child) => child.props)),
+)
+sandbox.window.localStorage.getItem = () => JSON.stringify({ enabled: false })
+check('the master switch hides the whole bar', renderUsage() === null)
+sandbox.window.localStorage.getItem = () => null
+
+// 纯计算：导出给自检，保证「没有数据就不编数字」的口径不被改坏。
+check('exports the usage projections', typeof plugin.stageReading === 'function')
+const idleStage = plugin.stageReading([], new Map(), false, NOW)
+check(
+  'an empty window yields no invented readings',
+  idleStage.speedTps === null &&
+    idleStage.ttftMs === null &&
+    idleStage.elapsedMs === null &&
+    idleStage.turn === null,
+  JSON.stringify(idleStage),
 )
 
 // 压缩按钮的执行通道：必须直接问宿主命令注册表要 /compact，而不经过输入框；
@@ -314,7 +476,7 @@ const settingsInjected = settingsEntry === undefined ? {} : settingsEntry.option
 const panels = Array.isArray(settingsInjected.panels) ? settingsInjected.panels : []
 check(
   'the settings page assembles one panel per feature',
-  panels.map((panel) => panel.id).join(',') === 'recent-tasks,compact-context,task-notify',
+  panels.map((panel) => panel.id).join(',') === 'recent-tasks,compact-context,token-usage,task-notify',
   JSON.stringify(panels.map((panel) => panel.id)),
 )
 check(
@@ -329,7 +491,7 @@ check(
 )
 check(
   'settings panel titles resolve from feature dictionaries',
-  panels.length === 3 && panels[0].t('settings.title') === '最近任务',
+  panels.length === 4 && panels[0].t('settings.title') === '最近任务',
   panels.length === 0 ? 'no panels' : String(panels[0].t('settings.title')),
 )
 const occupant = registrations.find((entry) => entry.options.name === 'sidebar.workspaces')
@@ -347,16 +509,17 @@ check(
 check('occupant uses the hub sidebar namespace', occupant.options.locale === 'feature-hub.sidebar')
 check(
   'every feature registers its dictionaries',
-  localeRegistrations.length === 6 &&
+  localeRegistrations.length === 7 &&
     localeRegistrations.some((entry) => entry.ns === 'feature-hub.sidebar') &&
     localeRegistrations.some((entry) => entry.ns === 'feature-hub.recent-tasks') &&
     localeRegistrations.some((entry) => entry.ns === 'feature-hub.settings') &&
     localeRegistrations.some((entry) => entry.ns === 'feature-hub.branch') &&
+    localeRegistrations.some((entry) => entry.ns === 'feature-hub.token-usage') &&
     localeRegistrations.some((entry) => entry.ns === 'feature-hub.task-notify'),
   JSON.stringify(localeRegistrations.map((entry) => entry.ns)),
 )
-check('every feature installs its stylesheet', styleElements.length === 6, String(styleElements.length))
-check('one effect per resource plus the registrations', effects.length === 19, String(effects.length))
+check('every feature installs its stylesheet', styleElements.length === 7, String(styleElements.length))
+check('one effect per resource plus the registrations', effects.length === 23, String(effects.length))
 check('shell component is a function', typeof occupant.component === 'function')
 
 const injected = occupant.options.inject()
@@ -388,7 +551,19 @@ check(
   'inject exposes the shell actions',
   typeof injected.openSession === 'function' &&
     typeof injected.startSession === 'function' &&
-    typeof injected.addWorkspace === 'function',
+    typeof injected.searchSessions === 'function' &&
+    typeof injected.archiveSession === 'function' &&
+    typeof injected.pinSession === 'function' &&
+    typeof injected.createWorkspace === 'function' &&
+    typeof injected.openContextMenu === 'function' &&
+    typeof injected.listDirectory === 'function',
+)
+check(
+  'inject carries the view store the browser persists through',
+  injected.viewStore !== undefined &&
+    typeof injected.viewStore.get === 'function' &&
+    typeof injected.viewStore.subscribe === 'function' &&
+    typeof injected.viewStore.actions.setGroupBy === 'function',
 )
 
 const MINUTE = 60_000
@@ -467,7 +642,7 @@ check(
 )
 check(
   'sessions no workspace accounts land in the ungrouped bucket',
-  model.groups[3].ungrouped === true && model.groups[3].sessions[0].id === 'loose',
+  model.groups[3].workspaceId === undefined && model.groups[3].sessions[0].id === 'loose',
 )
 check('flat rows list every visible session', model.rows.length === 6, String(model.rows.length))
 

@@ -68,7 +68,7 @@ pnpm run check-types  # 不写文件，只检查类型快照是否过期 / 契�
 
 ```
 client/src/
-├── main.ts                  总控：外壳 + SECTIONS / CONTROLS / RIGHT_CONTROLS / SETTINGS 清单与装配
+├── main.ts                  总控：外壳 + SECTIONS / CONTROLS / RIGHT_CONTROLS / DOCKS / SETTINGS 清单与装配
 ├── types.ts                 共享类型词汇表（描述对象、上下文、SidebarGroup 等）
 ├── shell/sidebar.ts         侧边栏外壳（单占位槽 sidebar.workspaces 的占用者）
 ├── features/<id>/           一个功能一个目录
@@ -102,6 +102,7 @@ client/src/
 | 侧边栏分组   | `SECTIONS`       | `id`、`order`、`locale`、`styles?`、`component`、`enabled?` |
 | 输入框工具行 | `CONTROLS`       | `id`、`order`、`locale`、`styles?`、`component`、`enabled?` |
 | 输入框右侧   | `RIGHT_CONTROLS` | `id`、`order`、`locale`、`styles?`、`component`、`enabled?` |
+| 输入框上方   | `DOCKS`          | `id`、`order`、`locale`、`styles?`、`component`、`enabled?` |
 | 设置面板     | `SETTINGS`       | `id`、`order`、`locale`、`styles?`、`component`、`enabled?` |
 | 设置页壳     | 单独注册         | `id`、`order`、`locale`、`styles`、`component`、`icon`      |
 
@@ -109,7 +110,7 @@ client/src/
 
 1. 建 `client/src/features/<id>/`，写 `index.ts`（组件 + 描述对象）、`locale.ts`、`styles.ts`；私有工具另开文件。
 2. 需要设置时再写 `settings.ts`：只渲染 `.fh-set-row` 等骨架结构，卡片标题/描述用功能字典里的 `settings.title` / `settings.description`。
-3. 在 `main.ts` 的 `SECTIONS`、`CONTROLS`（工具行左侧）或 `RIGHT_CONTROLS`（工具行右侧）里加一行；有设置面板则同时加进 `SETTINGS`。
+3. 在 `main.ts` 的 `SECTIONS`、`CONTROLS`（工具行左侧）、`RIGHT_CONTROLS`（工具行右侧）或 `DOCKS`（输入框正上方的整行 `conversation.input.dock`）里加一行；有设置面板则同时加进 `SETTINGS`。
 4. 字典键与 `zh` / `en` 两份同时加；CSS 类名带本功能前缀（`fh-br-`、`fh-ws-` 之类），避免与外壳或其它功能撞名。
 5. 跑 `pnpm run all`（check → lint → build → verify），再按"让改动生效"确认槽位。
 

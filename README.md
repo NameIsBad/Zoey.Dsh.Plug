@@ -4,13 +4,14 @@
 
 当前已实现：
 
-| 功能                    | 位置                      | 说明                                                     |
-| ----------------------- | ------------------------- | -------------------------------------------------------- |
-| 最近任务 `recent-tasks` | 侧边栏「工作区」列表顶部  | 全部项目按活动时间倒序的最近若干条会话，可折叠、条数可配 |
-| 当前分支 `git-branch`   | 输入框工具行              | 项目名 + 当前 git 分支，点击向上弹出切换面板             |
-| 压缩上下文              | 输入框工具行右侧          | 一键执行 `/compact`，不经过输入框、不动草稿              |
-| 任务提醒 `task-notify`  | Windows 通知中心          | 完成 / 失败 / 询问发系统通知，最小化或关闭到托盘仍收到   |
-| 侧边栏外壳              | 接管 `sidebar.workspaces` | 在上面功能之外，重建了工作区列表本身                     |
+| 功能                     | 位置                      | 说明                                                     |
+| ------------------------ | ------------------------- | -------------------------------------------------------- |
+| 最近任务 `recent-tasks`  | 侧边栏「工作区」列表顶部  | 全部项目按活动时间倒序的最近若干条会话，可折叠、条数可配 |
+| 当前分支 `git-branch`    | 输入框工具行              | 项目名 + 当前 git 分支，点击向上弹出切换面板             |
+| 压缩上下文               | 输入框工具行右侧          | 一键执行 `/compact`，不经过输入框、不动草稿              |
+| 用量状态条 `token-usage` | 输入框正上方（内容末尾）  | 已消耗 token、本阶段速度、首字、耗时、上下文占用实时读数 |
+| 任务提醒 `task-notify`   | Windows 通知中心          | 完成 / 失败 / 询问发系统通知，最小化或关闭到托盘仍收到   |
+| 侧边栏外壳               | 接管 `sidebar.workspaces` | 在上面功能之外，重建了工作区列表本身                     |
 
 > 侧边栏之所以要"接管"，是因为 DSH 的「工作区」列表没有"往里加一个分组"的扩展点：`sidebar.workspaces` 是单占位槽，想在列表里出现内容只能连列表一起渲染。接管后原生浏览区的部分能力未移植，见文末「已知缺口」。
 
@@ -50,6 +51,19 @@
 - 点击即压缩：直接调用**宿主命令执行通道**（Client Remote 的 `commands.execute('/compact')`，与 `/` 命令面板同一条 RPC），和手敲 `/compact` 得到同样的命令日志与结果，但**不经过输入框**——不写草稿、不提交、不动附件，所以没有「草稿被替换」的确认框。
 - 轮次执行中、输入框正在提交、或宿主没有挂载命令执行通道时按钮禁用，并提示原因（宿主此时会拒绝压缩）。压缩失败会在按钮上方弹一条提示（9 秒自动收起），失败原因原样显示。
 
+### 用量状态条（`token-usage`）
+
+- 位置：`conversation.input.dock`——**输入框卡片正上方的整行插槽**，也就是会话内容最末尾，紧贴输入框。
+- 一行读数，默认全部展示：`已消耗 19.2M tok · 速度 ≈144 tok/s · 首字 ≈1.6s · 耗时 ≈17m37s · 上下文 22%`。
+- 口径全部与宿主同源，不自己估算：
+  - **已消耗**：`tokenUsage` 投影的三个提示词桶（未缓存输入 + 缓存读 + 缓存写）+ 输出桶，与输入框下方那排统计胶囊同一口径。
+  - **速度 / 首字**：取当前对话窗口里**最新一轮**的助手节点计时。速度按「解码 token ÷ 解码墙钟」算，首字等待不计入吞吐。
+  - **耗时**：该轮 `turn/start → turn/end`；仍在执行时按当前时间估算，因此带「≈」。超过一分钟后写成 `15m45s` / `1h03m`，不再显示 `945s`。
+  - **上下文**：`contextPressure` 投影（`projectedTokens ?? pressureTokens` / 窗口容量），与输入框下方那圈百分比同源。
+- 没有 `sessionStats` 投影时（桌面默认组合没挂载它），速度与首字全部从 Chat 快照回算；**回算不出来就整段不显示**，绝不拿 0 冒充读数。
+- 全部可配置：「设置 → 功能集 → 用量状态条」里可以关总开关、逐项关掉五个指标、切换精确数字（`12,345`）与紧凑写法（`12.3K` / `1.2M`），以及关掉执行中的每秒刷新。偏好存在 `dsh-feature-hub.token-usage`，改完即时生效。
+- 执行中「耗时」用主题的业务蓝强调；整行 `role="status"` 并带完整 `aria-label`，屏幕阅读器一次读到全部读数。
+
 ### 任务提醒（`task-notify`）
 
 - 三个触发点：一轮回答正常结束（完成）、`api-session/error`（失败，带错误摘要）、出现待交互（批准工具调用 / 回答问题）。
@@ -77,12 +91,13 @@ index.ts                     Host 半边源码：/feature-hub/git（分支）+ /
 index.js                     构建产物（Node 入口，勿手改）
 cordis.patch.yml             插入 id=feature-hub 的插件行
 client/client.js             构建产物（唯一被浏览器加载的文件，勿手改）
-client/src/main.ts                       总控：外壳 + SECTIONS / CONTROLS / RIGHT_CONTROLS / SETTINGS 清单与装配
+client/src/main.ts                       总控：外壳 + SECTIONS / CONTROLS / RIGHT_CONTROLS / DOCKS / SETTINGS 清单与装配
 client/src/shell/sidebar.ts              侧边栏外壳：区头、列表、项目分组、会话行、拖拽、错误兜底
 client/src/features/recent-tasks/        功能：最近任务（index / settings / preferences / locale / styles）
 client/src/features/git-branch/          功能：分支胶囊（index / locale / styles / branch-name）
 client/src/features/settings/            设置页壳：只做卡片框架、排序与 .fh-set-* 样式契约
 client/src/features/compact-context/     功能：压缩上下文按钮（index / runner / settings / threshold / locale / styles）
+client/src/features/token-usage/         功能：用量状态条（index / metrics / preferences / settings / locale / styles）
 client/src/features/task-notify/         功能：任务提醒（index / settings / engine / preferences / desktop-notify / locale / styles）
 client/src/lib/*.ts                      真正跨域共用的工具（dom、status、time）
 client/src/types.ts                      本插件自有的类型（功能/设置描述对象、上下文等）
@@ -144,6 +159,7 @@ pnpm run check-types    # 只检查快照是否过期 / 契约是否漂移（可
 | 侧边栏里的一个分组     | `SECTIONS`（`client/src/main.ts`）        | `{ t, rows, snapshot, now, openSession, currentSessionId }`         |
 | 输入框工具行的一个控件 | `CONTROLS`                                | 插槽标准 props（`sessionId`、`useSessions`、`useWorkspaces`、`t`…） |
 | 输入框工具行右侧控件   | `RIGHT_CONTROLS`                          | 标准 props + `useInput`、`inputActions`                             |
+| 输入框上方的整行区域   | `DOCKS`（`conversation.input.dock`）      | 标准 props + `useChat`（Chat 快照与轮次时间）                       |
 | 功能自己的设置面板     | `SETTINGS`（`features/<id>/settings.ts`） | `{ t }`（只渲染设置行，卡片框架由设置页壳提供）                     |
 | 窗口级浮动层           | 直接注册 `shell.overlay`                  | 标准 props + 注册时 `inject` 进去的数据/动作                        |
 

@@ -19,7 +19,7 @@
 import { readRecentLimit, subscribeRecentLimit } from './preferences'
 import { statusIcon } from '../../lib/status'
 import type { StatusMeta } from '../../types'
-import type { ReactElement } from 'react'
+import type { ReactElement, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
 
 const { useEffect, useMemo, useState } = React
 
@@ -264,6 +264,14 @@ export function RecentTasksSection(props: SidebarSectionProps): ReactElement {
   const rowElement = (session: SessionSummary): ReactElement => {
     const status = statusOf(statuses, session.id)
     const selected = props.currentSessionId !== null && props.currentSessionId === session.id
+    /**
+     * 在行的下沿打开原生会话菜单。
+     * @param point 视口坐标。
+     */
+    const showMenu = (point: { readonly x: number; readonly y: number }): void => {
+      if (typeof props.openSessionMenu !== 'function') return
+      props.openSessionMenu(session.id, titleOf(session), point)
+    }
     return h(
       'div',
       {
@@ -276,7 +284,24 @@ export function RecentTasksSection(props: SidebarSectionProps): ReactElement {
         onClick: () => {
           open(session.id)
         },
-        onKeyDown: (event: KeyboardEvent) => {
+        onContextMenu: (event: ReactMouseEvent<HTMLElement>) => {
+          // 右键菜单与项目分组里的会话行一致：菜单项由宿主贡献，这里只交出目标。
+          if (typeof props.openSessionMenu !== 'function') return
+          event.preventDefault()
+          event.stopPropagation()
+          event.currentTarget.focus({ preventScroll: true })
+          showMenu({ x: event.clientX, y: event.clientY })
+        },
+        onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => {
+          // Shift+F10 / 菜单键：键盘用户的等价入口，锚在行的左下沿。
+          const keyboardMenu = event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)
+          if (keyboardMenu) {
+            if (typeof props.openSessionMenu !== 'function') return
+            event.preventDefault()
+            const box = event.currentTarget.getBoundingClientRect()
+            showMenu({ x: box.left, y: box.bottom })
+            return
+          }
           if (event.key !== 'Enter' && event.key !== ' ') return
           event.preventDefault()
           open(session.id)

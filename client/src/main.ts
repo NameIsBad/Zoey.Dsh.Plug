@@ -16,13 +16,25 @@
  *     等），否则整个注册抛错、插件看起来没生效。因此外壳不声明任何子槽，也不渲染它们。
  */
 
-import { SidebarEntry, SIDEBAR_DICT, SIDEBAR_NS, SIDEBAR_STYLES, buildSidebarGroups } from './shell/sidebar'
+import { SidebarEntry, SIDEBAR_DICT, SIDEBAR_NS, SIDEBAR_STYLES } from './shell/sidebar'
+import { createViewStore } from './shell/view-state'
+import { pushNotice } from './shell/notify'
+import {
+  ShellOverlays,
+  confirmSessionRename,
+  setSessionRename,
+  subscribeRename,
+  getSessionRename,
+} from './shell/overlays'
+import type { RowMenuRequest } from './shell/rows'
 import { recentAcrossProjects, recentTasksSection } from './features/recent-tasks/index'
 import { recentTasksSettings } from './features/recent-tasks/settings'
 import { gitBranchFeature } from './features/git-branch/index'
 import { compactContextFeature } from './features/compact-context/index'
 import { bindCompactRunner, createCompactRunner } from './features/compact-context/runner'
 import { compactContextSettings } from './features/compact-context/settings'
+import { tokenUsageFeature } from './features/token-usage/index'
+import { tokenUsageSettings } from './features/token-usage/settings'
 import {
   TASK_NOTIFY_NS,
   TaskNotifyOverlay,
@@ -39,11 +51,15 @@ import {
 } from './features/settings/index'
 import type {
   ClientContext,
+  ContextMenusService,
   ControlDescriptor,
+  DockDescriptor,
   LocaleSpec,
   RightControlDescriptor,
   SectionDescriptor,
+  SessionService,
   SettingsItemDescriptor,
+  WorkspaceService,
 } from './types'
 
 /**
@@ -72,10 +88,14 @@ export const CONTROLS: readonly ControlDescriptor[] = [gitBranchFeature]
 /** 输入框工具行右侧控件清单（模型选择与发送按钮之间）。 */
 export const RIGHT_CONTROLS: readonly RightControlDescriptor[] = [compactContextFeature]
 
+/** 输入框上方整行插槽清单（会话内容末尾的读数，紧贴输入框）。 */
+export const DOCKS: readonly DockDescriptor[] = [tokenUsageFeature]
+
 /** 「功能集」设置页里的功能面板清单（按 order 升序渲染）。 */
 export const SETTINGS: readonly SettingsItemDescriptor[] = [
   recentTasksSettings,
   compactContextSettings,
+  tokenUsageSettings,
   taskNotifySettings,
 ]
 
@@ -106,6 +126,7 @@ export function apply(ctx: ClientContext): void {
   // 外壳自身的字典与样式。
   ctx.effect(() => ctx.locale.register(SIDEBAR_NS, SIDEBAR_DICT), 'feature-hub:sidebar:dictionaries')
   ctx.effect(() => installStyles(SIDEBAR_STYLES), 'feature-hub:sidebar:styles')
+  const tSidebar = ctx.locale.bind(SIDEBAR_NS)
 
   // 所有功能（含设置面板）的字典与样式先统一去重安装：
   // 同一个命名空间可能同时出现在主功能描述与设置描述里，重复注册会打架。
@@ -113,6 +134,7 @@ export function apply(ctx: ClientContext): void {
     ...SECTIONS,
     ...CONTROLS,
     ...RIGHT_CONTROLS,
+    ...DOCKS,
     ...SETTINGS,
     featureHubSettings,
     taskNotify,
@@ -179,6 +201,26 @@ export function apply(ctx: ClientContext): void {
           ),
         ),
       `feature-hub:${control.id}:seat`,
+    )
+  }
+
+  // 输入框上方整行插槽（会话内容末尾）：用量状态条挂在这里。
+  // 这个插槽同样没有 inject 契约，组件只靠标准 props（投影 + Chat 快照）读数据。
+  for (const dock of enabledOf(DOCKS)) {
+    ctx.effect(
+      () =>
+        ctx.slots.inject('conversation.input.dock', () =>
+          ctx.slots.register(
+            {
+              name: 'conversation.input.dock',
+              id: dock.id,
+              order: dock.order,
+              locale: dock.locale.ns,
+            },
+            dock.component,
+          ),
+        ),
+      `feature-hub:${dock.id}:seat`,
     )
   }
 
@@ -254,6 +296,31 @@ export function apply(ctx: ClientContext): void {
     showProject: false,
   }))
 
+  // 浏览区自己持有的视图状态（分组/排序/展开/手动顺序/归档过滤）。
+  const viewStore = createViewStore()
+
+  // 宿主会话与工作区服务可能缺省（精简装载）：每个动作都先取服务再调用，
+  // 缺服务时给出可见提示，而不是让按钮看起来「点了没反应」。
+  const sessions = (): SessionService | undefined => ctx.get?.('sessions') as SessionService | undefined
+  const workspaces = (): WorkspaceService | undefined =>
+    ctx.get?.('workspaces') as WorkspaceService | undefined
+  const fail = (key: string, reason: unknown): void => {
+    const message = reason instanceof Error ? reason.message : String(reason)
+    pushNotice(tSidebar(key, { message }), 'warn')
+  }
+
+  /** 搜索：宿主控制器返回 `RemoteResult`，这里折成浏览区要的普通结果。 */
+  const searchSessions = async (
+    query: string,
+    signal: AbortSignal,
+  ): Promise<{ readonly items: readonly SessionSearchResultItem[]; readonly hasMore: boolean }> => {
+    const service = sessions()
+    if (service === undefined || typeof service.search !== 'function') return { items: [], hasMore: false }
+    const result = await service.search(query, signal)
+    if (!result.ok) throw new Error(result.error.message)
+    return result.value
+  }
+
   // 侧边栏外壳：-1 才能从原生浏览区手里拿到这个单占位槽。
   ctx.effect(
     () =>
@@ -265,30 +332,134 @@ export function apply(ctx: ClientContext): void {
             locale: SIDEBAR_NS,
             inject: () => ({
               sections,
+              viewStore,
               openSession: (sessionId: string) => {
                 ctx.uiWorkspace.openSession(sessionId)
               },
               startSession: (workspaceId?: string) => {
                 ctx.uiWorkspace.startSession(workspaceId)
               },
-              // 拖拽排序：insertBefore 会先乐观改本地顺序再与 Host 对齐；
-              // 若当前宿主没有这个方法，静默跳过（拖拽退化为无操作，不抛错）。
-              reorderWorkspace: async (workspaceId: string, beforeWorkspaceId?: string) => {
-                const service = ctx.workspaces
-                if (typeof service.insertBefore !== 'function') return
-                try {
-                  await service.insertBefore(workspaceId, beforeWorkspaceId)
-                } catch (error) {
-                  console.error('feature-hub: workspace reorder failed', error)
-                }
+              searchSessions,
+              searchResultLimit: sessions()?.searchResultLimit ?? 50,
+              requestSessionRename: (sessionId: string, currentTitle: string) => {
+                setSessionRename({ sessionId, currentTitle })
               },
-              addWorkspace: async () => {
-                const path = await ctx.uiWorkspace.pickDirectory()
-                if (path === null || path === undefined || path === '') return
-                const created = await ctx.workspaces.create({ path })
-                const workspaceId =
-                  created === undefined || created === null ? undefined : created.workspaceId
-                if (workspaceId !== undefined) ctx.uiWorkspace.startSession(workspaceId)
+              renameSession: async (sessionId: string, title: string) => {
+                const service = sessions()
+                if (service === undefined || typeof service.using !== 'function') {
+                  throw new Error('sessions service is unavailable')
+                }
+                await service.using(sessionId, { source: 'featureHubWorkspaceOperation' }, (reference) =>
+                  reference.binding.session.rename(title),
+                )
+              },
+              notifyArchivedNotOpenable: () => {
+                pushNotice(tSidebar('toast.archivedNotOpenable'), 'warn')
+              },
+              renameWorkspace: async (workspaceId: string, title: string) => {
+                const service = workspaces()
+                if (service === undefined) throw new Error('workspaces service is unavailable')
+                await service.rename(workspaceId, title)
+              },
+              deleteWorkspace: async (workspaceId: string) => {
+                const service = workspaces()
+                if (service === undefined) throw new Error('workspaces service is unavailable')
+                await service.delete(workspaceId)
+              },
+              insertWorkspaceBefore: async (workspaceId: string, beforeWorkspaceId?: string) => {
+                const service = workspaces()
+                if (service === undefined) throw new Error('workspaces service is unavailable')
+                await service.insertBefore(workspaceId, beforeWorkspaceId)
+              },
+              archiveSession: (sessionId: string) => {
+                const service = workspaces()
+                if (service === undefined) {
+                  pushNotice(tSidebar('toast.archiveFailed'), 'warn')
+                  return
+                }
+                service.archiveSession(sessionId).catch((reason: unknown) => {
+                  fail('toast.archiveFailed', reason)
+                })
+              },
+              unarchiveSession: async (sessionId: string) => {
+                const service = workspaces()
+                if (service === undefined) throw new Error('workspaces service is unavailable')
+                await service.unarchiveSession(sessionId)
+              },
+              pinSession: (sessionId: string) => {
+                const service = workspaces()
+                if (service === undefined) {
+                  pushNotice(tSidebar('toast.pinFailed'), 'warn')
+                  return
+                }
+                service
+                  .pinSession(sessionId)
+                  .then(() => {
+                    // 置顶后把该会话顶到它所在账本的最前，界面立刻跟随。
+                    viewStore.actions.pinSessionOrder(sessionId, [])
+                  })
+                  .catch(() => {
+                    pushNotice(tSidebar('toast.pinFailed'), 'warn')
+                  })
+              },
+              unpinSession: (sessionId: string) => {
+                const service = workspaces()
+                if (service === undefined) {
+                  pushNotice(tSidebar('toast.unpinFailed'), 'warn')
+                  return
+                }
+                service.unpinSession(sessionId).catch(() => {
+                  pushNotice(tSidebar('toast.unpinFailed'), 'warn')
+                })
+              },
+              createWorkspace: async (input: { readonly path: string }) => {
+                const service = workspaces()
+                if (service === undefined) throw new Error('workspaces service is unavailable')
+                return service.create(input)
+              },
+              pickDirectory: () => ctx.uiWorkspace.pickDirectory(),
+              // 只有宿主真的提供列目录时才启用内置浏览对话框；
+              // native 后端只实现 pick()，此时直接走系统对话框。
+              canBrowseDirectories:
+                typeof ctx.uiWorkspace.listDirectory === 'function' &&
+                typeof ctx.uiWorkspace.createDirectory === 'function',
+              listDirectory: async (path?: string) => {
+                const service = ctx.uiWorkspace
+                if (typeof service.listDirectory !== 'function') {
+                  throw new Error('directory listing is unavailable')
+                }
+                return service.listDirectory(path)
+              },
+              createDirectory: async (path: string, name: string) => {
+                const service = ctx.uiWorkspace
+                if (typeof service.createDirectory !== 'function') {
+                  throw new Error('directory creation is unavailable')
+                }
+                return service.createDirectory(path, name)
+              },
+              openContextMenu: (
+                target: RowMenuRequest,
+                point: { readonly x: number; readonly y: number },
+              ) => {
+                // 菜单项由宿主插件贡献（重命名/分支/复制 ID/归档/置顶、工作区重命名/删除），
+                // 形态与原生右键完全一致；这里只负责把目标交出去。
+                const menus = ctx.get?.('contextMenus') as ContextMenusService | undefined
+                if (menus === undefined) {
+                  pushNotice(tSidebar('shell.fallback'), 'warn')
+                  return
+                }
+                const value =
+                  target.kind === 'session'
+                    ? { sessionId: target.sessionId, displayTitle: target.displayTitle }
+                    : {
+                        workspaceId: target.workspaceId,
+                        path: target.path,
+                        displayTitle: target.displayTitle,
+                      }
+                menus.open({ kind: target.kind, value } as never, point)
+              },
+              notify: (message: string, tone: 'info' | 'warn') => {
+                pushNotice(message, tone)
               },
             }),
           },
@@ -297,10 +468,38 @@ export function apply(ctx: ClientContext): void {
       ),
     'feature-hub:sidebar',
   )
+
+  // 会话重命名对话框与失败提示都挂在框架级浮层上：它们要能盖住正文，
+  // 而且必须比触发它们的行活得更久。
+  ctx.effect(
+    () =>
+      ctx.slots.inject('shell.overlay', () =>
+        ctx.slots.register(
+          {
+            name: 'shell.overlay',
+            id: 'feature-hub.shell-overlays',
+            order: 950,
+            locale: SIDEBAR_NS,
+            inject: () => ({
+              state: getSessionRename,
+              subscribe: subscribeRename,
+              close: () => {
+                setSessionRename(null)
+              },
+              confirm: (sessionId: string, title: string) => confirmSessionRename(ctx, sessionId, title),
+              t: tSidebar,
+            }),
+          },
+          ShellOverlays,
+        ),
+      ),
+    'feature-hub:shell-overlays',
+  )
 }
 
 // 供 Node 自检直接调用：模块加载器会忽略它不认识的导出键。
-export { buildSidebarGroups }
+export { buildSidebarGroups } from './shell/tree'
 export { recentAcrossProjects }
 export { createTaskNotifyEngine }
 export { createCompactRunner }
+export { stageReading, formatSeconds } from './features/token-usage/metrics'

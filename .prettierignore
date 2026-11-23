@@ -1,6 +1,9 @@
-# Prettier 忽略：生成物与依赖不参与格式化
+# Prettier 忽略：生成物、依赖与「参考副本」不参与格式化
 client/client.js
 index.js
 types/dsh-observed.generated.md
+types/jsx.d.ts
 node_modules/
 pnpm-lock.yaml
+# tmp/ 下是从已安装 DSH 拷出来的原生源码，只用于对照实现，不是本仓库代码
+tmp/

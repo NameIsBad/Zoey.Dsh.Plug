@@ -4,6 +4,7 @@ window.__ModuleLoader__.load({
   factory(require) {
     const React = require('react')
     const h = React.createElement
+    const Fragment = React.Fragment
     const module = { exports: {} }
     const exports = module.exports
     ;(function (module, exports, require, React, h) {
@@ -30,6 +31,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var main_exports = {};
 __export(main_exports, {
   CONTROLS: () => CONTROLS,
+  DOCKS: () => DOCKS,
   RIGHT_CONTROLS: () => RIGHT_CONTROLS,
   SECTIONS: () => SECTIONS,
   SETTINGS: () => SETTINGS,
@@ -37,680 +39,2502 @@ __export(main_exports, {
   buildSidebarGroups: () => buildSidebarGroups,
   createCompactRunner: () => createCompactRunner,
   createTaskNotifyEngine: () => createTaskNotifyEngine,
+  formatSeconds: () => formatSeconds,
   inject: () => inject,
-  recentAcrossProjects: () => recentAcrossProjects
+  recentAcrossProjects: () => recentAcrossProjects,
+  stageReading: () => stageReading
 });
 module.exports = __toCommonJS(main_exports);
 
-// client/src/lib/time.ts
-var MINUTE = 6e4;
-var HOUR = 60 * MINUTE;
-var DAY = 24 * HOUR;
-var WEEK = 7 * DAY;
-function formatRelative(instant, t, now) {
-  const reference = typeof now === "number" ? now : Date.now();
-  const value = Number(instant);
-  if (!Number.isFinite(value) || value <= 0) return t("time.unknown");
-  const age = Math.max(0, reference - value);
-  if (age < MINUTE) return t("time.justNow");
-  if (age < HOUR) return t("time.minutes", { count: Math.floor(age / MINUTE) });
-  if (age < DAY) return t("time.hours", { count: Math.floor(age / HOUR) });
-  if (age < WEEK) return t("time.days", { count: Math.floor(age / DAY) });
-  return new Date(value).toLocaleDateString(void 0, { year: "numeric", month: "2-digit", day: "2-digit" });
-}
-function formatAbsolute(instant) {
-  const value = Number(instant);
-  if (!Number.isFinite(value) || value <= 0) return "";
-  return new Date(value).toLocaleString(void 0, {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-}
-function toIso(instant) {
-  const value = Number(instant);
-  if (!Number.isFinite(value) || value <= 0) return void 0;
-  return new Date(value).toISOString();
-}
-
-// client/src/lib/status.ts
-function statusMeta(status) {
-  if (status === void 0 || status === null) return null;
-  if (status.pendingInteraction !== void 0) return { tone: "warn", key: "status.waiting" };
-  if (status.running === true) return { tone: "live", key: "status.running" };
-  if (status.completionUnread === true) return { tone: "done", key: "status.done" };
-  return null;
-}
-function statusIcon(meta, label) {
-  if (meta === null) return null;
-  if (meta.tone === "live") {
-    return h("span", {
-      className: "fh-ws-spinner",
-      title: label,
-      "aria-label": label,
-      role: "img"
-    });
-  }
-  return h("span", {
-    className: `fh-ws-dot fh-ws-dot-${meta.tone}`,
-    title: label,
-    "aria-label": label,
-    role: "img"
-  });
-}
-
-// client/src/shell/sidebar.ts
-var { useEffect, useMemo, useState } = React;
-var SIDEBAR_NS = "feature-hub.sidebar";
-var EXPANDED_STORAGE_KEY = "dsh-feature-hub.sidebar.expanded";
-var selectItems = (state) => state.items;
-var selectArchived = (state) => state.archivedSessionIds;
-var selectPinned = (state) => state.pinnedSessionIds;
-var selectList = (state) => state;
-var selectStatuses = (state) => state;
-var selectPanelActive = (info) => info.activePanelId !== null;
-function orderMembers(sessions, pinned) {
-  const pinRank = new Map(pinned.map((id, index) => [id, index]));
-  return [...sessions].sort((left, right) => {
-    const leftPinned = pinRank.has(left.id);
-    const rightPinned = pinRank.has(right.id);
-    if (leftPinned !== rightPinned) return leftPinned ? -1 : 1;
-    if (leftPinned && rightPinned) return (pinRank.get(left.id) ?? 0) - (pinRank.get(right.id) ?? 0);
-    if (right.updatedAt !== left.updatedAt) return right.updatedAt - left.updatedAt;
-    return String(left.id).localeCompare(String(right.id));
-  });
-}
-function buildSidebarGroups(input) {
-  const byId = input.byId;
-  const archived = new Set(input.archivedSessionIds);
-  const pinned = input.pinnedSessionIds;
-  const accounted = /* @__PURE__ */ new Set();
-  const rows = [];
-  const groups = [];
-  const visible = (session) => session !== void 0 && session.origin !== "subagent" && (session.blank !== true || session.id === input.currentSessionId);
-  for (const workspace of input.items) {
-    const members = [];
-    for (const sessionId of workspace.sessionIds) {
-      accounted.add(sessionId);
-      const session = byId[sessionId];
-      if (!visible(session)) continue;
-      if (archived.has(sessionId)) continue;
-      members.push(session);
-    }
-    if (members.length === 0) continue;
-    const ordered = orderMembers(members, pinned);
-    for (const session of ordered) rows.push(session);
-    groups.push({
-      key: workspace.workspaceId,
-      workspaceId: workspace.workspaceId,
-      project: workspace.title || basename(workspace.path),
-      path: workspace.path,
-      sessions: ordered
-    });
-  }
-  const ungrouped = [];
-  for (const sessionId of input.ids) {
-    if (accounted.has(sessionId)) continue;
-    const session = byId[sessionId];
-    if (!visible(session)) continue;
-    if (archived.has(sessionId)) continue;
-    ungrouped.push(session);
-  }
-  if (ungrouped.length > 0) {
-    const ordered = orderMembers(ungrouped, pinned);
-    for (const session of ordered) rows.push(session);
-    groups.push({ key: "", workspaceId: "", project: "", path: "", sessions: ordered, ungrouped: true });
-  }
-  return { groups, rows };
-}
-function basename(path) {
-  const parts = String(path || "").split(/[\\/]+/).filter((part) => part !== "");
-  return parts.length === 0 ? "" : String(parts[parts.length - 1]);
-}
-function readExpanded() {
-  try {
-    const raw = window.localStorage.getItem(EXPANDED_STORAGE_KEY);
-    if (raw === null) return null;
-    const parsed = JSON.parse(raw);
-    return parsed !== null && typeof parsed === "object" ? parsed : null;
-  } catch (_error) {
-    return null;
-  }
-}
-function writeExpanded(value) {
-  try {
-    window.localStorage.setItem(EXPANDED_STORAGE_KEY, JSON.stringify(value));
-  } catch (_error) {
-  }
-}
-function Chevron(open) {
-  return h(
+// client/src/shell/icons.tsx
+function Stroke(props) {
+  const size = props.size ?? 16;
+  return /* @__PURE__ */ h(
     "svg",
     {
-      className: open ? "fh-ws-chevron fh-ws-chevron-open" : "fh-ws-chevron",
-      width: 10,
-      height: 10,
-      viewBox: "0 0 10 10",
-      "aria-hidden": true,
-      focusable: false
-    },
-    h("path", {
-      d: "M3.4 1.8 L7 5 L3.4 8.2",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: 1.5,
-      strokeLinecap: "round",
-      strokeLinejoin: "round"
-    })
-  );
-}
-function Folder() {
-  return h(
-    "svg",
-    {
-      width: 16,
-      height: 16,
+      width: size,
+      height: size,
       viewBox: "0 0 16 16",
+      className: props.className,
       "aria-hidden": true,
       focusable: false,
       fill: "none",
       stroke: "currentColor",
       strokeWidth: 1.3,
+      strokeLinecap: "round",
       strokeLinejoin: "round"
     },
-    h("path", {
-      d: "M1.8 4.2 A1 1 0 0 1 2.8 3.2 H6 L7.4 4.6 H13.2 A1 1 0 0 1 14.2 5.6 V11.4 A1 1 0 0 1 13.2 12.4 H2.8 A1 1 0 0 1 1.8 11.4 Z"
-    })
+    props.children
   );
 }
-function Pin() {
-  return h(
+function IconSearch(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("circle", { cx: 7, cy: 7, r: 4.2 }), /* @__PURE__ */ h("path", { d: "M10.2 10.2 L13.4 13.4" }));
+}
+function IconClose(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M4 4 L12 12 M12 4 L4 12" }));
+}
+function IconSliders(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M2.5 5 H13.5 M2.5 11 H13.5" }), /* @__PURE__ */ h("circle", { cx: 6, cy: 5, r: 1.6, fill: "currentColor", stroke: "none" }), /* @__PURE__ */ h("circle", { cx: 10, cy: 11, r: 1.6, fill: "currentColor", stroke: "none" }));
+}
+function IconFolderOpen(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M1.8 12.2 V4.4 A1 1 0 0 1 2.8 3.4 H6.2 L7.6 4.8 H13.2 A1 1 0 0 1 14.2 5.8 V6.6" }), /* @__PURE__ */ h("path", { d: "M1.8 12.2 L3.4 7.2 A1 1 0 0 1 4.4 6.5 H14.4 L12.8 12.2 Z" }));
+}
+function IconFolderClose(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M1.8 4.4 A1 1 0 0 1 2.8 3.4 H6.2 L7.6 4.8 H13.2 A1 1 0 0 1 14.2 5.8 V11.4 A1 1 0 0 1 13.2 12.4 H2.8 A1 1 0 0 1 1.8 11.4 Z" }));
+}
+function IconTriangleRight(props) {
+  return /* @__PURE__ */ h(
     "svg",
     {
-      className: "fh-ws-pin",
-      width: 11,
-      height: 11,
-      viewBox: "0 0 12 12",
+      width: props.size ?? 8,
+      height: props.size ?? 8,
+      viewBox: "0 0 8 8",
+      className: props.className,
+      "aria-hidden": true,
+      focusable: false
+    },
+    /* @__PURE__ */ h("path", { d: "M2.2 1 L6 4 L2.2 7 Z", fill: "currentColor" })
+  );
+}
+function IconNewChat(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M13.6 9.2 A1.6 1.6 0 0 1 12 10.8 H5.2 L2.4 13 V3 A1.6 1.6 0 0 1 4 1.4 H8" }), /* @__PURE__ */ h("path", { d: "M11.6 2.2 V6.2 M9.6 4.2 H13.6" }));
+}
+function IconProjectAdd(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M1.8 12.2 V4.4 A1 1 0 0 1 2.8 3.4 H6.2 L7.6 4.8 H13.2 A1 1 0 0 1 14.2 5.8 V7.4" }), /* @__PURE__ */ h("path", { d: "M1.8 12.2 H8.6" }), /* @__PURE__ */ h("path", { d: "M11.8 8.2 V13.4 M9.2 10.8 H14.4" }));
+}
+function IconArchive(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M1.8 3.6 H14.2 V5.6 H1.8 Z" }), /* @__PURE__ */ h("path", { d: "M2.6 5.6 V12.4 A0.8 0.8 0 0 0 3.4 13.2 H12.6 A0.8 0.8 0 0 0 13.4 12.4 V5.6" }), /* @__PURE__ */ h("path", { d: "M6.2 8.2 H9.8" }));
+}
+function IconUnarchive(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M1.8 3.6 H14.2 V5.6 H1.8 Z" }), /* @__PURE__ */ h("path", { d: "M2.6 5.6 V12.4 A0.8 0.8 0 0 0 3.4 13.2 H12.6 A0.8 0.8 0 0 0 13.4 12.4 V5.6" }), /* @__PURE__ */ h("path", { d: "M8 12 V7.2 M6 9.2 L8 7.2 L10 9.2" }));
+}
+function IconPinFill(props) {
+  return /* @__PURE__ */ h(
+    "svg",
+    {
+      width: props.size ?? 14,
+      height: props.size ?? 14,
+      viewBox: "0 0 16 16",
+      className: props.className,
       "aria-hidden": true,
       focusable: false,
       fill: "currentColor"
     },
-    h("path", { d: "M7.6 1.2 10.8 4.4 9.4 5 8.8 7.6 5.6 8.2 3.4 10.4 2.8 9.8 5 7.6 5.6 4.4 8.2 3.8 Z" })
+    /* @__PURE__ */ h("path", { d: "M10.2 1.6 14.4 5.8 12.6 6.6 12 10 7.8 10.8 4.8 13.8 4 13 7 10 7.8 5.8 11 5 Z" })
   );
 }
-function Plus() {
-  return h(
-    "svg",
-    {
-      width: 14,
-      height: 14,
-      viewBox: "0 0 14 14",
-      "aria-hidden": true,
-      focusable: false,
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: 1.4,
-      strokeLinecap: "round"
-    },
-    h("path", { d: "M7 2.6 V11.4 M2.6 7 H11.4" })
-  );
+function IconClock(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("circle", { cx: 8, cy: 8, r: 5.6 }), /* @__PURE__ */ h("path", { d: "M8 4.8 V8 L10.2 9.4" }));
 }
-function SearchGlyph() {
-  return h(
-    "svg",
-    {
-      width: 14,
-      height: 14,
-      viewBox: "0 0 16 16",
-      "aria-hidden": true,
-      focusable: false,
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: 1.4,
-      strokeLinecap: "round"
-    },
-    h("circle", { cx: 7, cy: 7, r: 4.2 }),
-    h("path", { d: "M10.2 10.2 L13 13" })
-  );
+function IconChevronsUpDown(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M4.6 6 L8 2.8 L11.4 6" }), /* @__PURE__ */ h("path", { d: "M4.6 10 L8 13.2 L11.4 10" }));
 }
-function SidebarBrowser(props) {
-  const t = props.t;
-  const wide = props.wide !== false;
-  const items = props.useWorkspaces(selectItems);
-  const archivedSessionIds = props.useWorkspaces(selectArchived);
-  const pinnedSessionIds = props.useWorkspaces(selectPinned);
-  const list = props.useSessions(selectList);
-  const statuses = props.useSessionStatus(selectStatuses);
-  const panelActive = props.usePanelInfo(selectPanelActive);
-  const menu = typeof props.useContextMenu === "function" ? props.useContextMenu() : void 0;
-  const getTriggerProps = menu !== void 0 && typeof menu.getTriggerProps === "function" ? menu.getTriggerProps : () => ({});
-  const scroller = typeof props.useSectionScroller === "function" ? props.useSectionScroller() : void 0;
-  const bindScrollerRef = scroller === void 0 ? void 0 : scroller.bindScrollerRef;
-  const sections = Array.isArray(props.sections) ? props.sections : [];
-  const [query, setQuery] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [expanded, setExpanded] = useState(() => readExpanded());
-  const [dragging, setDragging] = useState(null);
-  const [dropTarget, setDropTarget] = useState(null);
-  const [now, setNow] = useState(() => Date.now());
-  const byId = list.byId;
-  const currentSessionId = useMemo(() => {
-    if (panelActive) return null;
-    for (const sessionId of list.ids || []) {
-      const row = byId[sessionId];
-      if (row !== void 0 && row.retainedBy !== void 0 && row.retainedBy.mainView > 0) return sessionId;
-    }
-    return null;
-  }, [list, byId, panelActive]);
-  const model = useMemo(
-    () => buildSidebarGroups({
-      items,
-      byId,
-      ids: list.ids,
-      archivedSessionIds,
-      pinnedSessionIds,
-      currentSessionId
-    }),
-    [items, byId, list.ids, archivedSessionIds, pinnedSessionIds, currentSessionId]
-  );
-  const freshestAge = useMemo(() => {
-    let freshest = Number.POSITIVE_INFINITY;
-    for (const row of model.rows) {
-      const stamp = Number(row.updatedAt) || 0;
-      if (stamp <= 0) continue;
-      const age = Date.now() - stamp;
-      if (age >= 0 && age < freshest) freshest = age;
-    }
-    return freshest;
-  }, [model.rows]);
-  useEffect(() => {
-    const interval = freshestAge < 36e5 ? 1e3 : 6e4;
-    const timer = setInterval(() => {
-      setNow(Date.now());
-    }, interval);
-    return () => {
-      clearInterval(timer);
+function IconFlatList(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M2.4 4 H13.6 M2.4 8 H13.6 M2.4 12 H13.6" }));
+}
+function IconWorkspaceTree(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M2.6 3.4 H13.4 M5.6 8 H13.4 M5.6 12.6 H13.4" }), /* @__PURE__ */ h("path", { d: "M2.6 8 V12.6" }), /* @__PURE__ */ h("circle", { cx: 2.6, cy: 3.4, r: 0.9, fill: "currentColor", stroke: "none" }));
+}
+function IconArchiveOff(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M1.8 3.6 H11.4 M14.2 3.6 H14.2" }), /* @__PURE__ */ h("path", { d: "M2.6 5.6 V12.4 A0.8 0.8 0 0 0 3.4 13.2 H12.6 A0.8 0.8 0 0 0 13.4 12.4 V5.6" }), /* @__PURE__ */ h("path", { d: "M2 2 L14 14" }));
+}
+function IconQueue(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M2.4 3.6 H13.6 M2.4 7 H13.6 M2.4 10.4 H9.6" }), /* @__PURE__ */ h("path", { d: "M10.4 13 H14.4" }));
+}
+function IconArchiveCheck(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M1.8 3.6 H14.2 V5.6 H1.8 Z" }), /* @__PURE__ */ h("path", { d: "M2.6 5.6 V12.4 A0.8 0.8 0 0 0 3.4 13.2 H12.6 A0.8 0.8 0 0 0 13.4 12.4 V5.6" }), /* @__PURE__ */ h("path", { d: "M6.2 8.6 L7.6 10 L10 7.4" }));
+}
+function IconArrowUp(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M8 13 V3.4 M4.4 7 L8 3.4 L11.6 7" }));
+}
+
+// client/src/shell/menu.tsx
+function Menu(props) {
+  const id = `fh-menu-${React.useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const trigger = React.useRef(null);
+  const [position, setPosition] = React.useState(null);
+  const place = () => {
+    const box = trigger.current?.getBoundingClientRect();
+    if (box === void 0) return;
+    setPosition({
+      left: props.align === "end" ? box.right : box.left,
+      top: box.bottom + 4
+    });
+  };
+  const onKeyDown = (event) => {
+    const buttons = Array.from(
+      event.currentTarget.querySelectorAll('[role="menuitem"]:not([disabled])')
+    );
+    if (buttons.length === 0) return;
+    const active = document.activeElement;
+    const index = buttons.findIndex((button) => button === active);
+    const focusAt = (next) => {
+      const wrapped = (next % buttons.length + buttons.length) % buttons.length;
+      buttons[wrapped]?.focus();
     };
-  }, [freshestAge]);
-  const needle = query.trim().toLowerCase();
-  const searching = needle !== "";
-  const matches = useMemo(() => {
-    if (!searching) return null;
-    return model.rows.filter(
-      (session) => String(session.displayTitle || session.title || "").toLowerCase().includes(needle)
-    );
-  }, [model, needle, searching]);
-  const isExpanded = (key) => expanded === null || expanded[key] !== false;
-  const toggle = (key) => {
-    const next = { ...expanded || {} };
-    next[key] = !(next[key] !== false);
-    setExpanded(next);
-    writeExpanded(next);
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        focusAt(index === -1 ? 0 : index + 1);
+        return;
+      case "ArrowUp":
+        event.preventDefault();
+        focusAt(index === -1 ? buttons.length - 1 : index - 1);
+        return;
+      case "Home":
+        event.preventDefault();
+        focusAt(0);
+        return;
+      case "End":
+        event.preventDefault();
+        focusAt(buttons.length - 1);
+        return;
+      default:
+        return;
+    }
   };
-  const open = (sessionId) => {
-    if (typeof props.openSession === "function") props.openSession(sessionId);
-  };
-  const newSession = (workspaceId) => {
-    if (typeof props.startSession === "function") props.startSession(workspaceId);
-  };
-  const addWorkspace = () => {
-    if (typeof props.addWorkspace === "function") void props.addWorkspace();
-  };
-  const moveGroup = (workspaceId, targetId, before) => {
-    if (typeof props.reorderWorkspace !== "function") return;
-    if (workspaceId === targetId) return;
-    const real = model.groups.filter((group) => group.workspaceId !== "");
-    const index = real.findIndex((group) => group.workspaceId === targetId);
-    if (index === -1) return;
-    const next = real[index + 1];
-    const anchor = before ? targetId : next === void 0 ? void 0 : next.workspaceId;
-    if (anchor === workspaceId) return;
-    void props.reorderWorkspace(workspaceId, anchor);
-  };
-  const onGroupDragStart = (event, workspaceId) => {
-    if (workspaceId === "") return;
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", workspaceId);
-    setDragging(workspaceId);
-  };
-  const onGroupDragOver = (event, workspaceId) => {
-    if (dragging === null || workspaceId === "" || workspaceId === dragging) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    const rect = event.currentTarget.getBoundingClientRect();
-    const before = event.clientY < rect.top + rect.height / 2;
-    setDropTarget(
-      (current) => current !== null && current.workspaceId === workspaceId && current.before === before ? current : { workspaceId, before }
-    );
-  };
-  const onGroupDrop = (event, workspaceId) => {
-    event.preventDefault();
-    if (dragging === null) return;
-    const before = dropTarget !== null && dropTarget.workspaceId === workspaceId ? dropTarget.before : true;
-    moveGroup(dragging, workspaceId, before);
-    setDragging(null);
-    setDropTarget(null);
-  };
-  const onGroupDragEnd = () => {
-    setDragging(null);
-    setDropTarget(null);
-  };
-  const titleOf = (session) => {
-    if (session.blank === true) return t("session.new");
-    return session.displayTitle || session.title || t("session.untitled");
-  };
-  const statusOf2 = (sessionId) => statuses !== void 0 && statuses !== null && typeof statuses.get === "function" ? statuses.get(sessionId) : void 0;
-  const groupsByKey = useMemo(() => {
-    const map = /* @__PURE__ */ new Map();
-    for (const group of model.groups) map.set(group.key, group);
-    return map;
-  }, [model]);
-  const renderSession = (session, group) => {
-    const selected = session.id === currentSessionId;
-    const archived = archivedSessionIds.includes(session.id);
-    const pinned = pinnedSessionIds.includes(session.id);
-    const title = titleOf(session);
-    const menuTarget = {
-      kind: "session",
-      value: { sessionId: session.id, displayTitle: title }
-    };
-    const statusInfo = statusMeta(statusOf2(session.id));
-    const statusElement = statusIcon(statusInfo, statusInfo === null ? t("status.idle") : t(statusInfo.key));
-    const leading = null;
-    const trailing = null;
-    const quick = null;
-    return h(
-      "div",
-      {
-        key: session.id,
-        className: `fh-ws-row${selected ? " fh-ws-row-selected" : ""}${archived ? " fh-ws-row-archived" : ""}${session.blank === true ? " fh-ws-row-blank" : ""}`,
-        role: "treeitem",
-        "aria-selected": selected,
-        tabIndex: 0,
-        title: `${title}
-${group !== void 0 && group.path !== "" ? group.path : ""}`.trim(),
-        ...getTriggerProps(menuTarget),
-        onClick: () => {
-          if (archived) {
-            if (typeof props.notifyArchivedNotOpenable === "function") props.notifyArchivedNotOpenable();
-            return;
-          }
-          open(session.id);
-        },
-        onKeyDown: (event) => {
-          if (event.key !== "Enter" && event.key !== " ") return;
-          event.preventDefault();
-          open(session.id);
-        }
-      },
-      h("span", { className: "fh-ws-slot" }, statusElement || leading),
-      h("span", { className: "fh-ws-title" }, title),
-      h(
-        "span",
-        { className: "fh-ws-rest" },
-        h(
-          "time",
-          {
-            className: "fh-ws-time",
-            dateTime: toIso(session.updatedAt),
-            title: formatAbsolute(session.updatedAt)
-          },
-          formatRelative(session.updatedAt, t, now)
-        ),
-        trailing,
-        pinned ? h(Pin) : null
-      ),
-      h(
-        "span",
-        {
-          className: "fh-ws-actions",
-          onClick: (event) => {
-            event.stopPropagation();
-          }
-        },
-        h("span", { className: "fh-ws-quick" }, quick)
-      )
-    );
-  };
-  const renderGroupHeader = (group) => {
-    const openGroup = searching || isExpanded(group.key);
-    const label = group.ungrouped === true ? t("group.ungrouped") : group.project;
-    const draggable = group.workspaceId !== "" && !searching;
-    const drop = dropTarget !== null && dropTarget.workspaceId === group.workspaceId;
-    const classNames = ["fh-ws-group-head"];
-    if (dragging === group.workspaceId) classNames.push("fh-ws-group-dragging");
-    if (drop && dropTarget !== null)
-      classNames.push(dropTarget.before ? "fh-ws-drop-before" : "fh-ws-drop-after");
-    return h(
-      "div",
-      {
-        key: `head:${group.key}`,
-        className: classNames.join(" "),
-        role: "treeitem",
-        "aria-expanded": openGroup,
-        tabIndex: 0,
-        title: group.path,
-        draggable,
-        onDragStart: (event) => {
-          onGroupDragStart(event, group.workspaceId);
-        },
-        onDragOver: (event) => {
-          onGroupDragOver(event, group.workspaceId);
-        },
-        onDragLeave: () => {
-          if (drop) setDropTarget(null);
-        },
-        onDrop: (event) => {
-          onGroupDrop(event, group.workspaceId);
-        },
-        onDragEnd: onGroupDragEnd,
-        onClick: () => {
-          toggle(group.key);
-        },
-        onKeyDown: (event) => {
-          if (event.key !== "Enter" && event.key !== " ") return;
-          event.preventDefault();
-          toggle(group.key);
-        }
-      },
-      h("span", { className: "fh-ws-folder" }, Chevron(openGroup), Folder()),
-      h("span", { className: "fh-ws-group-title" }, label),
-      group.workspaceId === "" ? null : h(
-        "button",
-        {
-          type: "button",
-          className: "fh-ws-icon-button",
-          title: t("actions.newSession"),
-          "aria-label": `${t("actions.newSession")}: ${label}`,
-          onClick: (event) => {
-            event.stopPropagation();
-            newSession(group.workspaceId);
-          }
-        },
-        Plus()
-      )
-    );
-  };
-  const renderGroup = (group) => {
-    const openGroup = searching || isExpanded(group.key);
-    const sessions = searching ? group.sessions.filter((session) => matches !== null && matches.includes(session)) : group.sessions;
-    if (searching && sessions.length === 0) return null;
-    return h(
-      "section",
-      { key: `group:${group.key}`, className: "fh-ws-group" },
-      renderGroupHeader(group),
-      openGroup ? h(
-        "div",
-        { className: "fh-ws-group-body" },
-        sessions.map((session) => renderSession(session, group))
-      ) : null
-    );
-  };
-  if (!wide) return null;
-  return h(
+  return /* @__PURE__ */ h(Fragment, null, /* @__PURE__ */ h(
+    "button",
+    {
+      ref: trigger,
+      type: "button",
+      className: props.className,
+      title: props.label,
+      "aria-label": props.label,
+      "aria-haspopup": "menu",
+      popoverTarget: id,
+      onClick: () => {
+        place();
+      }
+    },
+    props.icon
+  ), /* @__PURE__ */ h(
     "div",
-    { className: "fh-ws", "data-wide": "true" },
-    h(
-      "div",
-      { className: "fh-ws-head" },
-      h("span", { className: "fh-ws-section-label" }, t("section.workspaces")),
-      searchOpen || searching ? h(
-        "span",
-        { className: "fh-ws-search" },
-        h("input", {
-          className: "fh-ws-search-input",
-          type: "text",
-          autoFocus: true,
-          value: query,
-          placeholder: t("search.placeholder"),
-          "aria-label": t("search.placeholder"),
-          onChange: (event) => {
-            setQuery(event.currentTarget.value);
-          },
-          onKeyDown: (event) => {
-            if (event.key !== "Escape") return;
-            setQuery("");
-            setSearchOpen(false);
-          }
-        })
-      ) : h(
+    {
+      id,
+      popover: "auto",
+      role: "menu",
+      "aria-label": props.label,
+      className: "fh-menu",
+      style: position === null ? void 0 : { left: position.left, top: position.top },
+      onToggle: (event) => {
+        if (event.nativeEvent.newState === "open") place();
+      },
+      onKeyDown
+    },
+    props.items.map((item) => {
+      if (item.kind === "separator") return /* @__PURE__ */ h("div", { key: item.id, className: "fh-menu-sep", role: "separator" });
+      if (item.kind === "label") {
+        return /* @__PURE__ */ h("div", { key: item.id, className: "fh-menu-label", role: "presentation" }, item.text);
+      }
+      return /* @__PURE__ */ h(
         "button",
         {
+          key: item.id,
           type: "button",
-          className: "fh-ws-icon-button",
-          title: t("search.open"),
-          "aria-label": t("search.open"),
+          role: "menuitem",
+          className: [
+            "fh-menu-item",
+            item.selected === true ? "fh-menu-item-selected" : "",
+            item.danger === true ? "fh-menu-item-danger" : ""
+          ].filter((part) => part !== "").join(" "),
+          disabled: item.disabled === true,
           onClick: () => {
-            setSearchOpen(true);
+            props.onSelect(item.id);
+            const popover = document.getElementById(id);
+            if (popover !== null && typeof popover.hidePopover === "function") {
+              ;
+              popover.hidePopover();
+            }
           }
         },
-        SearchGlyph()
-      ),
-      h(
-        "button",
-        {
-          type: "button",
-          className: "fh-ws-icon-button",
-          title: t("actions.addWorkspace"),
-          "aria-label": t("actions.addWorkspace"),
-          onClick: addWorkspace
-        },
-        Plus()
-      )
-    ),
-    h(
+        /* @__PURE__ */ h("span", { className: "fh-menu-item-icon" }, item.icon ?? null),
+        /* @__PURE__ */ h("span", { className: "fh-menu-item-label" }, item.label)
+      );
+    })
+  ));
+}
+function IconMore() {
+  return /* @__PURE__ */ h("svg", { width: 14, height: 14, viewBox: "0 0 16 16", "aria-hidden": true, focusable: false, fill: "currentColor" }, /* @__PURE__ */ h("circle", { cx: 3.4, cy: 8, r: 1.25 }), /* @__PURE__ */ h("circle", { cx: 8, cy: 8, r: 1.25 }), /* @__PURE__ */ h("circle", { cx: 12.6, cy: 8, r: 1.25 }));
+}
+
+// client/src/shell/rows.tsx
+function relativeParts(updatedAt, now) {
+  const age = Math.max(0, now - updatedAt);
+  const minute = 6e4;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (age < minute) return { unit: "now", n: 0 };
+  if (age < hour) return { unit: "minute", n: Math.floor(age / minute) };
+  if (age < day) return { unit: "hour", n: Math.floor(age / hour) };
+  return { unit: "day", n: Math.floor(age / day) };
+}
+function timeLabel(updatedAt, now, t) {
+  const { unit, n } = relativeParts(updatedAt, now);
+  if (unit === "now") return t("time.now");
+  return t(`time.${unit}`, { n });
+}
+function hoverTimeLabel(updatedAt, now, t) {
+  const { unit, n } = relativeParts(updatedAt, now);
+  if (unit === "now") return t("time.now");
+  return t("time.ago", { t: t(`time.${unit}`, { n }) });
+}
+function createdLabel(createdAt, t) {
+  const date = new Date(createdAt);
+  const pad = (value) => String(value).padStart(2, "0");
+  const ymd = t("date.ymd", { y: date.getFullYear(), m: date.getMonth() + 1, d: date.getDate() });
+  return t("hover.created", { time: `${ymd} ${pad(date.getHours())}:${pad(date.getMinutes())}` });
+}
+function sessionStatuses(node, t) {
+  const subagents = node.runningSubagentCount === 0 ? void 0 : {
+    state: "ongoing",
+    label: t(
+      node.runningSubagentCount === 1 ? "status.subagentsRunning.one" : "status.subagentsRunning.other",
+      {
+        n: node.runningSubagentCount
+      }
+    )
+  };
+  let pending;
+  switch (node.pendingInteraction) {
+    case "approval":
+      pending = {
+        state: "warning",
+        label: t("status.waitingApproval"),
+        trailingLabel: t("status.compact.approval")
+      };
+      break;
+    case "plan-review":
+      pending = {
+        state: "warning",
+        label: t("status.planReview"),
+        trailingLabel: t("status.compact.planReview")
+      };
+      break;
+    case "question":
+      pending = {
+        state: "warning",
+        label: t("status.waitingAnswer"),
+        trailingLabel: t("status.compact.answer")
+      };
+      break;
+    default:
+      break;
+  }
+  if (pending !== void 0) return subagents === void 0 ? [pending] : [pending, subagents];
+  if (node.running) {
+    const primary = { state: "ongoing", label: t("status.running") };
+    return subagents === void 0 ? [primary] : [primary, subagents];
+  }
+  if (subagents !== void 0) return [subagents];
+  if (node.completed) return [{ state: "done", label: t("status.completed") }];
+  return [{ state: "idle", label: t("status.idle") }];
+}
+function StatusDot(props) {
+  if (props.state === "ongoing") return /* @__PURE__ */ h("span", { className: "fh-dot-spinner" });
+  return /* @__PURE__ */ h("span", { className: `fh-dot fh-dot-${props.state}` });
+}
+function displayTitle(node, t) {
+  if (node.blank) return t("session.new");
+  return node.title === "" ? t("session.untitled") : node.title;
+}
+function HoverCard(props) {
+  const anchor = React.useRef(null);
+  const timer = React.useRef(void 0);
+  const [position, setPosition] = React.useState(null);
+  const [copied, setCopied] = React.useState(false);
+  const clear = () => {
+    if (timer.current !== void 0) window.clearTimeout(timer.current);
+    timer.current = void 0;
+  };
+  React.useEffect(() => clear, []);
+  return /* @__PURE__ */ h(
+    "div",
+    {
+      ref: anchor,
+      className: "fh-row-anchor",
+      onPointerEnter: () => {
+        if (props.disabled === true) return;
+        clear();
+        timer.current = window.setTimeout(() => {
+          const box = anchor.current?.getBoundingClientRect();
+          if (box === void 0) return;
+          const top = Math.min(box.bottom + 6, Math.max(0, window.innerHeight - 200));
+          setPosition({ left: Math.max(8, box.left), top });
+        }, 800);
+      },
+      onPointerLeave: () => {
+        clear();
+        setPosition(null);
+        setCopied(false);
+      }
+    },
+    props.children,
+    position === null ? null : /* @__PURE__ */ h("div", { className: "fh-hovercard", role: "tooltip", style: { left: position.left, top: position.top } }, props.content, props.copyText === void 0 ? null : /* @__PURE__ */ h(
+      "button",
+      {
+        type: "button",
+        className: "fh-hovercard-copy",
+        onClick: () => {
+          void navigator.clipboard?.writeText(props.copyText ?? "").then(
+            () => {
+              setCopied(true);
+            },
+            () => {
+              setCopied(false);
+            }
+          );
+        }
+      },
+      copied ? props.copiedLabel ?? props.copyLabel ?? "" : props.copyLabel ?? ""
+    ))
+  );
+}
+function ProjectRow(props) {
+  const group = props.group;
+  const drag = props.drag;
+  const ungrouped = group.workspaceId === void 0;
+  const label = ungrouped ? props.t("group.ungrouped") : group.label;
+  const classes = ["fh-row", "fh-workspace-row"];
+  if (props.active) classes.push("fh-workspace-active");
+  if (drag?.marker === "before") classes.push("fh-drop-before");
+  if (drag?.marker === "after") classes.push("fh-drop-after");
+  return /* @__PURE__ */ h(
+    HoverCard,
+    {
+      disabled: drag?.active === true,
+      copyText: group.cwd,
+      copyLabel: props.t("copy"),
+      copiedLabel: props.t("hover.copied"),
+      content: /* @__PURE__ */ h("div", { className: "fh-hovercard-body" }, /* @__PURE__ */ h("div", { className: "fh-hovercard-title" }, label), group.cwd === void 0 ? null : /* @__PURE__ */ h("div", { className: "fh-hovercard-path" }, group.cwd), group.createdAt === void 0 ? null : /* @__PURE__ */ h("div", { className: "fh-hovercard-time" }, createdLabel(group.createdAt, props.t)))
+    },
+    /* @__PURE__ */ h(
       "div",
       {
-        className: "fh-ws-list",
-        ref: wide ? bindScrollerRef : void 0,
-        "data-sidebar-list-area": ""
+        className: classes.join(" "),
+        role: "treeitem",
+        "aria-expanded": group.expanded,
+        tabIndex: 0,
+        title: group.cwd ?? label,
+        style: props.indent === void 0 ? void 0 : { paddingLeft: 12 + props.indent },
+        draggable: drag?.enabled === true,
+        onClick: props.onToggle,
+        onKeyDown: (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          props.onToggle();
+        },
+        onDragStart: drag?.enabled === true ? (event) => {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", group.key);
+          drag?.start();
+        } : void 0,
+        onDragEnd: drag === void 0 ? void 0 : () => {
+          drag.end();
+        },
+        onDragOver: drag === void 0 ? void 0 : (event) => {
+          if (!drag.active) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+          const box = event.currentTarget.getBoundingClientRect();
+          drag.hover(event.clientY < box.top + box.height / 2 ? "before" : "after");
+        },
+        onDrop: drag === void 0 ? void 0 : (event) => {
+          if (!drag.active) return;
+          event.preventDefault();
+          const box = event.currentTarget.getBoundingClientRect();
+          drag.drop(event.clientY < box.top + box.height / 2 ? "before" : "after");
+        }
       },
-      searching ? matches === null || matches.length === 0 ? h("div", { className: "fh-ws-empty" }, t("search.empty")) : h(
-        "div",
-        { className: "fh-ws-group" },
-        h(
-          "div",
-          { className: "fh-ws-group-head", role: "treeitem", "aria-expanded": true },
-          h("span", { className: "fh-ws-folder" }, Folder()),
-          h("span", { className: "fh-ws-group-title" }, t("search.results"))
-        ),
-        h(
-          "div",
-          { className: "fh-ws-group-body" },
-          (matches === null ? [] : matches).map(
-            (session) => renderSession(
-              session,
-              groupsByKey.get(workspaceOfSession(session, model)) ?? UNGROUPED_GROUP
-            )
-          )
-        )
-      ) : h(
-        React.Fragment,
-        null,
-        sections.filter((section) => section !== void 0 && section !== null).slice().sort((left, right) => (left.order || 0) - (right.order || 0)).map(
-          (section) => h(section.component, {
-            key: section.id,
-            t: section.t === void 0 ? t : section.t,
-            now,
-            model,
-            rows: model.rows,
-            currentSessionId,
-            snapshot: { items, byId, ids: list.ids, archivedSessionIds, pinnedSessionIds, statuses },
-            openSession: open
-          })
-        ),
-        model.groups.map(renderGroup),
-        model.groups.length === 0 ? h("div", { className: "fh-ws-empty" }, t("empty.none")) : null
-      )
+      /* @__PURE__ */ h("span", { className: `fh-row-folder${props.active ? " fh-row-folder-active" : ""}` }, group.expanded ? /* @__PURE__ */ h(IconFolderOpen, { size: 16 }) : /* @__PURE__ */ h(IconFolderClose, { size: 16 })),
+      /* @__PURE__ */ h("span", { className: "fh-row-chevron" }, /* @__PURE__ */ h(IconTriangleRight, { className: group.expanded ? "fh-chevron-open" : void 0 })),
+      /* @__PURE__ */ h("span", { className: "fh-row-title" }, label),
+      /* @__PURE__ */ h("span", { className: "fh-row-actions", onClick: (event) => event.stopPropagation() }, props.menu === void 0 ? null : /* @__PURE__ */ h(
+        Menu,
+        {
+          label: props.menu.label,
+          icon: /* @__PURE__ */ h(IconMore, null),
+          className: "fh-icon-button",
+          items: props.menu.items,
+          onSelect: props.menu.onSelect,
+          align: "end"
+        }
+      ), props.onCreate === void 0 ? null : /* @__PURE__ */ h(
+        "button",
+        {
+          type: "button",
+          className: "fh-icon-button",
+          title: props.t("actions.newSession"),
+          "aria-label": props.t("actions.newSession.aria", { name: label }),
+          onClick: props.onCreate
+        },
+        /* @__PURE__ */ h(IconNewChat, { size: 14 })
+      ))
     )
   );
 }
-function workspaceOfSession(session, model) {
-  for (const group of model.groups) {
-    if (group.sessions.some((candidate) => candidate.id === session.id)) return group.key;
-  }
-  return "";
+function SessionRow(props) {
+  const node = props.node;
+  const drag = props.drag;
+  const title = displayTitle(node, props.t);
+  const statuses = sessionStatuses(node, props.t);
+  const primary = statuses[0];
+  const showStatus = primary.state !== "idle";
+  const classes = ["fh-row", "fh-session-row"];
+  if (props.selected) classes.push("fh-row-selected");
+  if (node.archived) classes.push("fh-row-archived");
+  if (drag?.marker === "before") classes.push("fh-drop-before");
+  if (drag?.marker === "after") classes.push("fh-drop-after");
+  const row = React.useRef(null);
+  const armed = React.useRef(false);
+  React.useEffect(() => {
+    if (props.reveal !== true) return;
+    row.current?.scrollIntoView({ block: "nearest" });
+    props.onRevealed?.();
+  }, [props.reveal, props.onRevealed]);
+  return /* @__PURE__ */ h(
+    HoverCard,
+    {
+      disabled: drag?.active === true,
+      copyText: node.blank || node.title === "" ? void 0 : node.title,
+      copyLabel: props.t("copy"),
+      copiedLabel: props.t("hover.copied"),
+      content: /* @__PURE__ */ h("div", { className: "fh-hovercard-body" }, /* @__PURE__ */ h("div", { className: "fh-hovercard-title" }, title), node.cwd === void 0 ? null : /* @__PURE__ */ h("div", { className: "fh-hovercard-path" }, node.cwd), node.blank ? null : /* @__PURE__ */ h("div", { className: "fh-hovercard-time" }, hoverTimeLabel(node.updatedAt, props.now, props.t)), statuses.filter((status) => !(node.archived && (status.state === "done" || status.state === "idle"))).map((status) => /* @__PURE__ */ h("div", { className: "fh-hovercard-status", key: status.label }, /* @__PURE__ */ h(StatusDot, { state: status.state }), /* @__PURE__ */ h("span", null, status.label))), node.archived ? /* @__PURE__ */ h("div", { className: "fh-hovercard-status fh-hovercard-archived" }, /* @__PURE__ */ h(IconArchive, { size: 14 }), /* @__PURE__ */ h("span", null, props.t("row.archived"))) : null)
+    },
+    /* @__PURE__ */ h(
+      "div",
+      {
+        ref: row,
+        className: classes.join(" "),
+        role: "treeitem",
+        "aria-selected": props.selected,
+        tabIndex: 0,
+        "data-archived": node.archived ? "true" : void 0,
+        draggable: drag?.enabled === true,
+        onClick: () => {
+          props.onOpen(node.id);
+        },
+        onKeyDown: (event) => {
+          if (event.target !== event.currentTarget) return;
+          if (event.key === "ContextMenu" || event.key === "F10" && event.shiftKey) {
+            event.preventDefault();
+            const box = event.currentTarget.getBoundingClientRect();
+            props.onMenu({ x: box.left, y: box.bottom });
+            return;
+          }
+          if (event.key !== "Enter" && event.key !== " ") return;
+          if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+          event.preventDefault();
+          props.onOpen(node.id);
+        },
+        onContextMenu: (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          props.onMenu({ x: event.clientX, y: event.clientY });
+        },
+        onDragStart: drag?.enabled === true ? (event) => {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", node.id);
+          drag?.start();
+        } : void 0,
+        onDragEnd: drag === void 0 ? void 0 : () => {
+          drag.end();
+        },
+        onDragOver: drag === void 0 ? void 0 : (event) => {
+          if (!drag.active) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+          const box = event.currentTarget.getBoundingClientRect();
+          drag.hover(event.clientY < box.top + box.height / 2 ? "before" : "after");
+        },
+        onDrop: drag === void 0 ? void 0 : (event) => {
+          if (!drag.active) return;
+          event.preventDefault();
+          const box = event.currentTarget.getBoundingClientRect();
+          drag.drop(event.clientY < box.top + box.height / 2 ? "before" : "after");
+        }
+      },
+      /* @__PURE__ */ h("span", { className: "fh-row-slot" }, !node.archived && !node.blank && showStatus ? /* @__PURE__ */ h(Fragment, null, /* @__PURE__ */ h(StatusDot, { state: primary.state }), statuses.map((status) => /* @__PURE__ */ h("span", { className: "fh-visually-hidden", key: status.label }, status.label))) : null),
+      /* @__PURE__ */ h(
+        "span",
+        {
+          className: "fh-row-title",
+          onMouseDown: (event) => {
+            if (event.detail !== 1) return;
+            armed.current = true;
+            window.addEventListener(
+              "blur",
+              () => {
+                armed.current = false;
+              },
+              { once: true }
+            );
+          },
+          onDoubleClick: (event) => {
+            if (node.blank || props.onRenameRequest === void 0) return;
+            event.stopPropagation();
+            if (!armed.current) return;
+            armed.current = false;
+            props.onRenameRequest(node.id, node.title);
+          }
+        },
+        title
+      ),
+      node.blank ? null : /* @__PURE__ */ h("span", { className: "fh-row-rest" }, /* @__PURE__ */ h("span", { className: "fh-row-time" }, primary.trailingLabel ?? timeLabel(node.updatedAt, props.now, props.t)), node.pinned && !node.archived ? /* @__PURE__ */ h(
+        "span",
+        {
+          className: "fh-row-pin",
+          title: props.t("row.pinned"),
+          role: "img",
+          "aria-label": props.t("row.pinned")
+        },
+        /* @__PURE__ */ h(IconPinFill, { size: 12 })
+      ) : null),
+      node.blank ? null : /* @__PURE__ */ h("span", { className: "fh-row-actions", onClick: (event) => event.stopPropagation() }, /* @__PURE__ */ h(
+        "button",
+        {
+          type: "button",
+          className: "fh-icon-button",
+          title: props.t("actions.session.aria", { name: title }),
+          "aria-label": props.t("actions.session.aria", { name: title }),
+          onClick: (event) => {
+            const box = event.currentTarget.getBoundingClientRect();
+            props.onMenu({ x: box.left, y: box.bottom });
+          }
+        },
+        /* @__PURE__ */ h(IconMore, null)
+      ), node.archived ? props.onUnarchive === void 0 ? null : /* @__PURE__ */ h(
+        "button",
+        {
+          type: "button",
+          className: "fh-icon-button",
+          title: props.t("actions.unarchive"),
+          "aria-label": props.t("actions.unarchive"),
+          onClick: props.onUnarchive
+        },
+        /* @__PURE__ */ h(IconUnarchive, { size: 14 })
+      ) : props.pinned ? props.onPin === void 0 ? null : /* @__PURE__ */ h(
+        "button",
+        {
+          type: "button",
+          className: "fh-icon-button",
+          title: props.t("row.pinned"),
+          "aria-label": props.t("row.pinned"),
+          onClick: props.onPin
+        },
+        /* @__PURE__ */ h(IconPinFill, { size: 12 })
+      ) : props.onPin === void 0 ? null : /* @__PURE__ */ h(
+        "button",
+        {
+          type: "button",
+          className: "fh-icon-button",
+          title: props.t("row.pinned"),
+          "aria-label": props.t("row.pinned"),
+          onClick: props.onPin
+        },
+        /* @__PURE__ */ h(IconPinFill, { size: 12 })
+      ), node.archived || props.onArchive === void 0 ? null : /* @__PURE__ */ h(
+        "button",
+        {
+          type: "button",
+          className: "fh-icon-button",
+          title: props.t("row.archived"),
+          "aria-label": props.t("row.archived"),
+          onClick: props.onArchive
+        },
+        /* @__PURE__ */ h(IconArchive, { size: 14 })
+      ))
+    )
+  );
 }
-var UNGROUPED_GROUP = {
-  key: "",
-  workspaceId: "",
-  project: "",
-  path: "",
-  sessions: [],
-  ungrouped: true
-};
-var SIDEBAR_DICT = {
-  zh: {
-    "section.workspaces": "\u5DE5\u4F5C\u533A",
-    "group.ungrouped": "\u672A\u5206\u7EC4",
-    "actions.newSession": "\u65B0\u5EFA\u4F1A\u8BDD",
-    "actions.addWorkspace": "\u6DFB\u52A0\u5DE5\u4F5C\u533A",
-    "search.open": "\u641C\u7D22\u4F1A\u8BDD",
-    "search.placeholder": "\u641C\u7D22\u4F1A\u8BDD\u2026",
-    "search.empty": "\u6CA1\u6709\u5339\u914D\u7684\u4F1A\u8BDD",
-    "search.results": "\u641C\u7D22\u7ED3\u679C",
-    "session.new": "\u65B0\u4F1A\u8BDD",
-    "session.untitled": "\u672A\u547D\u540D\u4F1A\u8BDD",
-    "empty.none": "\u8FD8\u6CA1\u6709\u4F1A\u8BDD",
-    "time.justNow": "\u521A\u521A",
-    "time.minutes": "{count} \u5206\u949F\u524D",
-    "time.hours": "{count} \u5C0F\u65F6\u524D",
-    "time.days": "{count} \u5929\u524D",
-    "time.unknown": "\u2014",
-    "status.running": "\u8FD0\u884C\u4E2D",
-    "status.waiting": "\u5F85\u786E\u8BA4",
-    "status.done": "\u6709\u65B0\u7ED3\u679C",
-    "status.idle": "\u7A7A\u95F2",
-    "shell.fallback": "\u4FA7\u8FB9\u680F\u52A0\u8F7D\u5F02\u5E38\uFF0C\u5DF2\u5207\u6362\u4E3A\u7B80\u7248\u5217\u8868\uFF1B\u91CD\u5F00\u6216\u5237\u65B0\u53EF\u6062\u590D\u3002"
-  },
-  en: {
-    "section.workspaces": "Workspaces",
-    "group.ungrouped": "Ungrouped",
-    "actions.newSession": "New session",
-    "actions.addWorkspace": "Add workspace",
-    "search.open": "Search sessions",
-    "search.placeholder": "Search sessions\u2026",
-    "search.empty": "No session matches",
-    "search.results": "Results",
-    "session.new": "New session",
-    "session.untitled": "Untitled session",
-    "empty.none": "No sessions yet",
-    "time.justNow": "Just now",
-    "time.minutes": "{count} min ago",
-    "time.hours": "{count} hr ago",
-    "time.days": "{count} d ago",
-    "time.unknown": "\u2014",
-    "status.running": "Running",
-    "status.waiting": "Waiting for you",
-    "status.done": "New result",
-    "status.idle": "Idle",
-    "shell.fallback": "The full sidebar failed to render; showing a simplified list. Reopen or refresh to recover."
+function SearchResultRow(props) {
+  const result = props.result;
+  const statuses = sessionStatuses(result, props.t);
+  const primary = statuses[0];
+  const classes = ["fh-search-row"];
+  if (props.selected) classes.push("fh-row-selected");
+  if (result.archived) classes.push("fh-row-archived");
+  return /* @__PURE__ */ h(
+    "div",
+    {
+      className: classes.join(" "),
+      role: "treeitem",
+      "aria-selected": props.selected,
+      onClick: props.onOpen,
+      onKeyDown: (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        props.onOpen();
+      },
+      tabIndex: 0
+    },
+    /* @__PURE__ */ h("span", { className: "fh-search-heading" }, /* @__PURE__ */ h("span", { className: "fh-row-slot" }, result.archived ? null : primary.state === "idle" ? null : /* @__PURE__ */ h(StatusDot, { state: primary.state })), /* @__PURE__ */ h("span", { className: "fh-row-title" }, result.title === "" ? props.t("session.untitled") : result.title), result.archived && props.onUnarchive !== void 0 ? /* @__PURE__ */ h("span", { className: "fh-row-actions", onClick: (event) => event.stopPropagation() }, /* @__PURE__ */ h(
+      "button",
+      {
+        type: "button",
+        className: "fh-icon-button",
+        title: props.t("actions.unarchive"),
+        "aria-label": props.t("actions.unarchive"),
+        onClick: props.onUnarchive
+      },
+      /* @__PURE__ */ h(IconUnarchive, { size: 14 })
+    )) : null),
+    /* @__PURE__ */ h("span", { className: "fh-search-meta" }, /* @__PURE__ */ h("span", { className: "fh-search-workspace" }, result.workspace === "" ? props.t("group.ungrouped") : result.workspace), result.snippet === void 0 ? null : /* @__PURE__ */ h("span", { className: "fh-search-snippet" }, result.snippet))
+  );
+}
+
+// client/src/shell/dialogs.tsx
+function Modal(props) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const element = ref.current;
+    if (element === null) return;
+    if (props.open && !element.open) element.showModal();
+    else if (!props.open && element.open) element.close();
+  }, [props.open]);
+  return /* @__PURE__ */ h(
+    "dialog",
+    {
+      ref,
+      className: "fh-dialog",
+      "aria-label": props.title,
+      onCancel: (event) => {
+        event.preventDefault();
+        props.onClose();
+      },
+      onClick: (event) => {
+        if (event.target === ref.current) props.onClose();
+      }
+    },
+    /* @__PURE__ */ h("div", { className: "fh-dialog-head" }, /* @__PURE__ */ h("span", { className: "fh-dialog-title" }, props.title), /* @__PURE__ */ h(
+      "button",
+      {
+        type: "button",
+        className: "fh-icon-button",
+        title: props.ariaLabelClose ?? props.title,
+        onClick: props.onClose
+      },
+      /* @__PURE__ */ h(IconClose, { size: 14 })
+    )),
+    props.description === void 0 ? null : /* @__PURE__ */ h("p", { className: "fh-dialog-desc" }, props.description),
+    /* @__PURE__ */ h("div", { className: "fh-dialog-body" }, props.children),
+    props.footer === void 0 ? null : /* @__PURE__ */ h("div", { className: "fh-dialog-foot" }, props.footer)
+  );
+}
+function SessionRenameDialog(props) {
+  const [draft, setDraft] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState(null);
+  const composing = React.useRef(false);
+  const key = props.open ? `${props.sessionId ?? ""}/${props.currentTitle}` : "";
+  const lastKey = React.useRef(key);
+  if (lastKey.current !== key) {
+    lastKey.current = key;
+    setDraft(props.currentTitle);
+    setError(null);
+    setBusy(false);
   }
+  const trimmed = draft.trim();
+  const blocked = busy || trimmed === "" || trimmed === props.currentTitle;
+  const close = () => {
+    if (busy) return;
+    props.onClose();
+  };
+  const confirm = () => {
+    if (blocked || props.sessionId === null) return;
+    setBusy(true);
+    setError(null);
+    props.onConfirm(props.sessionId, trimmed).then(() => {
+      setBusy(false);
+      props.onClose();
+    }).catch((reason) => {
+      setBusy(false);
+      setError(reason instanceof Error ? reason.message : String(reason));
+    });
+  };
+  return /* @__PURE__ */ h(
+    Modal,
+    {
+      open: props.open,
+      title: props.t("rename"),
+      ariaLabelClose: props.closeLabel,
+      onClose: close,
+      footer: /* @__PURE__ */ h(Fragment, null, /* @__PURE__ */ h("button", { type: "button", className: "fh-button", disabled: busy, onClick: close }, props.cancelLabel), /* @__PURE__ */ h("button", { type: "button", className: "fh-button fh-button-primary", disabled: blocked, onClick: confirm }, props.t("rename")))
+    },
+    /* @__PURE__ */ h(
+      "input",
+      {
+        className: "fh-input",
+        value: draft,
+        "aria-label": props.t("field.workspaceName"),
+        disabled: busy,
+        autoFocus: true,
+        onFocus: (event) => {
+          event.currentTarget.select();
+        },
+        onChange: (event) => {
+          setDraft(event.currentTarget.value);
+          setError(null);
+        },
+        onCompositionStart: () => {
+          composing.current = true;
+        },
+        onCompositionEnd: () => {
+          composing.current = false;
+        },
+        onKeyDown: (event) => {
+          if (event.key !== "Enter" || composing.current) return;
+          event.preventDefault();
+          confirm();
+        }
+      }
+    ),
+    error === null ? null : /* @__PURE__ */ h("div", { className: "fh-dialog-error", role: "alert" }, error)
+  );
+}
+function WorkspaceDialogs(props) {
+  const request = props.request;
+  const renameTarget = request !== null && request.action === "rename" ? request : null;
+  const [draft, setDraft] = React.useState("");
+  const [renaming, setRenaming] = React.useState(false);
+  const [renameError, setRenameError] = React.useState(null);
+  const composing = React.useRef(false);
+  const renameKey = renameTarget === null ? "" : `${renameTarget.workspaceId}/${renameTarget.storedTitle}`;
+  const lastKey = React.useRef(renameKey);
+  if (lastKey.current !== renameKey) {
+    lastKey.current = renameKey;
+    setDraft(renameTarget === null ? "" : renameTarget.displayTitle);
+    setRenameError(null);
+    setRenaming(false);
+  }
+  const trimmed = draft.trim();
+  const duplicate = renameTarget !== null && trimmed !== "" && props.workspaces.some(
+    (workspace) => workspace.workspaceId !== renameTarget.workspaceId && workspace.title === trimmed
+  );
+  const blocked = renaming || renameTarget === null || trimmed === "" || trimmed === renameTarget.storedTitle || duplicate;
+  const closeRename = () => {
+    if (renaming) return;
+    props.settle();
+    setRenameError(null);
+  };
+  const confirmRename = () => {
+    if (blocked || renameTarget === null) return;
+    setRenaming(true);
+    setRenameError(null);
+    props.renameWorkspace(renameTarget.workspaceId, trimmed).then(() => {
+      setRenaming(false);
+      props.settle();
+    }).catch((reason) => {
+      setRenaming(false);
+      setRenameError(reason instanceof Error ? reason.message : String(reason));
+    });
+  };
+  const deleteTarget = request !== null && request.action === "delete" ? request : null;
+  const [deleting, setDeleting] = React.useState(false);
+  const [deleteError, setDeleteError] = React.useState(null);
+  const [deleteCommittedId, setDeleteCommittedId] = React.useState(null);
+  React.useEffect(() => {
+    if (deleteCommittedId === null) return;
+    if (props.workspaces.some((workspace) => workspace.workspaceId === deleteCommittedId)) return;
+    setDeleting(false);
+    setDeleteCommittedId(null);
+    props.settle();
+  }, [deleteCommittedId, props]);
+  const closeDelete = () => {
+    if (deleting) return;
+    props.settle();
+    setDeleteError(null);
+  };
+  const confirmDelete = () => {
+    if (deleting || deleteTarget === null) return;
+    setDeleting(true);
+    setDeleteError(null);
+    props.deleteWorkspace(deleteTarget.workspaceId).then(() => {
+      setDeleteCommittedId(deleteTarget.workspaceId);
+    }).catch((reason) => {
+      setDeleting(false);
+      setDeleteError(reason instanceof Error ? reason.message : String(reason));
+    });
+  };
+  return /* @__PURE__ */ h(Fragment, null, /* @__PURE__ */ h(
+    Modal,
+    {
+      open: renameTarget !== null,
+      title: props.t("rename.workspace.title"),
+      ariaLabelClose: props.closeLabel,
+      onClose: closeRename,
+      footer: /* @__PURE__ */ h(Fragment, null, /* @__PURE__ */ h("button", { type: "button", className: "fh-button", disabled: renaming, onClick: closeRename }, props.cancelLabel), /* @__PURE__ */ h(
+        "button",
+        {
+          type: "button",
+          className: "fh-button fh-button-primary",
+          disabled: blocked,
+          onClick: confirmRename
+        },
+        props.t("rename")
+      ))
+    },
+    /* @__PURE__ */ h(
+      "input",
+      {
+        className: "fh-input",
+        value: draft,
+        "aria-label": props.t("field.workspaceName"),
+        disabled: renaming,
+        autoFocus: true,
+        onFocus: (event) => {
+          event.currentTarget.select();
+        },
+        onChange: (event) => {
+          setDraft(event.currentTarget.value);
+          setRenameError(null);
+        },
+        onCompositionStart: () => {
+          composing.current = true;
+        },
+        onCompositionEnd: () => {
+          composing.current = false;
+        },
+        onKeyDown: (event) => {
+          if (event.key !== "Enter" || composing.current) return;
+          event.preventDefault();
+          confirmRename();
+        }
+      }
+    ),
+    duplicate ? /* @__PURE__ */ h("div", { className: "fh-dialog-error", role: "alert" }, props.t("conflict.named", { name: trimmed })) : null,
+    renameError === null ? null : /* @__PURE__ */ h("div", { className: "fh-dialog-error", role: "alert" }, renameError)
+  ), /* @__PURE__ */ h(
+    Modal,
+    {
+      open: deleteTarget !== null,
+      title: props.t("delete.workspace"),
+      description: deleteTarget === null ? void 0 : props.t("delete.desc", { name: deleteTarget.displayTitle }),
+      ariaLabelClose: props.closeLabel,
+      onClose: closeDelete,
+      footer: /* @__PURE__ */ h(Fragment, null, /* @__PURE__ */ h("button", { type: "button", className: "fh-button", disabled: deleting, onClick: closeDelete }, props.cancelLabel), /* @__PURE__ */ h(
+        "button",
+        {
+          type: "button",
+          className: "fh-button fh-button-danger",
+          disabled: deleting,
+          onClick: confirmDelete
+        },
+        props.t("delete.workspace")
+      ))
+    },
+    deleting ? /* @__PURE__ */ h("div", { className: "fh-dialog-status", role: "status" }, props.t("delete.pending")) : null,
+    deleteError === null ? null : /* @__PURE__ */ h("div", { className: "fh-dialog-error", role: "alert" }, deleteError)
+  ));
+}
+function DirectoryDialog(props) {
+  const [listing, setListing] = React.useState(null);
+  const [path, setPath] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState(null);
+  const [creating, setCreating] = React.useState(false);
+  const [folderName, setFolderName] = React.useState("");
+  const scan = React.useRef(0);
+  const load = React.useCallback(
+    (target) => {
+      const seq = ++scan.current;
+      setLoading(true);
+      setError(null);
+      props.listDirectory(target).then((result) => {
+        if (seq !== scan.current) return;
+        setListing(result);
+        setPath(result.path);
+        setLoading(false);
+      }).catch((reason) => {
+        if (seq !== scan.current) return;
+        setLoading(false);
+        const message = reason instanceof Error ? reason.message : String(reason);
+        if (message.includes("directory-picker/unavailable")) {
+          props.onUnsupported();
+          return;
+        }
+        setError(message);
+      });
+    },
+    [props]
+  );
+  const wasOpen = React.useRef(false);
+  if (props.open !== wasOpen.current) {
+    wasOpen.current = props.open;
+    if (props.open) {
+      setFolderName("");
+      setCreating(false);
+      load();
+    } else {
+      scan.current += 1;
+      setListing(null);
+      setLoading(false);
+      setError(null);
+    }
+  }
+  const parent = listing?.crumbs?.at(-2)?.path;
+  const entries = listing?.entries ?? [];
+  const createFolder = () => {
+    const name = folderName.trim();
+    if (creating || name === "" || listing === null) return;
+    setCreating(true);
+    setError(null);
+    props.createDirectory(listing.path, name).then((created) => {
+      setCreating(false);
+      setFolderName("");
+      load(created);
+    }).catch((reason) => {
+      setCreating(false);
+      setError(reason instanceof Error ? reason.message : String(reason));
+    });
+  };
+  const useSystemPicker = () => {
+    props.pickDirectory().then((picked) => {
+      if (picked !== null && picked !== "") props.onPicked(picked);
+    }).catch((reason) => {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    });
+  };
+  return /* @__PURE__ */ h(
+    Modal,
+    {
+      open: props.open,
+      title: props.t("picker.title"),
+      ariaLabelClose: props.closeLabel,
+      onClose: props.onClose,
+      footer: /* @__PURE__ */ h(Fragment, null, /* @__PURE__ */ h("button", { type: "button", className: "fh-button", onClick: useSystemPicker }, props.t("picker.system")), /* @__PURE__ */ h("span", { className: "fh-dialog-foot-gap" }), /* @__PURE__ */ h("button", { type: "button", className: "fh-button", onClick: props.onClose }, props.t("cancel")), /* @__PURE__ */ h(
+        "button",
+        {
+          type: "button",
+          className: "fh-button fh-button-primary",
+          disabled: listing === null || loading,
+          onClick: () => {
+            if (listing !== null) props.onPicked(listing.path);
+          }
+        },
+        props.t("picker.use")
+      ))
+    },
+    /* @__PURE__ */ h("div", { className: "fh-picker-path" }, /* @__PURE__ */ h(
+      "button",
+      {
+        type: "button",
+        className: "fh-icon-button",
+        title: props.t("picker.up"),
+        "aria-label": props.t("picker.up"),
+        disabled: parent === void 0,
+        onClick: () => {
+          if (parent !== void 0) load(parent);
+        }
+      },
+      /* @__PURE__ */ h(IconArrowUp, { size: 14 })
+    ), /* @__PURE__ */ h(
+      "input",
+      {
+        className: "fh-input fh-picker-path-input",
+        value: path,
+        "aria-label": props.t("picker.path"),
+        spellCheck: false,
+        onChange: (event) => {
+          setPath(event.currentTarget.value);
+        },
+        onKeyDown: (event) => {
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          load(path);
+        }
+      }
+    )),
+    /* @__PURE__ */ h("div", { className: "fh-picker-list", role: "listbox", "aria-label": props.t("picker.title") }, loading ? /* @__PURE__ */ h("div", { className: "fh-picker-status" }, props.t("picker.loading")) : null, !loading && entries.length === 0 ? /* @__PURE__ */ h("div", { className: "fh-picker-status" }, props.t("picker.empty")) : null, entries.map((entry) => /* @__PURE__ */ h(
+      "button",
+      {
+        key: entry.path,
+        type: "button",
+        role: "option",
+        "aria-selected": false,
+        className: "fh-picker-entry",
+        title: entry.path,
+        onClick: () => {
+          load(entry.path);
+        }
+      },
+      /* @__PURE__ */ h(IconFolderClose, { size: 14 }),
+      /* @__PURE__ */ h("span", { className: "fh-picker-entry-name" }, entry.name)
+    ))),
+    /* @__PURE__ */ h("div", { className: "fh-picker-new" }, /* @__PURE__ */ h(
+      "input",
+      {
+        className: "fh-input",
+        value: folderName,
+        placeholder: props.t("picker.newFolderName"),
+        "aria-label": props.t("picker.newFolderName"),
+        disabled: creating || listing === null,
+        onChange: (event) => {
+          setFolderName(event.currentTarget.value);
+        },
+        onKeyDown: (event) => {
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          createFolder();
+        }
+      }
+    ), /* @__PURE__ */ h(
+      "button",
+      {
+        type: "button",
+        className: "fh-button",
+        disabled: creating || folderName.trim() === "" || listing === null,
+        onClick: createFolder
+      },
+      props.t("picker.newFolder")
+    )),
+    error === null ? null : /* @__PURE__ */ h("div", { className: "fh-dialog-error", role: "alert" }, props.t("picker.error", { message: error }))
+  );
+}
+
+// client/src/shell/view-state.ts
+var STORAGE_KEY = "dsh-feature-hub.sidebar.view.v1";
+var INITIAL_STATE = {
+  groupBy: "workspace",
+  orderBy: "updated",
+  groupExpansion: {},
+  sessionOrderByAccount: {},
+  archivedFilter: "default"
 };
+function pickOne(value, allowed) {
+  return typeof value === "string" && allowed.includes(value) ? value : void 0;
+}
+function pickOrderMap(value) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+  const out = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (!Array.isArray(entry)) continue;
+    out[key] = entry.filter((id) => typeof id === "string");
+  }
+  return out;
+}
+function pickBoolMap(value) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+  const out = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (typeof entry === "boolean") out[key] = entry;
+  }
+  return out;
+}
+function readState() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (raw === null) return INITIAL_STATE;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return INITIAL_STATE;
+    const record = parsed;
+    return {
+      groupBy: pickOne(record.groupBy, ["workspace", "workspace-tree", "flat"]) ?? INITIAL_STATE.groupBy,
+      orderBy: pickOne(record.orderBy, ["manual", "updated"]) ?? INITIAL_STATE.orderBy,
+      groupExpansion: pickBoolMap(record.groupExpansion),
+      sessionOrderByAccount: pickOrderMap(record.sessionOrderByAccount),
+      archivedFilter: pickOne(record.archivedFilter, ["default", "show", "only"]) ?? INITIAL_STATE.archivedFilter
+    };
+  } catch (_error) {
+    return INITIAL_STATE;
+  }
+}
+function writeState(state) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (_error) {
+  }
+}
+function copyOrders(orders) {
+  return Object.fromEntries(Object.entries(orders).map(([key, order]) => [key, [...order]]));
+}
+function createViewStore() {
+  let state = readState();
+  const listeners6 = /* @__PURE__ */ new Set();
+  const commit = (next) => {
+    state = next;
+    writeState(next);
+    for (const listener of [...listeners6]) listener();
+  };
+  const actions = {
+    setGroupBy(mode) {
+      if (mode === state.groupBy) return;
+      commit({ ...state, groupBy: mode });
+    },
+    setOrderBy(mode, initialOrders) {
+      if (mode === state.orderBy) return;
+      commit({
+        ...state,
+        orderBy: mode,
+        sessionOrderByAccount: mode === "manual" ? copyOrders(initialOrders) : {}
+      });
+    },
+    setGroupExpanded(key, expanded) {
+      if ((state.groupExpansion[key] ?? true) === expanded) return;
+      commit({ ...state, groupExpansion: { ...state.groupExpansion, [key]: expanded } });
+    },
+    setArchivedFilter(filter) {
+      if (filter === state.archivedFilter) return;
+      commit({ ...state, archivedFilter: filter });
+    },
+    setSessionOrder(accountKey, order, initialOrders) {
+      const base = state.orderBy === "manual" ? state.sessionOrderByAccount : initialOrders;
+      commit({
+        ...state,
+        orderBy: "manual",
+        sessionOrderByAccount: { ...copyOrders(base), [accountKey]: [...order] }
+      });
+    },
+    syncSessionOrders(orders) {
+      if (state.orderBy !== "manual") return;
+      commit({
+        ...state,
+        sessionOrderByAccount: { ...state.sessionOrderByAccount, ...copyOrders(orders) }
+      });
+    },
+    retainAccountKeys(keys) {
+      const retained = new Set(keys);
+      const groupExpansion = Object.fromEntries(
+        Object.entries(state.groupExpansion).filter(([key]) => retained.has(key))
+      );
+      const sessionOrderByAccount = Object.fromEntries(
+        Object.entries(state.sessionOrderByAccount).filter(([key]) => retained.has(key))
+      );
+      commit({ ...state, groupExpansion, sessionOrderByAccount });
+    },
+    pinSessionOrder(sessionId, accountKeys) {
+      const selected = new Set(accountKeys);
+      const next = Object.fromEntries(
+        Object.entries(state.sessionOrderByAccount).map(([key, order]) => [
+          key,
+          selected.has(key) ? [sessionId, ...order.filter((id) => id !== sessionId)] : order
+        ])
+      );
+      commit({ ...state, sessionOrderByAccount: next });
+    }
+  };
+  return {
+    get: () => state,
+    subscribe(listener) {
+      listeners6.add(listener);
+      return () => {
+        listeners6.delete(listener);
+      };
+    },
+    actions
+  };
+}
+function useViewState(store) {
+  const [snapshot, setSnapshot] = React.useState(() => store.get());
+  React.useEffect(() => {
+    setSnapshot(store.get());
+    return store.subscribe(() => {
+      setSnapshot(store.get());
+    });
+  }, [store]);
+  return snapshot;
+}
+
+// client/src/shell/tree.ts
+var UNGROUPED_KEY = "";
+var FLAT_SESSION_ORDER_KEY = "__flat_session_order__";
+function mainSessionId(list) {
+  for (const session of Object.values(list.byId)) {
+    if ((session.retainedBy?.mainView ?? 0) > 0) return session.id;
+  }
+  return void 0;
+}
+function owningGroupKey(workspaces, sessionId) {
+  const owner = workspaces.find((workspace) => workspace.sessionIds.includes(sessionId));
+  return owner === void 0 ? UNGROUPED_KEY : owner.workspaceId;
+}
+function workspaceLabel(cwd) {
+  if (cwd === void 0 || cwd === "") return "";
+  const parts = cwd.split(/[\\/]+/).filter((part) => part !== "");
+  return parts.length === 0 ? cwd : String(parts[parts.length - 1]);
+}
+function orderByRecency(sessionIds, summaries) {
+  return sessionIds.flatMap((id) => {
+    const summary = summaries[id];
+    if (summary === void 0) return [];
+    return [{ id, rank: Number(summary.updatedAt) || 0 }];
+  }).sort((a, b) => {
+    if (a.rank !== b.rank) return b.rank - a.rank;
+    return a.id < b.id ? -1 : 1;
+  }).map((member) => member.id);
+}
+function reconcileManualOrder(memberIds, savedOrder, summaries, rowState) {
+  const members = new Set(memberIds);
+  const included = /* @__PURE__ */ new Set();
+  const ordered = [];
+  for (const key of savedOrder ?? []) {
+    if (!members.has(key) || included.has(key)) continue;
+    ordered.push(key);
+    included.add(key);
+  }
+  const archived = new Set(rowState?.archivedSessionIds);
+  const pins = [];
+  for (const sessionId of rowState?.pinnedSessionIds ?? []) {
+    if (!members.has(sessionId) || included.has(sessionId)) continue;
+    if (archived.has(sessionId) || summaries[sessionId] === void 0) continue;
+    pins.push(sessionId);
+    included.add(sessionId);
+  }
+  const ordinary = [];
+  const archives = [];
+  const rest = orderByRecency(
+    [...members].filter((id) => !included.has(id)),
+    summaries
+  );
+  for (const id of rest) {
+    if (archived.has(id)) archives.push(id);
+    else ordinary.push(id);
+  }
+  return [...pins, ...ordered, ...ordinary, ...archives];
+}
+function pinCurrentBlank(order, currentBlank) {
+  if (currentBlank === void 0) return [...order];
+  return [currentBlank, ...order.filter((id) => id !== currentBlank)];
+}
+function sessionVisible(session, current, archived, archivedFilter) {
+  if (session.origin === "subagent") return false;
+  if (session.blank === true && session.id !== current) return false;
+  switch (archivedFilter) {
+    case "default":
+      return !archived.has(session.id);
+    case "show":
+      return true;
+    case "only":
+      return archived.has(session.id);
+    default:
+      return false;
+  }
+}
+function sessionTitle(session) {
+  return session.blank === true ? "" : (session.title ?? "").trim();
+}
+function sectionMembers(members, pinned, archived) {
+  const placeholders = [];
+  const leading = [];
+  const rest = [];
+  for (const member of members) {
+    if (member.blank === true) placeholders.push(member);
+    else if (!archived.has(member.id) && pinned.has(member.id)) leading.push(member);
+    else rest.push(member);
+  }
+  return [...placeholders, ...leading, ...rest];
+}
+function visiblePendingKind(kind) {
+  switch (kind) {
+    case "approval":
+    case "plan-review":
+    case "question":
+      return kind;
+    default:
+      return void 0;
+  }
+}
+function runningChildCount(list, parentId, statuses) {
+  const catalog = list.projectionsBySession?.[parentId]?.values?.subagentCatalog;
+  if (catalog === void 0) return 0;
+  return catalog.reduce((count, child) => {
+    const childStatus = statusesOf(statuses, child.id);
+    const running = childStatus?.running ?? list.byId[child.id]?.running ?? false;
+    return count + (running ? 1 : 0);
+  }, 0);
+}
+function statusesOf(statuses, sessionId) {
+  if (statuses === void 0 || statuses === null) return void 0;
+  const asMap = statuses;
+  if (typeof asMap.get === "function") return asMap.get(sessionId);
+  return statuses[sessionId];
+}
+function sessionNode(session, list, statuses, pinned, archived) {
+  const status = statusesOf(statuses, session.id);
+  const pendingInteraction = visiblePendingKind(status?.pendingInteraction?.kind);
+  const cwd = session.cwd;
+  return {
+    id: session.id,
+    title: sessionTitle(session),
+    blank: session.blank === true,
+    running: status?.running ?? session.running,
+    runningSubagentCount: runningChildCount(list, session.id, statuses),
+    completed: status?.completionUnread === true,
+    pinned: !archived.has(session.id) && pinned.has(session.id),
+    archived: archived.has(session.id),
+    updatedAt: Number(session.updatedAt) || 0,
+    ...cwd === void 0 || cwd === "" ? {} : { cwd },
+    ...pendingInteraction === void 0 ? {} : { pendingInteraction }
+  };
+}
+function groupByWorkspace(list, workspaces, archived, archivedFilter, ungroupedOrder) {
+  const current = mainSessionId(list);
+  const groups = [];
+  const accounted = /* @__PURE__ */ new Set();
+  for (const workspace of workspaces) {
+    const members = [];
+    for (const id of workspace.sessionIds) {
+      const summary = list.byId[id];
+      if (summary === void 0) continue;
+      accounted.add(id);
+      if (!sessionVisible(summary, current, archived, archivedFilter)) continue;
+      members.push(summary);
+    }
+    if (archivedFilter === "only" && members.length === 0) continue;
+    groups.push({
+      key: workspace.workspaceId,
+      workspaceId: workspace.workspaceId,
+      cwd: workspace.path,
+      createdAt: parseTime(workspace.createdAt),
+      label: workspace.title,
+      sessions: members
+    });
+  }
+  const stray = list.ids.map((id) => list.byId[id]).filter(
+    (session) => session !== void 0 && !accounted.has(session.id) && sessionVisible(session, current, archived, archivedFilter)
+  );
+  if (stray.length > 0) {
+    groups.push({
+      key: UNGROUPED_KEY,
+      workspaceId: void 0,
+      cwd: void 0,
+      createdAt: void 0,
+      label: "",
+      sessions: orderedUngrouped(stray, ungroupedOrder, list.byId)
+    });
+  }
+  return groups;
+}
+function orderedUngrouped(members, stored, summaries) {
+  const byId = new Map(members.map((session) => [session.id, session]));
+  const ids = stored === void 0 ? orderByRecency(
+    members.map((session) => session.id),
+    summaries
+  ) : reconcileManualOrder(
+    members.map((session) => session.id),
+    stored,
+    summaries
+  );
+  return ids.flatMap((id) => {
+    const session = byId.get(id);
+    return session === void 0 ? [] : [session];
+  });
+}
+function parseTime(value) {
+  if (value === void 0 || value === "") return void 0;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : void 0;
+}
+function deriveGroups(list, workspaces, rowState, statuses, view) {
+  const archived = new Set(rowState.archivedSessionIds);
+  const pinned = new Set(rowState.pinnedSessionIds);
+  const expandedGroups = new Set(view.expandedGroups);
+  const current = mainSessionId(list);
+  const currentGroup = current === void 0 ? void 0 : owningGroupKey(workspaces, current);
+  const groups = [];
+  for (const draft of groupByWorkspace(
+    list,
+    workspaces,
+    archived,
+    rowState.archivedFilter,
+    view.ungroupedOrder
+  )) {
+    const expanded = expandedGroups.has(draft.key);
+    groups.push({
+      key: draft.key,
+      workspaceId: draft.workspaceId,
+      cwd: draft.cwd,
+      createdAt: draft.createdAt,
+      label: draft.label,
+      sessionCount: draft.sessions.length,
+      expanded,
+      containsCurrent: draft.key === currentGroup,
+      sessions: expanded ? sectionMembers(draft.sessions, pinned, archived).map(
+        (session) => sessionNode(session, list, statuses, pinned, archived)
+      ) : []
+    });
+  }
+  return groups;
+}
+function sessionMemberIds(list) {
+  return visibleSessionIds(list, [], "show");
+}
+function visibleSessionIds(list, archivedSessionIds, archivedFilter) {
+  const archived = new Set(archivedSessionIds);
+  const current = mainSessionId(list);
+  return list.ids.filter((id) => {
+    const session = list.byId[id];
+    return session !== void 0 && sessionVisible(session, current, archived, archivedFilter);
+  });
+}
+function deriveFlat(list, sessionIds, rowState, statuses) {
+  const archived = new Set(rowState.archivedSessionIds);
+  const pinned = new Set(rowState.pinnedSessionIds);
+  const current = mainSessionId(list);
+  const members = sessionIds.flatMap((id) => {
+    const session = list.byId[id];
+    return session !== void 0 && sessionVisible(session, current, archived, rowState.archivedFilter) ? [session] : [];
+  });
+  return sectionMembers(members, pinned, archived).map(
+    (session) => sessionNode(session, list, statuses, pinned, archived)
+  );
+}
+function deriveSearchResults(list, workspaces, query, archivedSessionIds, archivedFilter, statuses, content, limit) {
+  const needle = query.trim().toLowerCase();
+  if (needle === "") return { items: [], hasMore: false };
+  const archived = new Set(archivedSessionIds);
+  const current = mainSessionId(list);
+  const workspaceBySession = /* @__PURE__ */ new Map();
+  for (const workspace of workspaces) {
+    for (const sessionId of workspace.sessionIds) {
+      if (!workspaceBySession.has(sessionId)) workspaceBySession.set(sessionId, workspace.title);
+    }
+  }
+  const labelOf = (summary) => workspaceBySession.get(summary.id) ?? workspaceLabel(summary.cwd);
+  const contentBySession = /* @__PURE__ */ new Map();
+  for (const item of content.items) {
+    if (!contentBySession.has(item.sessionId)) contentBySession.set(item.sessionId, item);
+  }
+  const local = [];
+  for (const id of list.ids) {
+    const summary = list.byId[id];
+    if (summary === void 0 || summary.blank === true || !sessionVisible(summary, current, archived, archivedFilter)) {
+      continue;
+    }
+    if (sessionTitle(summary).toLowerCase().includes(needle) || labelOf(summary).toLowerCase().includes(needle) || summary.id.toLowerCase().includes(needle)) {
+      local.push(summary);
+    }
+  }
+  const localById = new Map(local.map((summary) => [summary.id, summary]));
+  const orderedLocal = orderByRecency(
+    local.map((summary) => summary.id),
+    list.byId
+  ).flatMap((id) => {
+    const summary = localById.get(id);
+    return summary === void 0 ? [] : [summary];
+  });
+  const ordered = [];
+  const included = /* @__PURE__ */ new Set();
+  const include = (summary) => {
+    if (included.has(summary.id)) return;
+    included.add(summary.id);
+    ordered.push(summary);
+  };
+  for (const summary of orderedLocal) include(summary);
+  for (const item of content.items) {
+    const summary = list.byId[item.sessionId];
+    if (summary !== void 0 && summary.blank !== true && sessionVisible(summary, current, archived, archivedFilter)) {
+      include(summary);
+    }
+  }
+  return {
+    items: ordered.slice(0, limit).map((summary) => {
+      const match = contentBySession.get(summary.id);
+      const status = statusesOf(statuses, summary.id);
+      const pendingInteraction = visiblePendingKind(status?.pendingInteraction?.kind);
+      const snippet = match?.snippet;
+      return {
+        id: summary.id,
+        title: sessionTitle(summary),
+        workspace: labelOf(summary),
+        running: status?.running ?? summary.running,
+        runningSubagentCount: runningChildCount(list, summary.id, statuses),
+        ...pendingInteraction === void 0 ? {} : { pendingInteraction },
+        completed: status?.completionUnread === true,
+        archived: archived.has(summary.id),
+        ...snippet === void 0 ? {} : { snippet }
+      };
+    }),
+    hasMore: content.hasMore || ordered.length > limit
+  };
+}
+function folderPath(path) {
+  const windows = /^[A-Za-z]:[/\\]/.test(path) || path.startsWith("\\\\");
+  return (windows ? path.replaceAll("\\", "/") : path).replace(/\/+$/, "");
+}
+function owningParentFolder(path, parents) {
+  const child = folderPath(path);
+  let owner;
+  let length = -1;
+  for (const parent of parents) {
+    const root = folderPath(parent);
+    if (root.length > length && child !== root && child.startsWith(`${root}/`)) {
+      owner = parent;
+      length = root.length;
+    }
+  }
+  return owner;
+}
+function buildSidebarGroups(input) {
+  const current = input.currentSessionId;
+  const visible = (session) => session !== void 0 && session.origin !== "subagent" && (session.blank !== true || session.id === current);
+  const accounted = /* @__PURE__ */ new Set();
+  const groups = [];
+  const rows = [];
+  const archived = new Set(input.archivedSessionIds);
+  const pinned = new Set(input.pinnedSessionIds);
+  const nodeOf = (session) => ({
+    id: session.id,
+    title: session.blank === true ? "" : (session.title ?? "").trim(),
+    blank: session.blank === true,
+    running: session.running,
+    runningSubagentCount: 0,
+    completed: false,
+    pinned: !archived.has(session.id) && pinned.has(session.id),
+    archived: archived.has(session.id),
+    updatedAt: Number(session.updatedAt) || 0
+  });
+  const order = (members) => orderByRecency(
+    members.map((session) => session.id),
+    input.byId
+  ).flatMap((id) => {
+    const session = input.byId[id];
+    return session === void 0 ? [] : [session];
+  });
+  for (const workspace of input.items) {
+    const members = [];
+    for (const sessionId of workspace.sessionIds) {
+      accounted.add(sessionId);
+      const session = input.byId[sessionId];
+      if (!visible(session)) continue;
+      if (archived.has(sessionId)) continue;
+      members.push(session);
+    }
+    if (members.length === 0) continue;
+    const ordered = order(members);
+    const nodes = sectionMembers(ordered, pinned, archived).map(nodeOf);
+    rows.push(...nodes);
+    groups.push({
+      key: workspace.workspaceId,
+      workspaceId: workspace.workspaceId,
+      cwd: workspace.path,
+      createdAt: parseTime(workspace.createdAt),
+      label: workspace.title,
+      sessionCount: nodes.length,
+      expanded: true,
+      containsCurrent: current !== null && members.some((session) => session.id === current),
+      sessions: nodes
+    });
+  }
+  const loose = [];
+  for (const sessionId of input.ids) {
+    if (accounted.has(sessionId)) continue;
+    const session = input.byId[sessionId];
+    if (!visible(session)) continue;
+    if (archived.has(sessionId)) continue;
+    loose.push(session);
+  }
+  if (loose.length > 0) {
+    const nodes = sectionMembers(order(loose), pinned, archived).map(nodeOf);
+    rows.push(...nodes);
+    groups.push({
+      key: UNGROUPED_KEY,
+      workspaceId: void 0,
+      cwd: void 0,
+      createdAt: void 0,
+      label: "",
+      sessionCount: nodes.length,
+      expanded: true,
+      containsCurrent: current !== null && loose.some((session) => session.id === current),
+      sessions: nodes
+    });
+  }
+  return { groups, rows };
+}
+
+// client/src/shell/browser.tsx
+var SESSION_WATERMARK_BASE = 5;
+var SESSION_WATERMARK_AUTO_MAX = 50;
+var SEARCH_DEBOUNCE_MS = 250;
+var SEARCH_QUERY_MAX_CODE_UNITS = 500;
+var PICK_TIMEOUT_MS = 18e4;
+function sanitizeQuery(value) {
+  const withoutNul = value.replaceAll("\0", "");
+  if (withoutNul.length <= SEARCH_QUERY_MAX_CODE_UNITS) return withoutNul;
+  let end = SEARCH_QUERY_MAX_CODE_UNITS;
+  const last = withoutNul.charCodeAt(end - 1);
+  const next = withoutNul.charCodeAt(end);
+  if (last >= 55296 && last <= 56319 && next >= 56320 && next <= 57343) end--;
+  return withoutNul.slice(0, end);
+}
+function basename(path) {
+  const parts = String(path || "").split(/[\\/]+/).filter((part) => part !== "");
+  return parts.length === 0 ? String(path || "") : String(parts[parts.length - 1]);
+}
+function watermarkRows(sessions, watermark) {
+  let count = 0;
+  const rows = sessions.filter((session) => {
+    if (session.blank) return true;
+    count += 1;
+    return count <= watermark;
+  });
+  return { rows, hiddenCount: sessions.length - rows.length };
+}
+function requiredWatermark(sessions, current, reveal) {
+  let index = 0;
+  let required = 0;
+  for (const session of sessions) {
+    if (session.blank) continue;
+    index += 1;
+    const attention = index <= SESSION_WATERMARK_AUTO_MAX && (session.running || session.runningSubagentCount > 0 || session.pendingInteraction !== void 0 || session.completed || session.id === current);
+    if (attention || session.id === reveal) required = index;
+  }
+  return required;
+}
+function sessionDragOrder(order, rows, drag, over) {
+  const source = rows.find((row) => row.id === drag.sessionId);
+  const target = rows.find((row) => row.id === over.id);
+  if (source === void 0 || target === void 0 || source.blank || source.pinned !== drag.pinned || target.pinned !== drag.pinned || source.id === target.id || !order.includes(source.id)) {
+    return void 0;
+  }
+  const next = order.filter((id) => id !== source.id);
+  const targetIndex = next.indexOf(target.id);
+  if (targetIndex === -1) return void 0;
+  next.splice(targetIndex + (over.half === "after" ? 1 : 0), 0, source.id);
+  const blank = rows.find((row) => row.blank)?.id;
+  return blank === void 0 ? next : [blank, ...next.filter((id) => id !== blank)];
+}
+function WorkspaceBrowser(props) {
+  const t = props.t;
+  const wide = props.wide !== false;
+  const list = props.useSessions((state) => state);
+  const items = props.useWorkspaces((state) => state.items);
+  const phase = props.useWorkspaces((state) => state.phase);
+  const streamState = props.useWorkspaces((state) => state.state);
+  const archivedSessionIds = props.useWorkspaces((state) => state.archivedSessionIds);
+  const pinnedSessionIds = props.useWorkspaces((state) => state.pinnedSessionIds);
+  const statuses = props.useSessionStatus((state) => state);
+  const panelActive = props.usePanelInfo((info) => info.activePanelId !== null);
+  const view = useViewState(props.viewStore);
+  const scroller = typeof props.useSectionScroller === "function" ? props.useSectionScroller() : void 0;
+  const sections = Array.isArray(props.sections) ? props.sections : [];
+  const workspaces = React.useMemo(
+    () => items.map((workspace) => ({ ...workspace, title: workspace.title || basename(workspace.path) })),
+    [items]
+  );
+  const workspaceReady = phase === "ready" && streamState !== "loading";
+  void workspaceReady;
+  const current = panelActive ? void 0 : mainSessionId(list);
+  const currentBlank = current !== void 0 && list.byId[current]?.blank === true ? current : void 0;
+  const orderState = React.useMemo(
+    () => ({ pinnedSessionIds, archivedSessionIds }),
+    [pinnedSessionIds, archivedSessionIds]
+  );
+  const rowState = React.useMemo(
+    () => ({ ...orderState, archivedFilter: view.archivedFilter }),
+    [orderState, view.archivedFilter]
+  );
+  const ungroupedMemberIds = React.useMemo(() => {
+    const accounted = new Set(workspaces.flatMap((workspace) => workspace.sessionIds));
+    return list.ids.filter((id) => list.byId[id] !== void 0 && !accounted.has(id));
+  }, [list, workspaces]);
+  const flatMemberIds = React.useMemo(() => sessionMemberIds(list), [list]);
+  const projectOrder = (members, accountKey) => {
+    const base = view.orderBy === "updated" ? orderByRecency(members, list.byId) : reconcileManualOrder(members, view.sessionOrderByAccount[accountKey], list.byId, orderState);
+    return pinCurrentBlank(
+      base,
+      currentBlank !== void 0 && members.includes(currentBlank) ? currentBlank : void 0
+    );
+  };
+  const orderedWorkspaces = React.useMemo(
+    () => workspaces.map((workspace) => ({
+      ...workspace,
+      sessionIds: projectOrder(workspace.sessionIds, workspace.workspaceId)
+    })),
+    [workspaces, view.orderBy, view.sessionOrderByAccount, list.byId, orderState, currentBlank]
+  );
+  const orderedUngrouped2 = React.useMemo(
+    () => projectOrder(ungroupedMemberIds, UNGROUPED_KEY),
+    [ungroupedMemberIds, view.orderBy, view.sessionOrderByAccount, list.byId, orderState, currentBlank]
+  );
+  const orderedFlat = React.useMemo(
+    () => projectOrder(flatMemberIds, FLAT_SESSION_ORDER_KEY),
+    [flatMemberIds, view.orderBy, view.sessionOrderByAccount, list.byId, orderState, currentBlank]
+  );
+  const activeSessionOrders = React.useMemo(
+    () => Object.fromEntries([
+      ...orderedWorkspaces.map((workspace) => [workspace.workspaceId, workspace.sessionIds]),
+      [UNGROUPED_KEY, orderedUngrouped2],
+      [FLAT_SESSION_ORDER_KEY, orderedFlat]
+    ]),
+    [orderedWorkspaces, orderedUngrouped2, orderedFlat]
+  );
+  React.useEffect(() => {
+    if (phase !== "ready") return;
+    props.viewStore.actions.retainAccountKeys([
+      UNGROUPED_KEY,
+      FLAT_SESSION_ORDER_KEY,
+      ...workspaces.map((workspace) => workspace.workspaceId)
+    ]);
+  }, [props.viewStore, phase, workspaces]);
+  const parents = React.useMemo(() => {
+    if (view.groupBy !== "workspace-tree") return /* @__PURE__ */ new Map();
+    const keysByPath = new Map(workspaces.map((workspace) => [workspace.path, workspace.workspaceId]));
+    const paths = [...keysByPath.keys()];
+    return new Map(
+      workspaces.map((workspace) => {
+        const path = owningParentFolder(workspace.path, paths);
+        return [workspace.workspaceId, path === void 0 ? void 0 : keysByPath.get(path)];
+      })
+    );
+  }, [view.groupBy, workspaces]);
+  const expandedGroups = React.useMemo(() => {
+    const ancestorKeys = new Set(parents.values());
+    return [...workspaces.map((workspace) => workspace.workspaceId), UNGROUPED_KEY].filter(
+      (key) => view.groupExpansion[key] ?? (ancestorKeys.has(key) || parents.size === 0)
+    );
+  }, [view.groupExpansion, parents, workspaces]);
+  const groups = React.useMemo(
+    () => deriveGroups(list, orderedWorkspaces, rowState, statuses, {
+      expandedGroups,
+      ungroupedOrder: orderedUngrouped2
+    }),
+    [list, orderedWorkspaces, rowState, statuses, expandedGroups, orderedUngrouped2]
+  );
+  const currentGroup = current === void 0 ? void 0 : orderedWorkspaces.find((workspace) => workspace.sessionIds.includes(current))?.workspaceId ?? UNGROUPED_KEY;
+  React.useEffect(() => {
+    if (!wide || currentGroup === void 0) return;
+    if (Object.hasOwn(view.groupExpansion, currentGroup)) return;
+    props.viewStore.actions.setGroupExpanded(currentGroup, true);
+  }, [wide, currentGroup, view.groupExpansion, props.viewStore]);
+  const [now, setNow] = React.useState(() => Date.now());
+  const freshestAge = React.useMemo(() => {
+    let freshest = Number.POSITIVE_INFINITY;
+    for (const group of groups) {
+      for (const session of group.sessions) {
+        const age = Date.now() - session.updatedAt;
+        if (age >= 0 && age < freshest) freshest = age;
+      }
+    }
+    return freshest;
+  }, [groups]);
+  React.useEffect(() => {
+    const timer = window.setInterval(
+      () => {
+        setNow(Date.now());
+      },
+      freshestAge < 36e5 ? 1e3 : 6e4
+    );
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [freshestAge]);
+  const [query, setQuery] = React.useState("");
+  const [searchOpen, setSearchOpen] = React.useState(false);
+  const [searchOnExpand, setSearchOnExpand] = React.useState(false);
+  const [remote, setRemote] = React.useState({ query: "", status: "idle", items: [], hasMore: false });
+  const normalizedQuery = sanitizeQuery(query).trim();
+  const searchBox = React.useRef(null);
+  const searchOpenedAt = React.useRef(0);
+  const searchInput = React.useRef(null);
+  const [revealSessionId, setRevealSessionId] = React.useState(void 0);
+  const focusSearch = () => {
+    searchInput.current?.focus({ preventScroll: true });
+  };
+  const openSearch = () => {
+    searchOpenedAt.current = performance.now();
+    setSearchOpen(true);
+  };
+  React.useEffect(() => {
+    if (!searchOpen) return;
+    const timer = window.setTimeout(focusSearch, 0);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [searchOpen]);
+  React.useEffect(() => {
+    if (!wide || !searchOpen) return;
+    const onClick = (event) => {
+      if (!(event.target instanceof Node)) return;
+      if (performance.now() - searchOpenedAt.current < 400) return;
+      if (searchBox.current?.contains(event.target) === true) return;
+      if (normalizedQuery !== "") return;
+      setSearchOpen(false);
+    };
+    document.addEventListener("click", onClick);
+    return () => {
+      document.removeEventListener("click", onClick);
+    };
+  }, [normalizedQuery, wide, searchOpen]);
+  React.useEffect(() => {
+    if (normalizedQuery === "") {
+      setRemote({ query: "", status: "idle", items: [], hasMore: false });
+      return;
+    }
+    const controller = new AbortController();
+    setRemote({ query: normalizedQuery, status: "loading", items: [], hasMore: false });
+    const timer = window.setTimeout(() => {
+      props.searchSessions(normalizedQuery, controller.signal).then((result) => {
+        if (controller.signal.aborted) return;
+        setRemote({ query: normalizedQuery, status: "ready", items: result.items, hasMore: result.hasMore });
+      }).catch(() => {
+        if (controller.signal.aborted) return;
+        setRemote({ query: normalizedQuery, status: "error", items: [], hasMore: false });
+      });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [normalizedQuery, props]);
+  const searchCurrent = remote.query === normalizedQuery ? remote : { query: normalizedQuery, status: "loading", items: [], hasMore: false };
+  const searchResults = React.useMemo(
+    () => normalizedQuery === "" ? { items: [], hasMore: false } : deriveSearchResults(
+      list,
+      orderedWorkspaces,
+      normalizedQuery,
+      archivedSessionIds,
+      view.archivedFilter,
+      statuses,
+      searchCurrent,
+      props.searchResultLimit
+    ),
+    [
+      list,
+      orderedWorkspaces,
+      normalizedQuery,
+      archivedSessionIds,
+      view.archivedFilter,
+      statuses,
+      searchCurrent,
+      props.searchResultLimit
+    ]
+  );
+  const [watermarks, setWatermarks] = React.useState({});
+  const required = /* @__PURE__ */ new Map();
+  for (const group of groups) {
+    required.set(
+      group.key,
+      Math.max(
+        SESSION_WATERMARK_BASE,
+        requiredWatermark(group.sessions, current, group.key === currentGroup ? revealSessionId : void 0)
+      )
+    );
+  }
+  let raised = watermarks;
+  for (const [key, value] of required) {
+    if (value > (raised[key] ?? SESSION_WATERMARK_BASE)) {
+      raised = { ...raised, [key]: value };
+    }
+  }
+  if (raised !== watermarks) setWatermarks(raised);
+  const [sessionDrag, setSessionDrag] = React.useState(null);
+  const [workspaceDrag, setWorkspaceDrag] = React.useState(null);
+  const sessionCommitted = React.useRef(false);
+  const workspaceCommitted = React.useRef(false);
+  const commitSessionDrag = (active, over) => {
+    if (sessionCommitted.current) return;
+    sessionCommitted.current = true;
+    setSessionDrag(null);
+    const group = groups.find((candidate) => candidate.key === active.accountKey);
+    if (group === void 0 || over.id === active.sessionId) return;
+    const accountSessionIds = active.accountKey === UNGROUPED_KEY ? ungroupedMemberIds : workspaces.find((workspace) => workspace.workspaceId === active.accountKey)?.sessionIds;
+    if (accountSessionIds === void 0) return;
+    const rendered = watermarkRows(group.sessions, watermarks[group.key] ?? SESSION_WATERMARK_BASE).rows;
+    const nextOrder = sessionDragOrder(accountSessionIds, rendered, active, over);
+    if (nextOrder !== void 0) {
+      props.viewStore.actions.setSessionOrder(active.accountKey, nextOrder, activeSessionOrders);
+    }
+  };
+  const commitWorkspaceDrag = (active, over) => {
+    if (workspaceCommitted.current) return;
+    workspaceCommitted.current = true;
+    setWorkspaceDrag(null);
+    const owner = parents.get(active.workspaceId);
+    const siblings = workspaces.filter((workspace) => parents.get(workspace.workspaceId) === owner);
+    const index = siblings.findIndex((workspace) => workspace.workspaceId === over.id);
+    if (index === -1) return;
+    const anchor = over.half === "before" ? over.id : siblings[index + 1]?.workspaceId;
+    if (anchor === active.workspaceId) return;
+    props.insertWorkspaceBefore(active.workspaceId, anchor).catch((reason) => {
+      console.warn("feature-hub: workspace reorder failed", reason);
+    });
+  };
+  const guardedOpen = (sessionId) => {
+    if (archivedSessionIds.includes(sessionId)) {
+      props.notifyArchivedNotOpenable();
+      return;
+    }
+    props.openSession(sessionId);
+  };
+  const openSearchResult = (sessionId) => {
+    if (archivedSessionIds.includes(sessionId)) {
+      props.notifyArchivedNotOpenable();
+      return;
+    }
+    setRevealSessionId(sessionId);
+    setQuery("");
+    setSearchOpen(false);
+    props.openSession(sessionId);
+  };
+  const archive = (sessionId) => {
+    props.archiveSession(sessionId);
+  };
+  const unarchive = (sessionId) => {
+    props.unarchiveSession(sessionId).catch((reason) => {
+      props.notify(
+        t("toast.addFailed", { message: reason instanceof Error ? reason.message : String(reason) }),
+        "warn"
+      );
+    });
+  };
+  const [workspaceAction, setWorkspaceAction] = React.useState(null);
+  const canBrowse = props.canBrowseDirectories;
+  const [pickerOpen, setPickerOpen] = React.useState(false);
+  const [adding, setAdding] = React.useState(false);
+  const pickTicket = React.useRef(0);
+  const requestDirectory = (then) => {
+    if (adding) return;
+    const ticket = ++pickTicket.current;
+    setAdding(true);
+    const settle = () => {
+      if (pickTicket.current === ticket) setAdding(false);
+    };
+    const timer = window.setTimeout(() => {
+      if (pickTicket.current !== ticket) return;
+      setAdding(false);
+      props.notify(t("toast.pickTimeout"), "warn");
+    }, PICK_TIMEOUT_MS);
+    props.pickDirectory().then((path) => {
+      window.clearTimeout(timer);
+      settle();
+      if (path === null || path === "") return;
+      then(path);
+    }).catch((reason) => {
+      window.clearTimeout(timer);
+      settle();
+      props.notify(
+        t("toast.addFailed", { message: reason instanceof Error ? reason.message : String(reason) }),
+        "warn"
+      );
+    });
+  };
+  const adoptDirectory = (path) => {
+    if (adding) return;
+    setAdding(true);
+    props.createWorkspace({ path }).then((workspace) => {
+      setAdding(false);
+      setPickerOpen(false);
+      props.startSession(workspace.workspaceId);
+    }).catch((reason) => {
+      setAdding(false);
+      props.notify(
+        t("toast.addFailed", { message: reason instanceof Error ? reason.message : String(reason) }),
+        "warn"
+      );
+    });
+  };
+  const openAddWorkspace = () => {
+    if (adding) return;
+    if (canBrowse) {
+      setPickerOpen(true);
+      return;
+    }
+    requestDirectory(adoptDirectory);
+  };
+  React.useEffect(() => {
+    if (!wide) return;
+    const onKeyDown = (event) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      if (event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        openSearch();
+        return;
+      }
+      if (event.key.toLowerCase() === "o") {
+        event.preventDefault();
+        openAddWorkspace();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [wide, adding, canBrowse]);
+  const viewItems = [
+    { kind: "label", id: "group-by", text: t("groupBy.label") },
+    {
+      kind: "item",
+      id: "workspace",
+      label: t("groupBy.workspace"),
+      selected: view.groupBy === "workspace",
+      icon: /* @__PURE__ */ h(IconFolderClose, { size: 14 })
+    },
+    {
+      kind: "item",
+      id: "workspace-tree",
+      label: t("groupBy.workspaceTree"),
+      selected: view.groupBy === "workspace-tree",
+      icon: /* @__PURE__ */ h(IconWorkspaceTree, { size: 14 })
+    },
+    {
+      kind: "item",
+      id: "flat",
+      label: t("groupBy.flat"),
+      selected: view.groupBy === "flat",
+      icon: /* @__PURE__ */ h(IconFlatList, { size: 14 })
+    },
+    { kind: "separator", id: "order-sep" },
+    { kind: "label", id: "order-by", text: t("orderBy.label") },
+    {
+      kind: "item",
+      id: "manual",
+      label: t("orderBy.manual"),
+      selected: view.orderBy === "manual",
+      icon: /* @__PURE__ */ h(IconChevronsUpDown, { size: 14 })
+    },
+    {
+      kind: "item",
+      id: "updated",
+      label: t("orderBy.updated"),
+      selected: view.orderBy === "updated",
+      icon: /* @__PURE__ */ h(IconClock, { size: 14 })
+    },
+    { kind: "separator", id: "archived-sep" },
+    { kind: "label", id: "filter-by", text: t("filterBy.label") },
+    {
+      kind: "item",
+      id: "hide-archived",
+      label: t("viewOptions.hideArchived"),
+      selected: view.archivedFilter === "default",
+      icon: /* @__PURE__ */ h(IconArchiveOff, { size: 14 })
+    },
+    {
+      kind: "item",
+      id: "show-archived",
+      label: t("viewOptions.showArchived"),
+      selected: view.archivedFilter === "show",
+      icon: /* @__PURE__ */ h(IconQueue, { size: 14 })
+    },
+    {
+      kind: "item",
+      id: "only-archived",
+      label: t("viewOptions.onlyArchived"),
+      selected: view.archivedFilter === "only",
+      icon: /* @__PURE__ */ h(IconArchiveCheck, { size: 14 })
+    }
+  ];
+  const onViewSelect = (id) => {
+    if (id === "workspace" || id === "workspace-tree" || id === "flat") {
+      props.viewStore.actions.setGroupBy(id);
+      return;
+    }
+    if (id === "manual" || id === "updated") {
+      props.viewStore.actions.setOrderBy(id, activeSessionOrders);
+      return;
+    }
+    if (id === "hide-archived") props.viewStore.actions.setArchivedFilter("default");
+    else if (id === "show-archived") props.viewStore.actions.setArchivedFilter("show");
+    else if (id === "only-archived") props.viewStore.actions.setArchivedFilter("only");
+  };
+  const openSessionMenuAt = (sessionId, displayTitle2, point) => {
+    props.openContextMenu({ kind: "session", sessionId, displayTitle: displayTitle2, point }, point);
+  };
+  const openSessionMenu = (node, point) => {
+    openSessionMenuAt(node.id, node.title, point);
+  };
+  const workspaceMenuItems = () => [
+    { kind: "item", id: "rename", label: t("rename") },
+    { kind: "item", id: "delete", label: t("delete.workspace"), danger: true }
+  ];
+  const onWorkspaceMenu = (group, id) => {
+    if (group.workspaceId === void 0) return;
+    const action = id === "rename" ? "rename" : "delete";
+    const workspace = workspaces.find((candidate) => candidate.workspaceId === group.workspaceId);
+    setWorkspaceAction({
+      action,
+      workspaceId: group.workspaceId,
+      displayTitle: group.label,
+      storedTitle: workspace?.title ?? group.label
+    });
+  };
+  const railSearch = () => {
+    setSearchOnExpand(true);
+    openSearch();
+    props.expandSidebar();
+  };
+  React.useEffect(() => {
+    if (!wide || !searchOnExpand) return;
+    const timer = window.setTimeout(() => {
+      focusSearch();
+      setSearchOnExpand(false);
+    }, 320);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [wide, searchOnExpand]);
+  const renderSession = (node, group, options = {}) => {
+    const sameGroupDrag = sessionDrag !== null && sessionDrag.accountKey === group.key;
+    const compatible = sameGroupDrag && sessionDrag.pinned === node.pinned;
+    const normalize = (half) => node.blank ? "after" : half;
+    return /* @__PURE__ */ h(
+      SessionRow,
+      {
+        key: node.id,
+        node,
+        selected: node.id === current,
+        now,
+        t,
+        onOpen: guardedOpen,
+        onRenameRequest: props.requestSessionRename,
+        onMenu: (point) => {
+          openSessionMenu(node, point);
+        },
+        onArchive: () => {
+          archive(node.id);
+        },
+        onUnarchive: () => {
+          unarchive(node.id);
+        },
+        onPin: node.pinned ? () => {
+          props.unpinSession(node.id);
+        } : () => {
+          props.pinSession(node.id);
+        },
+        pinned: node.pinned,
+        reveal: node.id === revealSessionId,
+        onRevealed: () => {
+          setRevealSessionId((existing) => existing === node.id ? void 0 : existing);
+        },
+        drag: options.flat === true || node.blank || node.archived ? {
+          enabled: false,
+          active: false,
+          marker: null,
+          start: () => {
+          },
+          end: () => {
+          },
+          hover: () => {
+          },
+          drop: () => {
+          }
+        } : {
+          enabled: true,
+          active: compatible,
+          marker: sameGroupDrag && sessionDrag.over?.id === node.id ? sessionDrag.over.half : null,
+          start: () => {
+            sessionCommitted.current = false;
+            setSessionDrag({
+              accountKey: group.key,
+              sessionId: node.id,
+              pinned: node.pinned,
+              over: null
+            });
+          },
+          end: () => {
+            if (sessionDrag?.over !== null && sessionDrag?.over !== void 0) {
+              commitSessionDrag(sessionDrag, sessionDrag.over);
+            } else {
+              setSessionDrag(null);
+            }
+            sessionCommitted.current = false;
+          },
+          hover: (half) => {
+            setSessionDrag(
+              (active) => active === null ? active : { ...active, over: { id: node.id, half: normalize(half) } }
+            );
+          },
+          drop: (half) => {
+            if (sessionDrag === null) return;
+            commitSessionDrag(sessionDrag, { id: node.id, half: normalize(half) });
+          }
+        }
+      }
+    );
+  };
+  const renderGroup = (group, depth) => {
+    const workspaceId = group.workspaceId;
+    const marker = workspaceDrag?.over !== null && workspaceDrag?.over !== void 0 && workspaceDrag.over.id === workspaceId ? workspaceDrag.over.half : null;
+    const compatibleWorkspaceDrag = workspaceDrag !== null && parents.get(workspaceDrag.workspaceId) === parents.get(group.key);
+    const watermark = watermarks[group.key] ?? SESSION_WATERMARK_BASE;
+    const visible = watermarkRows(group.sessions, watermark);
+    const sessionsExpanded = visible.hiddenCount === 0;
+    const children = groups.filter((candidate) => parents.get(candidate.key) === group.key);
+    return /* @__PURE__ */ h("div", { key: group.key, className: "fh-group" }, /* @__PURE__ */ h(
+      ProjectRow,
+      {
+        group,
+        active: group.containsCurrent,
+        indent: depth * 12,
+        t,
+        onToggle: () => {
+          props.viewStore.actions.setGroupExpanded(group.key, !group.expanded);
+        },
+        onCreate: workspaceId === void 0 ? void 0 : () => {
+          props.viewStore.actions.setGroupExpanded(group.key, true);
+          props.startSession(workspaceId);
+        },
+        menu: workspaceId === void 0 ? void 0 : {
+          label: t("actions.workspace.aria", { name: group.label }),
+          items: workspaceMenuItems(),
+          onSelect: (id) => {
+            onWorkspaceMenu(group, id);
+          }
+        },
+        drag: workspaceId === void 0 ? void 0 : {
+          enabled: true,
+          active: compatibleWorkspaceDrag,
+          marker,
+          start: () => {
+            workspaceCommitted.current = false;
+            setWorkspaceDrag({ workspaceId, over: null });
+          },
+          end: () => {
+            if (workspaceDrag?.over !== null && workspaceDrag?.over !== void 0) {
+              commitWorkspaceDrag(workspaceDrag, workspaceDrag.over);
+            } else {
+              setWorkspaceDrag(null);
+            }
+            workspaceCommitted.current = false;
+          },
+          hover: (half) => {
+            setWorkspaceDrag(
+              (active) => active === null ? active : { ...active, over: { id: workspaceId, half } }
+            );
+          },
+          drop: (half) => {
+            if (workspaceDrag === null) return;
+            commitWorkspaceDrag(workspaceDrag, { id: workspaceId, half });
+          }
+        }
+      }
+    ), group.expanded && children.length > 0 ? /* @__PURE__ */ h("div", { role: "group" }, children.map((child) => renderGroup(child, depth + 1))) : null, group.expanded ? /* @__PURE__ */ h("div", { className: "fh-group-body" }, visible.rows.map((node) => renderSession(node, group)), visible.hiddenCount > 0 ? /* @__PURE__ */ h(
+      "button",
+      {
+        type: "button",
+        className: "fh-show-more",
+        "aria-expanded": sessionsExpanded,
+        onClick: () => {
+          if (sessionsExpanded) {
+            setWatermarks((marks) => {
+              const next = { ...marks };
+              delete next[group.key];
+              return next;
+            });
+            return;
+          }
+          setWatermarks((marks) => ({
+            ...marks,
+            [group.key]: visible.hiddenCount <= SESSION_WATERMARK_BASE ? Number.POSITIVE_INFINITY : watermark + SESSION_WATERMARK_BASE
+          }));
+        }
+      },
+      sessionsExpanded ? t("sessions.collapse") : t("sessions.expand", { n: visible.hiddenCount })
+    ) : null) : null);
+  };
+  const renderFlat = () => {
+    const rows = deriveFlat(list, orderedFlat, rowState, statuses);
+    const fakeGroup = {
+      key: FLAT_SESSION_ORDER_KEY,
+      workspaceId: void 0,
+      cwd: void 0,
+      createdAt: void 0,
+      label: "",
+      sessionCount: rows.length,
+      expanded: true,
+      containsCurrent: false,
+      sessions: rows
+    };
+    if (rows.length === 0) return renderEmpty();
+    return /* @__PURE__ */ h("div", { className: "fh-group-body" }, rows.map((node) => renderSession(node, fakeGroup, { flat: true })));
+  };
+  function renderEmpty() {
+    const archivedOnly = view.archivedFilter === "only";
+    return /* @__PURE__ */ h("div", { className: "fh-empty" }, /* @__PURE__ */ h("span", { className: "fh-empty-icon" }, archivedOnly ? /* @__PURE__ */ h(IconQueue, { size: 20 }) : /* @__PURE__ */ h(IconArchiveCheck, { size: 20 })), /* @__PURE__ */ h("div", null, archivedOnly ? t("empty.noneArchived") : t("empty.none")), archivedOnly ? /* @__PURE__ */ h(
+      "button",
+      {
+        type: "button",
+        className: "fh-button",
+        onClick: () => {
+          props.viewStore.actions.setArchivedFilter("default");
+        }
+      },
+      t("empty.viewOthers")
+    ) : null);
+  }
+  const renderSearch = () => {
+    const pending = searchCurrent.status === "loading";
+    return /* @__PURE__ */ h("div", { className: "fh-search-body" }, searchResults.items.length === 0 && !pending ? /* @__PURE__ */ h("div", { className: "fh-empty" }, t("search.noMatches")) : null, searchResults.items.map((result) => /* @__PURE__ */ h(
+      SearchResultRow,
+      {
+        key: result.id,
+        result,
+        selected: result.id === current,
+        t,
+        onOpen: () => {
+          openSearchResult(result.id);
+        },
+        onUnarchive: result.archived ? () => {
+          unarchive(result.id);
+        } : void 0
+      }
+    )), pending ? /* @__PURE__ */ h("div", { className: "fh-search-status", role: "status", "aria-label": t("search.pending") }, t("search.pending")) : null, searchResults.hasMore ? /* @__PURE__ */ h("div", { className: "fh-search-status" }, t("search.hasMore", { n: props.searchResultLimit })) : null);
+  };
+  if (!wide) {
+    return /* @__PURE__ */ h("div", { className: "fh-rail" }, /* @__PURE__ */ h(
+      "button",
+      {
+        type: "button",
+        className: "fh-rail-button",
+        title: t("search"),
+        "aria-label": t("search.aria"),
+        onClick: railSearch
+      },
+      /* @__PURE__ */ h(IconSearch, { size: 18 })
+    ), /* @__PURE__ */ h(
+      "button",
+      {
+        type: "button",
+        className: "fh-rail-button",
+        title: t("workspace.add"),
+        "aria-label": t("workspace.add"),
+        onClick: openAddWorkspace
+      },
+      /* @__PURE__ */ h(IconProjectAdd, { size: 18 })
+    ));
+  }
+  const rootGroups = parents.size === 0 ? groups : groups.filter((group) => parents.get(group.key) === void 0);
+  const listRef = scroller?.bindScrollerRef;
+  return /* @__PURE__ */ h("div", { className: "fh-ws" }, /* @__PURE__ */ h("div", { className: "fh-ws-head" }, searchOpen || normalizedQuery !== "" ? null : /* @__PURE__ */ h("span", { className: "fh-ws-label" }, view.groupBy === "flat" ? t("section.sessions") : t("section.workspaces")), /* @__PURE__ */ h(
+    "div",
+    {
+      ref: searchBox,
+      className: `fh-ws-search${searchOpen ? " fh-ws-search-open" : ""}`,
+      onClick: () => {
+        if (searchOpen) return;
+        openSearch();
+      }
+    },
+    searchOpen ? /* @__PURE__ */ h(Fragment, null, /* @__PURE__ */ h(IconSearch, { size: 12 }), /* @__PURE__ */ h(
+      "input",
+      {
+        ref: searchInput,
+        className: "fh-ws-search-input",
+        type: "text",
+        value: query,
+        placeholder: t("search.placeholder"),
+        "aria-label": t("search.placeholder"),
+        maxLength: SEARCH_QUERY_MAX_CODE_UNITS,
+        onChange: (event) => {
+          setQuery(sanitizeQuery(event.currentTarget.value));
+        },
+        onKeyDown: (event) => {
+          if (event.key !== "Escape") return;
+          event.preventDefault();
+          setQuery("");
+          setSearchOpen(false);
+        }
+      }
+    ), /* @__PURE__ */ h(
+      "button",
+      {
+        type: "button",
+        className: "fh-icon-button",
+        title: t("search.clear"),
+        "aria-label": t("search.clear"),
+        onClick: (event) => {
+          event.stopPropagation();
+          setQuery("");
+          setSearchOpen(false);
+        }
+      },
+      /* @__PURE__ */ h(IconClose, { size: 12 })
+    )) : /* @__PURE__ */ h(
+      "button",
+      {
+        type: "button",
+        className: "fh-icon-button",
+        title: t("search"),
+        "aria-label": t("search.aria"),
+        "aria-expanded": false,
+        onClick: (event) => {
+          event.stopPropagation();
+          openSearch();
+        }
+      },
+      /* @__PURE__ */ h(IconSearch, { size: 14 })
+    )
+  ), /* @__PURE__ */ h("div", { className: "fh-ws-head-actions" }, /* @__PURE__ */ h(
+    Menu,
+    {
+      label: t("viewOptions.label"),
+      icon: /* @__PURE__ */ h(IconSliders, { size: 16 }),
+      className: "fh-icon-button",
+      items: viewItems,
+      onSelect: onViewSelect,
+      align: "end"
+    }
+  ), /* @__PURE__ */ h(
+    "button",
+    {
+      type: "button",
+      className: "fh-icon-button",
+      title: t("workspace.add"),
+      "aria-label": t("workspace.add"),
+      disabled: adding,
+      onClick: openAddWorkspace
+    },
+    /* @__PURE__ */ h(IconProjectAdd, { size: 16 })
+  ))), /* @__PURE__ */ h("div", { className: "fh-ws-list", ref: listRef, "data-sidebar-list-area": "" }, normalizedQuery !== "" ? renderSearch() : /* @__PURE__ */ h(Fragment, null, sections.filter((section) => section !== void 0 && section !== null).slice().sort((left, right) => (left.order || 0) - (right.order || 0)).map(
+    (section) => React.createElement(section.component, {
+      key: section.id,
+      t: section.t === void 0 ? t : section.t,
+      now,
+      model: { groups, rows: groups.flatMap((group) => group.sessions) },
+      rows: groups.flatMap((group) => group.sessions),
+      currentSessionId: current ?? null,
+      snapshot: {
+        items,
+        byId: list.byId,
+        ids: list.ids,
+        archivedSessionIds,
+        pinnedSessionIds,
+        statuses
+      },
+      openSession: guardedOpen,
+      openSessionMenu: openSessionMenuAt
+    })
+  ), view.groupBy === "flat" ? renderFlat() : groups.length === 0 ? renderEmpty() : rootGroups.map((group) => renderGroup(group, 0)))), /* @__PURE__ */ h(
+    WorkspaceDialogs,
+    {
+      request: workspaceAction,
+      workspaces,
+      renameWorkspace: props.renameWorkspace,
+      deleteWorkspace: props.deleteWorkspace,
+      settle: () => {
+        setWorkspaceAction(null);
+      },
+      t,
+      closeLabel: t("close"),
+      cancelLabel: t("cancel")
+    }
+  ), /* @__PURE__ */ h(
+    DirectoryDialog,
+    {
+      open: pickerOpen,
+      onClose: () => {
+        if (adding) return;
+        setPickerOpen(false);
+      },
+      onPicked: adoptDirectory,
+      t,
+      closeLabel: t("close"),
+      listDirectory: props.listDirectory,
+      createDirectory: props.createDirectory,
+      pickDirectory: props.pickDirectory,
+      onUnsupported: () => {
+        setPickerOpen(false);
+        requestDirectory(adoptDirectory);
+      }
+    }
+  ));
+}
+
+// client/src/shell/styles.ts
 var SIDEBAR_STYLES = `
-.fh-ws, .fh-ws *, .fh-ws *::before, .fh-ws *::after { box-sizing: border-box; }
+.fh-ws, .fh-ws *, .fh-ws *::before, .fh-ws *::after,
+.fh-rail, .fh-rail *, .fh-dialog, .fh-dialog *, .fh-menu, .fh-menu * { box-sizing: border-box; }
+
 .fh-ws {
   display: flex;
   flex-direction: column;
@@ -718,6 +2542,8 @@ var SIDEBAR_STYLES = `
   max-height: 100cqh;
   color: var(--dsw-alias-label-primary);
 }
+
+/* ---- \u533A\u5934\uFF1A\u6807\u9898 / \u641C\u7D22 / \u89C6\u56FE\u83DC\u5355 / \u6DFB\u52A0\u5DE5\u4F5C\u533A ---- */
 .fh-ws-head {
   flex: none;
   display: flex;
@@ -727,7 +2553,7 @@ var SIDEBAR_STYLES = `
   padding: 0 4px 0 12px;
   color: var(--dsw-alias-label-secondary);
 }
-.fh-ws-section-label {
+.fh-ws-label {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -736,10 +2562,45 @@ var SIDEBAR_STYLES = `
   font-size: 13px;
   line-height: 20px;
 }
-.fh-ws-icon-button {
-  flex: none;
-  width: 28px;
+.fh-ws-search {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   height: 28px;
+  padding: 0 2px 0 6px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+.fh-ws-search:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); }
+.fh-ws-search.fh-ws-search-open {
+  border-color: color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
+  background: transparent;
+  cursor: text;
+}
+.fh-ws-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 24px;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.fh-ws-search-input::placeholder { color: var(--dsw-alias-label-secondary); }
+.fh-ws-head-actions { flex: none; display: inline-flex; align-items: center; gap: 2px; }
+
+/* ---- \u56FE\u6807\u6309\u94AE\uFF08\u884C\u5C3E\u3001\u533A\u5934\u3001\u5BF9\u8BDD\u6846\u5171\u7528\u51E0\u4F55\uFF09 ---- */
+.fh-icon-button, .fh-ws-icon-button {
+  flex: none;
+  width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -750,23 +2611,11 @@ var SIDEBAR_STYLES = `
   color: inherit;
   cursor: pointer;
 }
-.fh-ws-icon-button:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); color: var(--dsw-alias-label-primary); }
-.fh-ws-icon-button:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: -2px; }
-.fh-ws-search { flex: 1 1 auto; min-width: 0; display: flex; }
-.fh-ws-search-input {
-  width: 100%;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
-  background: transparent;
-  color: var(--dsw-alias-label-primary);
-  font: inherit;
-  font-size: 13px;
-  outline: none;
-}
-.fh-ws-search-input::placeholder { color: var(--dsw-alias-label-secondary); }
-.fh-ws-search-input:focus-visible { border-color: var(--dsw-alias-brand-primary); }
+.fh-icon-button:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); color: var(--dsw-alias-label-primary); }
+.fh-icon-button:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: -2px; }
+.fh-icon-button:disabled { opacity: 0.45; cursor: default; }
+
+/* ---- \u5217\u8868\u5BB9\u5668 ---- */
 .fh-ws-list {
   flex: 1 1 auto;
   min-height: 0;
@@ -775,8 +2624,11 @@ var SIDEBAR_STYLES = `
   padding: 0 4px 16px 0;
   scrollbar-width: thin;
 }
-.fh-ws-group + .fh-ws-group { margin-top: 4px; }
-.fh-ws-group-head {
+
+/* ---- \u5206\u7EC4 ---- */
+.fh-ws-group, .fh-group { display: block; }
+.fh-ws-group + .fh-ws-group, .fh-group + .fh-group { margin-top: 4px; }
+.fh-ws-group-head, .fh-workspace-row {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -784,151 +2636,638 @@ var SIDEBAR_STYLES = `
   padding: 0 6px 0 12px;
   border-radius: 8px;
   cursor: pointer;
+  outline: none;
 }
-.fh-ws-group-head[draggable='true'] { cursor: grab; }
-.fh-ws-group-head[draggable='true']:active { cursor: grabbing; }
-.fh-ws-group-head:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent); }
-.fh-ws-group-dragging { opacity: 0.45; }
-/* \u62D6\u62FD\u843D\u70B9\uFF1A\u7528\u4E0A\u4E0B\u4E24\u6761 2px \u7684\u4E3B\u9898\u8272\u7EBF\u8868\u793A\u63D2\u5728\u524D/\u540E\u3002 */
-.fh-ws-drop-before { position: relative; }
-.fh-ws-drop-after { position: relative; }
-.fh-ws-drop-before::before,
-.fh-ws-drop-after::after {
+.fh-ws-group-head:hover, .fh-workspace-row:hover {
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);
+}
+.fh-ws-group-head:focus-visible, .fh-workspace-row:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: -2px;
+}
+.fh-ws-group-head[draggable='true'], .fh-workspace-row[draggable='true'] { cursor: grab; }
+.fh-ws-group-head[draggable='true']:active, .fh-workspace-row[draggable='true']:active { cursor: grabbing; }
+.fh-workspace-active .fh-ws-group-title, .fh-workspace-active .fh-row-title { color: var(--dsw-alias-label-primary); }
+
+.fh-ws-folder, .fh-row-folder {
+  position: relative;
+  flex: none;
+  width: 16px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-secondary);
+}
+.fh-row-folder-active { color: var(--dsw-alias-brand-primary); }
+.fh-ws-folder > svg,
+.fh-row-chevron > svg { position: absolute; }
+
+.fh-ws-chevron, .fh-row-chevron {
+  position: relative;
+  flex: none;
+  width: 8px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-secondary);
+}
+.fh-ws-chevron { top: 5px; left: -10px; transition: transform 120ms ease; }
+.fh-ws-chevron-open, .fh-chevron-open { transform: rotate(90deg); }
+.fh-ws-group-head:hover .fh-ws-chevron, .fh-workspace-row:hover .fh-row-chevron {
+  color: var(--dsw-alias-label-primary);
+}
+
+.fh-ws-group-title, .fh-row-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 20px;
+}
+.fh-ws-count {
+  flex: none;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+.fh-ws-group-head > .fh-icon-button,
+.fh-workspace-row > .fh-row-actions .fh-icon-button { opacity: 0; }
+.fh-ws-group-head:hover > .fh-icon-button,
+.fh-workspace-row:hover > .fh-row-actions .fh-icon-button,
+.fh-workspace-row:focus-within > .fh-row-actions .fh-icon-button { opacity: 1; }
+.fh-ws-group-body, .fh-group-body { display: flex; flex-direction: column; gap: 2px; }
+
+/* ---- \u4F1A\u8BDD\u884C ---- */
+.fh-ws-row, .fh-session-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px 0 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+}
+.fh-ws-row:hover, .fh-session-row:hover {
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);
+}
+.fh-ws-row-selected, .fh-row-selected {
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
+}
+.fh-ws-row:focus-visible, .fh-session-row:focus-visible, .fh-search-row:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: -2px;
+}
+.fh-ws-slot, .fh-row-slot {
+  flex: none;
+  width: 16px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-secondary);
+}
+.fh-ws-rest, .fh-row-rest {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--dsw-alias-label-secondary);
+}
+.fh-ws-time, .fh-row-time { font-size: 10px; line-height: 16px; font-variant-numeric: tabular-nums; }
+.fh-ws-actions, .fh-row-actions { display: none; flex: none; align-items: center; gap: 2px; }
+.fh-ws-row:hover .fh-ws-rest, .fh-session-row:hover .fh-row-rest,
+.fh-session-row:focus-within .fh-row-rest { display: none; }
+.fh-ws-row:hover .fh-ws-actions, .fh-session-row:hover .fh-row-actions,
+.fh-session-row:focus-within .fh-row-actions { display: inline-flex; }
+.fh-ws-row-archived .fh-ws-title, .fh-row-archived .fh-row-title { color: var(--dsw-alias-label-secondary); }
+.fh-ws-pin, .fh-row-pin { color: var(--dsw-alias-label-secondary); display: inline-flex; }
+.fh-row-anchor { position: relative; display: block; }
+
+/* \u62D6\u62FD\u843D\u70B9\uFF1A\u4E0A\u4E0B\u5404\u4E00\u6761\u4E3B\u9898\u8272\u7EC6\u7EBF\u3002 */
+.fh-drop-before { position: relative; }
+.fh-drop-after { position: relative; }
+.fh-drop-before::before,
+.fh-drop-after::after {
   content: '';
   position: absolute;
   left: 8px;
   right: 8px;
   height: 2px;
   border-radius: 2px;
-  background: var(--dsw-alias-state-business-primary);
+  background: var(--dsw-alias-brand-primary);
   pointer-events: none;
 }
-.fh-ws-drop-before::before { top: -2px; }
-.fh-ws-drop-after::after { bottom: -2px; }
-.fh-ws-group-head:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: -2px; }
-.fh-ws-folder {
-  position: relative;
-  flex: none;
-  width: 16px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--dsw-alias-label-secondary);
-}
-.fh-ws-folder > svg { position: absolute; }
-/* \u6298\u53E0\u6307\u793A\u5668\u5E38\u9A7B\uFF1A\u539F\u751F\u53EA\u5728\u60AC\u505C\u65F6\u7528\u7BAD\u5934\u4E34\u65F6\u66FF\u6362\u6587\u4EF6\u5939\u56FE\u6807\uFF0C\u9759\u6B62\u72B6\u6001\u4E0B\u5F00\u3001\u5408
-   \u4E24\u6001\u957F\u5F97\u4E00\u6A21\u4E00\u6837\u3002\u8FD9\u91CC\u8BA9\u5B83\u4E00\u76F4\u753B\u5728\u5206\u7EC4\u5934\u7684\u5DE6\u4FA7\u7559\u767D\u91CC\uFF08\u4E0D\u5360\u5E03\u5C40\u3001\u4E0D\u632A\u6807\u9898\uFF09\uFF0C
-   \u5411\u53F3 = \u5DF2\u6536\u8D77\uFF0C\u5411\u4E0B = \u5DF2\u5C55\u5F00\uFF1B\u6587\u4EF6\u5939/\u65F6\u949F\u56FE\u6807\u59CB\u7EC8\u4FDD\u7559\u3002 */
-.fh-ws-chevron { top: 5px; left: -10px; transition: transform 120ms ease; }
-.fh-ws-chevron-open { transform: rotate(90deg); }
-.fh-ws-group-head:hover .fh-ws-chevron { color: var(--dsw-alias-label-primary); }
-.fh-ws-group-title {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14px;
-  line-height: 20px;
-}
-.fh-ws-group-head > .fh-ws-icon-button { opacity: 0; }
-.fh-ws-group-head:hover > .fh-ws-icon-button { opacity: 1; }
-.fh-ws-group-body { display: flex; flex-direction: column; gap: 2px; }
-.fh-ws-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  /* 12px + 16px \u72B6\u6001\u4F4D + 6px \u95F4\u8DDD = 34px\uFF0C\u4E0E\u5206\u7EC4\u6807\u9898\u540C\u4E00\u5217\uFF08\u5BF9\u9F50\u539F\u751F\u6D4F\u89C8\u533A\uFF1A
-     \u4F1A\u8BDD\u6807\u9898\u548C\u9879\u76EE\u6807\u9898\u5DE6\u5BF9\u9F50\uFF0C\u7F29\u8FDB\u53EA\u7531\u524D\u5BFC\u683C\u4F53\u73B0\uFF0C\u800C\u4E0D\u662F\u518D\u5F80\u91CC\u63A8\u4E00\u622A\uFF09\u3002 */
-  padding: 0 8px 0 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  outline: none;
-}
-.fh-ws-row:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent); }
-.fh-ws-row-selected { background: color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent); }
-.fh-ws-row:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: -2px; }
-.fh-ws-slot {
-  flex: none;
-  width: 16px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--dsw-alias-label-secondary);
-}
-.fh-ws-title {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14px;
-  line-height: 20px;
-}
-.fh-ws-rest { flex: none; display: inline-flex; align-items: center; gap: 6px; color: var(--dsw-alias-label-secondary); }
-.fh-ws-time { font-size: 10px; line-height: 16px; font-variant-numeric: tabular-nums; }
-.fh-ws-actions { display: none; flex: none; align-items: center; gap: 4px; }
-.fh-ws-quick { display: contents; }
-.fh-ws-row:hover .fh-ws-rest { display: none; }
-.fh-ws-row:hover .fh-ws-actions { display: inline-flex; }
-.fh-ws-row-archived .fh-ws-title { color: var(--dsw-alias-label-secondary); }
-.fh-ws-row-blank .fh-ws-title { color: var(--dsw-alias-label-secondary); }
-.fh-ws-dot {
-  position: relative;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  display: inline-block;
-  flex: none;
-}
+.fh-drop-before::before { top: -2px; }
+.fh-drop-after::after { bottom: -2px; }
 
-.fh-ws-spinner {
+/* ---- \u72B6\u6001\u70B9 ---- */
+.fh-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; display: inline-block; }
+.fh-dot-idle { background: var(--dsw-alias-state-idle-primary); }
+.fh-dot-warning { background: var(--dsw-alias-state-warn-primary); }
+.fh-dot-done { background: var(--dsw-alias-state-success-primary); }
+.fh-dot-spinner, .fh-ws-spinner {
   box-sizing: border-box;
   width: 11px;
   height: 11px;
   flex: none;
   border-radius: 50%;
-  border: 1.6px solid color-mix(in srgb, var(--dsw-alias-state-business-primary) 22%, transparent);
-  border-top-color: var(--dsw-alias-state-business-primary);
-  animation: fh-ws-spin 0.8s linear infinite;
+  border: 1.6px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 22%, transparent);
+  border-top-color: var(--dsw-alias-brand-primary);
+  animation: fh-spin 0.8s linear infinite;
 }
-@keyframes fh-ws-spin {
-  to { transform: rotate(360deg); }
-}
-.fh-ws-dot-warn { background: var(--dsw-alias-state-warn-primary); }
-.fh-ws-dot-warn::after {
-  content: '';
+@keyframes fh-spin { to { transform: rotate(360deg); } }
+.fh-visually-hidden {
   position: absolute;
-  inset: -2px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 45%, transparent);
-  animation: fh-ws-dot-pulse 1.6s ease-in-out infinite;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
-.fh-ws-dot-done { background: var(--dsw-alias-state-success-primary); }
 
-@keyframes fh-ws-dot-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.25; }
-  50% { transform: scale(1.7); opacity: 0.55; }
+/* ---- \u7A7A\u72B6\u6001 / \u663E\u793A\u66F4\u591A ---- */
+.fh-ws-empty, .fh-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary);
 }
-.fh-ws-pin { color: var(--dsw-alias-label-secondary); }
-.fh-ws-empty { padding: 40px 12px; text-align: center; font-size: 12px; color: var(--dsw-alias-label-secondary); }
+.fh-empty-icon { color: var(--dsw-alias-label-secondary); opacity: 0.7; }
+.fh-show-more {
+  align-self: flex-start;
+  margin: 2px 0 2px 12px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.fh-show-more:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); color: var(--dsw-alias-label-primary); }
+
+/* ---- \u641C\u7D22\u7ED3\u679C ---- */
+.fh-search-body { display: flex; flex-direction: column; gap: 2px; }
+.fh-search-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.fh-search-row:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent); }
+.fh-search-heading { display: flex; align-items: center; gap: 6px; }
+.fh-search-meta { display: flex; gap: 8px; padding-left: 22px; min-width: 0; color: var(--dsw-alias-label-secondary); font-size: 11px; }
+.fh-search-workspace { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fh-search-snippet { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fh-search-status { padding: 8px 12px; font-size: 11px; color: var(--dsw-alias-label-secondary); }
+
+/* ---- \u60AC\u505C\u5361\u7247 ---- */
+.fh-hovercard {
+  position: fixed;
+  z-index: 40;
+  width: 260px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  background: var(--dsw-alias-bg-overlay);
+  color: var(--dsw-alias-label-primary);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
+  font-size: 12px;
+  pointer-events: none;
+}
+.fh-hovercard-body { display: flex; flex-direction: column; gap: 4px; }
+.fh-hovercard-title { font-size: 12px; line-height: 18px; word-break: break-word; }
+.fh-hovercard-path { color: var(--dsw-alias-label-secondary); font-size: 11px; word-break: break-all; }
+.fh-hovercard-time { color: var(--dsw-alias-label-secondary); font-size: 11px; }
+.fh-hovercard-status { display: flex; align-items: center; gap: 6px; color: var(--dsw-alias-label-secondary); }
+.fh-hovercard-archived { color: var(--dsw-alias-state-warn-primary); }
+.fh-hovercard-copy {
+  margin-top: 6px;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 9%, transparent);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 11px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* ---- \u83DC\u5355\uFF08popover\uFF09 ---- */
+.fh-menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 4px;
+  min-width: 190px;
+  max-width: 280px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-overlay);
+  color: var(--dsw-alias-label-primary);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);
+  font-size: 13px;
+}
+.fh-menu:popover-open { display: flex; flex-direction: column; }
+.fh-menu-label {
+  padding: 6px 10px 2px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-secondary);
+}
+.fh-menu-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--dsw-alias-border-l1);
+}
+.fh-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.fh-menu-item:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); }
+.fh-menu-item:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: -2px; }
+.fh-menu-item:disabled { opacity: 0.45; cursor: default; }
+.fh-menu-item-selected { color: var(--dsw-alias-brand-primary); }
+.fh-menu-item-danger { color: var(--dsw-alias-state-error-primary); }
+.fh-menu-item-icon { flex: none; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; }
+.fh-menu-item-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- \u5BF9\u8BDD\u6846 ---- */
+.fh-dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-height: min(70vh, 640px);
+  padding: 0;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  box-shadow: 0 16px 48px color-mix(in srgb, var(--dsw-alias-label-primary) 24%, transparent);
+  font-size: 13px;
+}
+.fh-dialog::backdrop { background: color-mix(in srgb, var(--dsw-alias-label-primary) 32%, transparent); }
+.fh-dialog[open] { display: flex; flex-direction: column; }
+.fh-dialog-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 8px 16px;
+}
+.fh-dialog-title { flex: 1 1 auto; font-size: 14px; line-height: 20px; }
+.fh-dialog-desc { margin: 0; padding: 0 16px 8px; color: var(--dsw-alias-label-secondary); line-height: 18px; }
+.fh-dialog-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 16px 12px; }
+.fh-dialog-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}
+.fh-dialog-foot-gap { flex: 1 1 auto; }
+.fh-dialog-error { margin-top: 8px; color: var(--dsw-alias-state-error-primary); font-size: 12px; line-height: 18px; }
+.fh-dialog-status { color: var(--dsw-alias-label-secondary); font-size: 12px; }
+.fh-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.fh-input:focus { border-color: var(--dsw-alias-brand-primary); }
+.fh-button {
+  flex: none;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.fh-button:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); }
+.fh-button:disabled { opacity: 0.45; cursor: default; }
+.fh-button-primary {
+  border-color: transparent;
+  background: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-bg-base);
+}
+.fh-button-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-brand-primary) 88%, var(--dsw-alias-label-primary)); }
+.fh-button-danger { border-color: var(--dsw-alias-state-error-primary); color: var(--dsw-alias-state-error-primary); }
+
+/* ---- \u76EE\u5F55\u9009\u62E9\u5668 ---- */
+.fh-picker-path { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.fh-picker-path-input { flex: 1 1 auto; }
+.fh-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 240px;
+  min-height: 120px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+}
+.fh-picker-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.fh-picker-entry:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); }
+.fh-picker-entry-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fh-picker-status { padding: 12px; text-align: center; color: var(--dsw-alias-label-secondary); font-size: 12px; }
+.fh-picker-new { display: flex; gap: 8px; margin-top: 8px; }
+.fh-picker-new .fh-input { flex: 1 1 auto; }
+
+/* ---- \u6298\u53E0 rail \u6001 ---- */
+.fh-rail { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; }
+.fh-rail-button {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+.fh-rail-button:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); color: var(--dsw-alias-label-primary); }
+
+/* ---- \u53F3\u4E0B\u89D2\u63D0\u793A ---- */
+.fh-notices {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+.fh-notice {
+  max-width: 360px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  background: var(--dsw-alias-bg-overlay);
+  color: var(--dsw-alias-label-primary);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: left;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.fh-notice-warn { border-color: var(--dsw-alias-state-warn-primary); }
+
 @media (hover: none) {
-  .fh-ws-rest { display: none; }
-  .fh-ws-actions { display: inline-flex; }
+  .fh-ws-rest, .fh-row-rest { display: none; }
+  .fh-ws-actions, .fh-row-actions { display: inline-flex; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .fh-ws-chevron { transition: none; }
-  .fh-ws-dot-warn::after, .fh-ws-spinner { animation: none; }
+  .fh-ws-chevron, .fh-row-chevron { transition: none; }
+  .fh-dot-spinner, .fh-ws-spinner { animation: none; }
 }
 `;
+
+// client/src/shell/locale.ts
+var zh = {
+  "section.workspaces": "\u5DE5\u4F5C\u533A",
+  "section.sessions": "\u4F1A\u8BDD",
+  "group.ungrouped": "\u672A\u5206\u7EC4",
+  search: "\u641C\u7D22\u4F1A\u8BDD",
+  "search.aria": "\u641C\u7D22\u4F1A\u8BDD",
+  "search.placeholder": "\u641C\u7D22\u4F1A\u8BDD\u2026",
+  "search.clear": "\u6E05\u9664\u641C\u7D22",
+  "search.results.aria": "\u641C\u7D22\u7ED3\u679C",
+  "search.pending": "\u6B63\u5728\u641C\u7D22",
+  "search.noMatches": "\u6CA1\u6709\u5339\u914D\u7684\u4F1A\u8BDD",
+  "search.hasMore": "\u53EA\u663E\u793A\u524D {n} \u6761\uFF0C\u8F93\u5165\u66F4\u591A\u5173\u952E\u8BCD\u53EF\u7F29\u5C0F\u8303\u56F4",
+  "viewOptions.label": "\u89C6\u56FE\u9009\u9879",
+  "groupBy.label": "\u5206\u7EC4\u65B9\u5F0F",
+  "groupBy.workspace": "\u6309\u5DE5\u4F5C\u533A",
+  "groupBy.workspaceTree": "\u6309\u76EE\u5F55\u6811",
+  "groupBy.flat": "\u4E00\u5F20\u5217\u8868",
+  "orderBy.label": "\u6392\u5E8F\u65B9\u5F0F",
+  "orderBy.manual": "\u624B\u52A8\u6392\u5E8F",
+  "orderBy.updated": "\u6700\u8FD1\u6D3B\u52A8",
+  "filterBy.label": "\u5F52\u6863\u4F1A\u8BDD",
+  "viewOptions.hideArchived": "\u9690\u85CF\u5F52\u6863",
+  "viewOptions.showArchived": "\u663E\u793A\u5F52\u6863",
+  "viewOptions.onlyArchived": "\u53EA\u770B\u5F52\u6863",
+  "workspace.add": "\u6DFB\u52A0\u5DE5\u4F5C\u533A",
+  "actions.newSession": "\u65B0\u5EFA\u4F1A\u8BDD",
+  "actions.newSession.aria": "\u5728\u300C{name}\u300D\u65B0\u5EFA\u4F1A\u8BDD",
+  "actions.workspace.aria": "\u300C{name}\u300D\u7684\u5DE5\u4F5C\u533A\u9009\u9879",
+  "actions.session.aria": "\u300C{name}\u300D\u7684\u4F1A\u8BDD\u9009\u9879",
+  "actions.unarchive": "\u53D6\u6D88\u5F52\u6863",
+  "session.new": "\u65B0\u4F1A\u8BDD",
+  "session.untitled": "\u672A\u547D\u540D\u4F1A\u8BDD",
+  "time.now": "\u521A\u521A",
+  "time.ago": "{t}\u524D",
+  "time.minute": "{n} \u5206\u949F",
+  "time.hour": "{n} \u5C0F\u65F6",
+  "time.day": "{n} \u5929",
+  "status.running": "\u8FD0\u884C\u4E2D",
+  "status.completed": "\u6709\u65B0\u7ED3\u679C",
+  "status.idle": "\u7A7A\u95F2",
+  "status.waitingApproval": "\u7B49\u5F85\u786E\u8BA4",
+  "status.planReview": "\u7B49\u5F85\u786E\u8BA4\u8BA1\u5212",
+  "status.waitingAnswer": "\u7B49\u5F85\u56DE\u7B54",
+  "status.compact.approval": "\u5F85\u786E\u8BA4",
+  "status.compact.planReview": "\u5F85\u786E\u8BA4",
+  "status.compact.answer": "\u5F85\u56DE\u7B54",
+  "status.subagentsRunning.one": "{n} \u4E2A\u5B50\u4EE3\u7406\u8FD0\u884C\u4E2D",
+  "status.subagentsRunning.other": "{n} \u4E2A\u5B50\u4EE3\u7406\u8FD0\u884C\u4E2D",
+  "row.archived": "\u5DF2\u5F52\u6863",
+  "row.pinned": "\u5DF2\u7F6E\u9876",
+  "hover.created": "\u521B\u5EFA\u4E8E {time}",
+  "hover.copied": "\u5DF2\u590D\u5236",
+  copy: "\u590D\u5236",
+  "date.ymd": "{y}/{m}/{d}",
+  "sessions.expand": "\u663E\u793A\u66F4\u591A\uFF08{n}\uFF09",
+  "sessions.collapse": "\u6536\u8D77",
+  "empty.none": "\u8FD8\u6CA1\u6709\u4F1A\u8BDD",
+  "empty.noneArchived": "\u6CA1\u6709\u5F52\u6863\u4F1A\u8BDD",
+  "empty.viewOthers": "\u67E5\u770B\u5176\u4ED6\u4F1A\u8BDD",
+  "toast.archivedNotOpenable": "\u5DF2\u5F52\u6863\u7684\u4F1A\u8BDD\u4E0D\u80FD\u76F4\u63A5\u6253\u5F00\uFF0C\u8BF7\u5148\u53D6\u6D88\u5F52\u6863",
+  "toast.pinFailed": "\u7F6E\u9876\u5931\u8D25",
+  "toast.unpinFailed": "\u53D6\u6D88\u7F6E\u9876\u5931\u8D25",
+  "toast.archiveFailed": "\u5F52\u6863\u5931\u8D25",
+  "toast.addFailed": "\u6DFB\u52A0\u5DE5\u4F5C\u533A\u5931\u8D25\uFF1A{message}",
+  "toast.pickTimeout": "\u6CA1\u6709\u7B49\u5230\u76EE\u5F55\u9009\u62E9\u7ED3\u679C\uFF0C\u5DF2\u53D6\u6D88\u8FD9\u6B21\u6DFB\u52A0\uFF1B\u53EF\u4EE5\u518D\u70B9\u4E00\u6B21\u52A0\u53F7\u91CD\u8BD5\u3002",
+  rename: "\u91CD\u547D\u540D",
+  cancel: "\u53D6\u6D88",
+  close: "\u5173\u95ED",
+  "rename.workspace.title": "\u91CD\u547D\u540D\u5DE5\u4F5C\u533A",
+  "delete.workspace": "\u5220\u9664\u5DE5\u4F5C\u533A",
+  "delete.desc": "\u53EA\u5220\u9664\u300C{name}\u300D\u8FD9\u6761\u5DE5\u4F5C\u533A\u8BB0\u5F55\uFF0C\u4E0D\u5220\u9664\u76EE\u5F55\u4E0E\u4F1A\u8BDD\u65E5\u5FD7\u3002",
+  "delete.pending": "\u6B63\u5728\u5220\u9664\u2026",
+  "field.workspaceName": "\u5DE5\u4F5C\u533A\u540D\u79F0",
+  "conflict.named": "\u5DF2\u7ECF\u6709\u540C\u540D\u7684\u5DE5\u4F5C\u533A\u300C{name}\u300D",
+  "picker.title": "\u9009\u62E9\u5DE5\u4F5C\u533A\u76EE\u5F55",
+  "picker.path": "\u76EE\u5F55\u8DEF\u5F84",
+  "picker.up": "\u4E0A\u4E00\u5C42",
+  "picker.empty": "\u8FD9\u4E2A\u76EE\u5F55\u91CC\u6CA1\u6709\u5B50\u76EE\u5F55",
+  "picker.use": "\u4F7F\u7528\u8FD9\u4E2A\u76EE\u5F55",
+  "picker.system": "\u7CFB\u7EDF\u5BF9\u8BDD\u6846\u2026",
+  "picker.newFolder": "\u65B0\u5EFA\u6587\u4EF6\u5939",
+  "picker.newFolderName": "\u6587\u4EF6\u5939\u540D\u79F0",
+  "picker.create": "\u521B\u5EFA",
+  "picker.loading": "\u6B63\u5728\u8BFB\u53D6\u2026",
+  "picker.error": "\u8BFB\u53D6\u76EE\u5F55\u5931\u8D25\uFF1A{message}",
+  "shell.fallback": "\u4FA7\u8FB9\u680F\u52A0\u8F7D\u5F02\u5E38\uFF0C\u5DF2\u5207\u6362\u4E3A\u7B80\u7248\u5217\u8868\uFF1B\u91CD\u5F00\u6216\u5237\u65B0\u53EF\u6062\u590D\u3002"
+};
+var en = {
+  "section.workspaces": "Workspaces",
+  "section.sessions": "Sessions",
+  "group.ungrouped": "Ungrouped",
+  search: "Search sessions",
+  "search.aria": "Search sessions",
+  "search.placeholder": "Search sessions\u2026",
+  "search.clear": "Clear search",
+  "search.results.aria": "Search results",
+  "search.pending": "Searching",
+  "search.noMatches": "No sessions match",
+  "search.hasMore": "Showing the first {n}; refine the query to narrow it",
+  "viewOptions.label": "View options",
+  "groupBy.label": "Group by",
+  "groupBy.workspace": "Workspace",
+  "groupBy.workspaceTree": "Workspace tree",
+  "groupBy.flat": "One list",
+  "orderBy.label": "Order by",
+  "orderBy.manual": "Manual",
+  "orderBy.updated": "Last updated",
+  "filterBy.label": "Archived sessions",
+  "viewOptions.hideArchived": "Hide archived",
+  "viewOptions.showArchived": "Show archived",
+  "viewOptions.onlyArchived": "Only archived",
+  "workspace.add": "Add workspace",
+  "actions.newSession": "New session",
+  "actions.newSession.aria": "New session in {name}",
+  "actions.workspace.aria": "Workspace actions for {name}",
+  "actions.session.aria": "Session actions for {name}",
+  "actions.unarchive": "Unarchive",
+  "session.new": "New session",
+  "session.untitled": "Untitled session",
+  "time.now": "now",
+  "time.ago": "{t} ago",
+  "time.minute": "{n} min",
+  "time.hour": "{n} hr",
+  "time.day": "{n} d",
+  "status.running": "Running",
+  "status.completed": "New result",
+  "status.idle": "Idle",
+  "status.waitingApproval": "Waiting for approval",
+  "status.planReview": "Waiting for plan review",
+  "status.waitingAnswer": "Waiting for your answer",
+  "status.compact.approval": "Review",
+  "status.compact.planReview": "Review",
+  "status.compact.answer": "Answer",
+  "status.subagentsRunning.one": "{n} subagent running",
+  "status.subagentsRunning.other": "{n} subagents running",
+  "row.archived": "Archived",
+  "row.pinned": "Pinned",
+  "hover.created": "Created {time}",
+  "hover.copied": "Copied",
+  copy: "Copy",
+  "date.ymd": "{y}/{m}/{d}",
+  "sessions.expand": "Show {n} more",
+  "sessions.collapse": "Show less",
+  "empty.none": "No sessions yet",
+  "empty.noneArchived": "No archived sessions",
+  "empty.viewOthers": "View other sessions",
+  "toast.archivedNotOpenable": "An archived session cannot be opened; unarchive it first",
+  "toast.pinFailed": "Could not pin the session",
+  "toast.unpinFailed": "Could not unpin the session",
+  "toast.archiveFailed": "Could not archive the session",
+  "toast.addFailed": "Could not add the workspace: {message}",
+  "toast.pickTimeout": "The directory chooser did not answer; this attempt was cancelled. Click + to try again.",
+  rename: "Rename",
+  cancel: "Cancel",
+  close: "Close",
+  "rename.workspace.title": "Rename workspace",
+  "delete.workspace": "Delete workspace",
+  "delete.desc": 'Removes only the "{name}" workspace registration; files and session logs stay.',
+  "delete.pending": "Deleting\u2026",
+  "field.workspaceName": "Workspace name",
+  "conflict.named": 'A workspace named "{name}" already exists',
+  "picker.title": "Select a workspace directory",
+  "picker.path": "Directory path",
+  "picker.up": "Parent folder",
+  "picker.empty": "This folder has no subfolders",
+  "picker.use": "Use this directory",
+  "picker.system": "System dialog\u2026",
+  "picker.newFolder": "New folder",
+  "picker.newFolderName": "Folder name",
+  "picker.create": "Create",
+  "picker.loading": "Loading\u2026",
+  "picker.error": "Could not read the directory: {message}",
+  "shell.fallback": "The full sidebar failed to render; showing a simplified list. Reopen or refresh to recover."
+};
+
+// client/src/shell/sidebar.tsx
+var SIDEBAR_NS = "feature-hub.sidebar";
+var SIDEBAR_DICT = { zh, en };
+var SIDEBAR_STYLES2 = SIDEBAR_STYLES;
 var ShellBoundary = class extends React.Component {
   constructor(props) {
     super(props);
     this.state = { failed: false };
   }
+  /** 捕获到异常时置位，后续渲染走 fallback。 */
   static getDerivedStateFromError() {
     return { failed: true };
   }
@@ -939,67 +3278,134 @@ var ShellBoundary = class extends React.Component {
 };
 function FallbackList(props) {
   const t = props.t;
-  const items = props.useWorkspaces(selectItems);
-  const list = props.useSessions(selectList);
+  const items = props.useWorkspaces((state) => state.items);
+  const list = props.useSessions((state) => state);
   const byId = list.byId;
-  const open = (sessionId) => {
-    if (typeof props.openSession === "function") props.openSession(sessionId);
-  };
-  return h(
-    "div",
-    { className: "fh-ws" },
-    h(
+  return /* @__PURE__ */ h("div", { className: "fh-ws" }, /* @__PURE__ */ h("div", { className: "fh-ws-head" }, /* @__PURE__ */ h("span", { className: "fh-ws-label" }, t("section.workspaces"))), /* @__PURE__ */ h("div", { className: "fh-ws-list" }, /* @__PURE__ */ h("div", { className: "fh-ws-empty" }, t("shell.fallback")), items.map((workspace) => /* @__PURE__ */ h("div", { key: workspace.workspaceId, className: "fh-group" }, /* @__PURE__ */ h("div", { className: "fh-ws-group-head" }, /* @__PURE__ */ h("span", { className: "fh-ws-group-title" }, workspace.title === "" ? workspace.path : workspace.title), /* @__PURE__ */ h("span", { className: "fh-ws-count" }, String(workspace.sessionIds.length))), /* @__PURE__ */ h("div", { className: "fh-ws-group-body" }, workspace.sessionIds.map((sessionId) => {
+    const session = byId[sessionId];
+    if (session === void 0) return null;
+    return /* @__PURE__ */ h(
       "div",
-      { className: "fh-ws-head" },
-      h("span", { className: "fh-ws-section-label" }, t("section.workspaces"))
-    ),
-    h(
-      "div",
-      { className: "fh-ws-list" },
-      h("div", { className: "fh-ws-empty" }, t("shell.fallback")),
-      items.map(
-        (workspace) => h(
-          "section",
-          { key: workspace.workspaceId, className: "fh-ws-group" },
-          h(
-            "div",
-            { className: "fh-ws-group-head" },
-            h("span", { className: "fh-ws-group-title" }, workspace.title || ""),
-            h("span", { className: "fh-ws-count" }, String((workspace.sessionIds || []).length))
-          ),
-          h(
-            "div",
-            { className: "fh-ws-group-body" },
-            (workspace.sessionIds || []).map((sessionId) => {
-              const session = byId[sessionId];
-              if (session === void 0) return null;
-              return h(
-                "div",
-                {
-                  key: sessionId,
-                  className: "fh-ws-row",
-                  onClick: () => {
-                    open(sessionId);
-                  }
-                },
-                h("span", { className: "fh-ws-title" }, session.displayTitle || session.title || sessionId)
-              );
-            })
-          )
-        )
-      )
-    )
-  );
+      {
+        key: sessionId,
+        className: "fh-ws-row",
+        onClick: () => {
+          if (typeof props.openSession === "function") props.openSession(sessionId);
+        }
+      },
+      /* @__PURE__ */ h("span", { className: "fh-ws-title" }, session.displayTitle || session.title || sessionId)
+    );
+  }))))));
 }
 function SidebarEntry(props) {
-  return h(ShellBoundary, { fallback: () => h(FallbackList, props) }, h(SidebarBrowser, props));
+  return /* @__PURE__ */ h(ShellBoundary, { fallback: () => /* @__PURE__ */ h(FallbackList, { ...props }) }, /* @__PURE__ */ h(WorkspaceBrowser, { ...props }));
+}
+
+// client/src/shell/notify.tsx
+var notices = [];
+var sequence = 0;
+var listeners = /* @__PURE__ */ new Set();
+function emit() {
+  for (const listener of [...listeners]) listener();
+}
+function pushNotice(text, tone = "info") {
+  const id = ++sequence;
+  notices = [...notices, { id, text, tone }];
+  emit();
+  window.setTimeout(() => {
+    dismissNotice(id);
+  }, 4e3);
+}
+function dismissNotice(id) {
+  const next = notices.filter((notice) => notice.id !== id);
+  if (next.length === notices.length) return;
+  notices = next;
+  emit();
+}
+function getNotices() {
+  return notices;
+}
+function subscribeNotices(listener) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+function NoticesOverlay() {
+  const [items, setItems] = React.useState(() => getNotices());
+  React.useEffect(() => {
+    setItems(getNotices());
+    return subscribeNotices(() => {
+      setItems(getNotices());
+    });
+  }, []);
+  if (items.length === 0) return null;
+  return /* @__PURE__ */ h("div", { className: "fh-notices", role: "status", "aria-live": "polite" }, items.map((notice) => /* @__PURE__ */ h(
+    "button",
+    {
+      key: notice.id,
+      type: "button",
+      className: `fh-notice${notice.tone === "warn" ? " fh-notice-warn" : ""}`,
+      onClick: () => {
+        dismissNotice(notice.id);
+      }
+    },
+    notice.text
+  )));
+}
+
+// client/src/shell/overlays.tsx
+var renameState = null;
+var renameListeners = /* @__PURE__ */ new Set();
+var renameExecutor = null;
+async function confirmSessionRename(_ctx, sessionId, title) {
+  if (renameExecutor === null) throw new Error("session rename is unavailable");
+  await renameExecutor(sessionId, title);
+}
+function emitRename() {
+  for (const listener of [...renameListeners]) listener();
+}
+function setSessionRename(request) {
+  renameState = request;
+  emitRename();
+}
+function getSessionRename() {
+  return renameState;
+}
+function subscribeRename(listener) {
+  renameListeners.add(listener);
+  return () => {
+    renameListeners.delete(listener);
+  };
+}
+function ShellOverlays(props) {
+  const [request, setRequest] = React.useState(() => props.state());
+  React.useEffect(() => {
+    setRequest(props.state());
+    return props.subscribe(() => {
+      setRequest(props.state());
+    });
+  }, [props]);
+  return /* @__PURE__ */ h(Fragment, null, /* @__PURE__ */ h(
+    SessionRenameDialog,
+    {
+      open: request !== null,
+      sessionId: request === null ? null : request.sessionId,
+      currentTitle: request === null ? "" : request.currentTitle,
+      onConfirm: props.confirm,
+      onClose: props.close,
+      t: props.t,
+      closeLabel: props.t("close"),
+      cancelLabel: props.t("cancel")
+    }
+  ), /* @__PURE__ */ h(NoticesOverlay, null));
 }
 
 // client/src/features/recent-tasks/preferences.ts
 var DEFAULT_RECENT_LIMIT = 5;
 var MAX_RECENT_LIMIT = 50;
 var LIMIT_KEY = "dsh-feature-hub.recent-tasks.limit";
-var listeners = /* @__PURE__ */ new Set();
+var listeners2 = /* @__PURE__ */ new Set();
 function clampRecentLimit(value, fallback = DEFAULT_RECENT_LIMIT) {
   const number = Number(value);
   if (!Number.isFinite(number) || number <= 0) return fallback;
@@ -1020,7 +3426,7 @@ function writeRecentLimit(value) {
     window.localStorage.setItem(LIMIT_KEY, String(next));
   } catch (_error) {
   }
-  for (const listener of listeners) listener();
+  for (const listener of listeners2) listener();
   return next;
 }
 function resetRecentLimit() {
@@ -1028,17 +3434,37 @@ function resetRecentLimit() {
     window.localStorage.removeItem(LIMIT_KEY);
   } catch (_error) {
   }
-  for (const listener of listeners) listener();
+  for (const listener of listeners2) listener();
 }
 function subscribeRecentLimit(listener) {
-  listeners.add(listener);
+  listeners2.add(listener);
   return () => {
-    listeners.delete(listener);
+    listeners2.delete(listener);
   };
+}
+
+// client/src/lib/status.ts
+function statusIcon(meta, label) {
+  if (meta === null) return null;
+  if (meta.tone === "live") {
+    return h("span", {
+      className: "fh-ws-spinner",
+      title: label,
+      "aria-label": label,
+      role: "img"
+    });
+  }
+  return h("span", {
+    className: `fh-ws-dot fh-ws-dot-${meta.tone}`,
+    title: label,
+    "aria-label": label,
+    role: "img"
+  });
 }
 
 // client/src/features/recent-tasks/styles.ts
 var styles = `
+/* \u5206\u7EC4\u8BA1\u6570\u5FBD\u6807 */
 .fh-ws-recent .fh-ws-count {
   flex: none;
   min-width: 18px;
@@ -1052,10 +3478,32 @@ var styles = `
   color: var(--dsw-alias-label-secondary);
   font-variant-numeric: tabular-nums;
 }
+
+/* \u884C\u6807\u9898\uFF1A\u5355\u884C\u7701\u7565\uFF0C\u957F\u6807\u9898\u4E0D\u80FD\u628A 32px \u7684\u884C\u6491\u6210\u4E24\u884C */
+.fh-ws-row .fh-ws-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* \u72B6\u6001\u70B9\uFF1A\u51E0\u4F55\u4E0E\u914D\u8272\u4E0E\u5916\u58F3\u7684 .fh-dot* \u4FDD\u6301\u4E00\u81F4 */
+.fh-ws-row .fh-ws-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  display: inline-block;
+  border-radius: 50%;
+}
+.fh-ws-row .fh-ws-dot-warn { background: var(--dsw-alias-state-warn-primary); }
+.fh-ws-row .fh-ws-dot-done { background: var(--dsw-alias-state-success-primary); }
 `;
 
 // client/src/features/recent-tasks/locale.ts
-var zh = {
+var zh2 = {
   title: "\u6700\u8FD1\u4EFB\u52A1",
   "row.new": "\u65B0\u4F1A\u8BDD",
   "row.untitled": "\u672A\u547D\u540D\u4F1A\u8BDD",
@@ -1075,7 +3523,7 @@ var zh = {
   "limit.hint": "\u9ED8\u8BA4 5 \u6761\uFF1B\u8FD0\u884C\u4E2D\u6216\u7B49\u5F85\u786E\u8BA4\u7684\u4EFB\u52A1\u4E0D\u4F1A\u88AB\u8FD9\u4E2A\u6570\u91CF\u88C1\u6389\uFF0C\u4F1A\u989D\u5916\u5217\u51FA\u30021\u2013{max}\u3002",
   "limit.reset": "\u6062\u590D\u9ED8\u8BA4"
 };
-var en = {
+var en2 = {
   title: "Recent tasks",
   "row.new": "New session",
   "row.untitled": "Untitled session",
@@ -1097,7 +3545,7 @@ var en = {
 };
 
 // client/src/features/recent-tasks/index.ts
-var { useEffect: useEffect2, useMemo: useMemo2, useState: useState2 } = React;
+var { useEffect, useMemo, useState } = React;
 var RECENT_TASKS_ID = "recent-tasks";
 var COLLAPSE_STORAGE_KEY = "dsh-feature-hub.recent-tasks.collapsed";
 function limitOf(value) {
@@ -1166,16 +3614,16 @@ function statusOf(statuses, sessionId) {
 }
 function RecentTasksSection(props) {
   const { t, now, snapshot, openSession } = props;
-  const [collapsed, setCollapsed] = useState2(readCollapsed);
-  const [limit, setLimit] = useState2(readRecentLimit);
-  useEffect2(
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const [limit, setLimit] = useState(readRecentLimit);
+  useEffect(
     () => subscribeRecentLimit(() => {
       setLimit(readRecentLimit());
     }),
     []
   );
   const statuses = snapshot.statuses;
-  const activeIds = useMemo2(() => {
+  const activeIds = useMemo(() => {
     const ids = /* @__PURE__ */ new Set();
     for (const row of props.rows) {
       const status = statusOf(statuses, row.id);
@@ -1183,7 +3631,7 @@ function RecentTasksSection(props) {
     }
     return ids;
   }, [props.rows, statuses]);
-  const rows = useMemo2(
+  const rows = useMemo(
     () => recentAcrossProjects(props.rows, limit, activeIds),
     [props.rows, limit, activeIds]
   );
@@ -1256,6 +3704,10 @@ function RecentTasksSection(props) {
   const rowElement = (session) => {
     const status = statusOf(statuses, session.id);
     const selected = props.currentSessionId !== null && props.currentSessionId === session.id;
+    const showMenu = (point) => {
+      if (typeof props.openSessionMenu !== "function") return;
+      props.openSessionMenu(session.id, titleOf(session), point);
+    };
     return h(
       "div",
       {
@@ -1268,7 +3720,22 @@ function RecentTasksSection(props) {
         onClick: () => {
           open(session.id);
         },
+        onContextMenu: (event) => {
+          if (typeof props.openSessionMenu !== "function") return;
+          event.preventDefault();
+          event.stopPropagation();
+          event.currentTarget.focus({ preventScroll: true });
+          showMenu({ x: event.clientX, y: event.clientY });
+        },
         onKeyDown: (event) => {
+          const keyboardMenu = event.key === "ContextMenu" || event.key === "F10" && event.shiftKey;
+          if (keyboardMenu) {
+            if (typeof props.openSessionMenu !== "function") return;
+            event.preventDefault();
+            const box = event.currentTarget.getBoundingClientRect();
+            showMenu({ x: box.left, y: box.bottom });
+            return;
+          }
           if (event.key !== "Enter" && event.key !== " ") return;
           event.preventDefault();
           open(session.id);
@@ -1311,16 +3778,16 @@ var RECENT_TASKS_NS = "feature-hub.recent-tasks";
 var recentTasksSection = {
   id: RECENT_TASKS_ID,
   order: 10,
-  locale: { ns: RECENT_TASKS_NS, dicts: { zh, en } },
+  locale: { ns: RECENT_TASKS_NS, dicts: { zh: zh2, en: en2 } },
   styles,
   component: RecentTasksSection
 };
 
 // client/src/features/recent-tasks/settings.ts
-var { useState: useState3 } = React;
+var { useState: useState2 } = React;
 function RecentTasksSettings(props) {
   const { t } = props;
-  const [limit, setLimit] = useState3(readRecentLimit);
+  const [limit, setLimit] = useState2(readRecentLimit);
   const commit = (value) => {
     setLimit(writeRecentLimit(value));
   };
@@ -1367,7 +3834,7 @@ function RecentTasksSettings(props) {
 var recentTasksSettings = {
   id: "recent-tasks",
   order: 10,
-  locale: { ns: RECENT_TASKS_NS, dicts: { zh, en } },
+  locale: { ns: RECENT_TASKS_NS, dicts: { zh: zh2, en: en2 } },
   component: RecentTasksSettings
 };
 
@@ -1523,7 +3990,7 @@ var styles2 = `
 `;
 
 // client/src/features/git-branch/locale.ts
-var zh2 = {
+var zh3 = {
   "chip.label": "\u5F53\u524D\u5206\u652F\uFF1A{branch}\u3002\u70B9\u51FB\u5207\u6362\u5206\u652F",
   detached: "\u6E38\u79BB HEAD",
   dirty: "{count} \u4E2A\u6587\u4EF6\u6709\u672A\u63D0\u4EA4\u6539\u52A8",
@@ -1544,7 +4011,7 @@ var zh2 = {
   "warn.cancel": "\u53D6\u6D88",
   "warn.confirm": "\u4ECD\u8981\u5207\u6362"
 };
-var en2 = {
+var en3 = {
   "chip.label": "Current branch: {branch}. Select to switch",
   detached: "Detached HEAD",
   dirty: "{count} uncommitted files",
@@ -1567,7 +4034,7 @@ var en2 = {
 };
 
 // client/src/features/git-branch/index.ts
-var { useCallback, useEffect: useEffect3, useRef, useState: useState4 } = React;
+var { useCallback, useEffect: useEffect2, useRef, useState: useState3 } = React;
 var BRANCH_NS = "feature-hub.branch";
 var GAP = 8;
 function routeUrl(subpath, params) {
@@ -1653,13 +4120,13 @@ function BranchChip(props) {
     const row = snapshot.byId[sessionId];
     return row === void 0 ? true : row.blank === true;
   });
-  const [state, setState] = useState4(null);
-  const [pending, setPending] = useState4(null);
-  const [error, setError] = useState4("");
-  const [busy, setBusy] = useState4(false);
-  const [open, setOpen] = useState4(false);
-  const [query, setQuery] = useState4("");
-  const [draft, setDraft] = useState4("");
+  const [state, setState] = useState3(null);
+  const [pending, setPending] = useState3(null);
+  const [error, setError] = useState3("");
+  const [busy, setBusy] = useState3(false);
+  const [open, setOpen] = useState3(false);
+  const [query, setQuery] = useState3("");
+  const [draft, setDraft] = useState3("");
   const chipRef = useRef(null);
   const panelRef = useRef(null);
   const searchRef = useRef(null);
@@ -1678,7 +4145,7 @@ function BranchChip(props) {
       setState(null);
     }
   }, [cwd]);
-  useEffect3(() => {
+  useEffect2(() => {
     void load();
   }, [load]);
   const place = useCallback(() => {
@@ -1694,7 +4161,7 @@ function BranchChip(props) {
     panel.style.top = `${Math.round(top)}px`;
     panel.style.left = `${Math.round(left)}px`;
   }, []);
-  useEffect3(() => {
+  useEffect2(() => {
     const panel = panelRef.current;
     if (panel === null) return;
     if (typeof panel.showPopover !== "function") {
@@ -1711,7 +4178,7 @@ function BranchChip(props) {
     }
     if (!open && panel.matches(":popover-open")) panel.hidePopover();
   }, [open, state?.branches.length, place]);
-  useEffect3(() => {
+  useEffect2(() => {
     const panel = panelRef.current;
     if (panel === null) return;
     const onToggle = (event) => {
@@ -1921,7 +4388,7 @@ function BranchChip(props) {
 var gitBranchFeature = {
   id: "git-branch",
   order: 5,
-  locale: { ns: BRANCH_NS, dicts: { zh: zh2, en: en2 } },
+  locale: { ns: BRANCH_NS, dicts: { zh: zh3, en: en3 } },
   styles: styles2,
   component: BranchChip
 };
@@ -1982,8 +4449,8 @@ function runCompact(sessionId) {
 var DEFAULT_COMPACT_THRESHOLD = 50;
 var MIN_COMPACT_THRESHOLD = 20;
 var MAX_COMPACT_THRESHOLD = 100;
-var STORAGE_KEY = "dsh-feature-hub.compact.threshold";
-var listeners2 = /* @__PURE__ */ new Set();
+var STORAGE_KEY2 = "dsh-feature-hub.compact.threshold";
+var listeners3 = /* @__PURE__ */ new Set();
 function clampCompactThreshold(value, fallback = DEFAULT_COMPACT_THRESHOLD) {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
@@ -1991,7 +4458,7 @@ function clampCompactThreshold(value, fallback = DEFAULT_COMPACT_THRESHOLD) {
 }
 function readCompactThreshold() {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(STORAGE_KEY2);
     if (raw === null || raw === "") return DEFAULT_COMPACT_THRESHOLD;
     return clampCompactThreshold(raw);
   } catch (_error) {
@@ -2001,28 +4468,28 @@ function readCompactThreshold() {
 function writeCompactThreshold(value) {
   const next = clampCompactThreshold(value);
   try {
-    window.localStorage.setItem(STORAGE_KEY, String(next));
+    window.localStorage.setItem(STORAGE_KEY2, String(next));
   } catch (_error) {
   }
-  for (const listener of listeners2) listener();
+  for (const listener of listeners3) listener();
   return next;
 }
 function resetCompactThreshold() {
   try {
-    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(STORAGE_KEY2);
   } catch (_error) {
   }
-  for (const listener of listeners2) listener();
+  for (const listener of listeners3) listener();
 }
 function subscribeCompactThreshold(listener) {
-  listeners2.add(listener);
+  listeners3.add(listener);
   return () => {
-    listeners2.delete(listener);
+    listeners3.delete(listener);
   };
 }
 
 // client/src/features/compact-context/locale.ts
-var zh3 = {
+var zh4 = {
   label: "\u538B\u7F29\u4E0A\u4E0B\u6587",
   tooltip: "\u4E0A\u4E0B\u6587\u5DF2\u7528 {percent}%\uFF0C\u70B9\u51FB\u538B\u7F29\u8F83\u65E9\u7684\u5BF9\u8BDD\u5386\u53F2\uFF08\u7B49\u540C /compact\uFF0C\u4E0D\u4F1A\u52A8\u8F93\u5165\u6846\u91CC\u7684\u8349\u7A3F\uFF09",
   "disabled.running": "\u6B63\u5728\u6267\u884C\uFF0C\u7ED3\u675F\u540E\u624D\u80FD\u538B\u7F29",
@@ -2037,7 +4504,7 @@ var zh3 = {
   "threshold.hint": "\u4E0A\u4E0B\u6587\u5360\u7528\u8FBE\u5230\u8BE5\u767E\u5206\u6BD4\u624D\u663E\u793A\u6309\u94AE\uFF1B\u6700\u5C0F {min}%\u3002",
   "threshold.reset": "\u6062\u590D\u9ED8\u8BA4"
 };
-var en3 = {
+var en4 = {
   label: "Compact context",
   tooltip: "Context is {percent}% full; compact earlier history now (same as /compact, never touches your draft)",
   "disabled.running": "Running a turn; compaction is available when it ends",
@@ -2097,7 +4564,7 @@ var styles3 = `
 `;
 
 // client/src/features/compact-context/index.ts
-var { useEffect: useEffect4, useRef: useRef2, useState: useState5 } = React;
+var { useEffect: useEffect3, useRef: useRef2, useState: useState4 } = React;
 var COMPACT_NS = "feature-hub.compact";
 var NOTE_VISIBLE_MS = 9e3;
 function CompactGlyph(props) {
@@ -2135,23 +4602,23 @@ function CompactButton(props) {
     const row = state.byId[sessionId];
     return row === void 0 ? false : row.running === true;
   });
-  const [threshold, setThreshold] = useState5(readCompactThreshold);
-  const [pending, setPending] = useState5(false);
-  const [note, setNote] = useState5(null);
+  const [threshold, setThreshold] = useState4(readCompactThreshold);
+  const [pending, setPending] = useState4(false);
+  const [note, setNote] = useState4(null);
   const alive = useRef2(true);
-  useEffect4(() => {
+  useEffect3(() => {
     alive.current = true;
     return () => {
       alive.current = false;
     };
   }, []);
-  useEffect4(
+  useEffect3(
     () => subscribeCompactThreshold(() => {
       setThreshold(readCompactThreshold());
     }),
     []
   );
-  useEffect4(() => {
+  useEffect3(() => {
     if (note === null) return;
     const timer = window.setTimeout(() => {
       if (alive.current) setNote(null);
@@ -2208,16 +4675,16 @@ function CompactButton(props) {
 var compactContextFeature = {
   id: "compact-context",
   order: 20,
-  locale: { ns: COMPACT_NS, dicts: { zh: zh3, en: en3 } },
+  locale: { ns: COMPACT_NS, dicts: { zh: zh4, en: en4 } },
   styles: styles3,
   component: CompactButton
 };
 
 // client/src/features/compact-context/settings.ts
-var { useState: useState6 } = React;
+var { useState: useState5 } = React;
 function CompactContextSettings(props) {
   const { t } = props;
-  const [text, setText] = useState6(() => String(readCompactThreshold()));
+  const [text, setText] = useState5(() => String(readCompactThreshold()));
   const commit = () => {
     if (text.trim() === "") {
       setText(String(readCompactThreshold()));
@@ -2274,8 +4741,493 @@ function CompactContextSettings(props) {
 var compactContextSettings = {
   id: "compact-context",
   order: 20,
-  locale: { ns: COMPACT_NS, dicts: { zh: zh3, en: en3 } },
+  locale: { ns: COMPACT_NS, dicts: { zh: zh4, en: en4 } },
   component: CompactContextSettings
+};
+
+// client/src/features/token-usage/metrics.ts
+var EMPTY_STAGE = { speedTps: null, ttftMs: null, elapsedMs: null, turn: null };
+function billedTokens(usage) {
+  const total = usage.uncachedInputTokens + usage.cacheReadTokens + usage.cacheWriteTokens + usage.outputTokens;
+  return Number.isFinite(total) ? Math.max(0, Math.round(total)) : 0;
+}
+function outputTokensOf(usage) {
+  if (typeof usage !== "object" || usage === null) return null;
+  const value = usage.outputTokens;
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+}
+function latestTurn(nodes, turnTimings) {
+  let latest = null;
+  const consider = (turn) => {
+    if (typeof turn !== "number" || !Number.isFinite(turn)) return;
+    if (latest === null || turn > latest) latest = turn;
+  };
+  for (const node of nodes) consider(node.turn);
+  for (const turn of turnTimings.keys()) consider(turn);
+  return latest;
+}
+function stageReading(nodes, turnTimings, running, now) {
+  const turn = latestTurn(nodes, turnTimings);
+  if (turn === null) return EMPTY_STAGE;
+  let decodeMs = 0;
+  let decodeTokens = 0;
+  let ttftTotal = 0;
+  let ttftSteps = 0;
+  for (const node of nodes) {
+    if (node.kind !== "assistant" || node.turn !== turn) continue;
+    const timing2 = node.timing;
+    if (timing2 === void 0) continue;
+    if (timing2.stepStartTime !== null && timing2.firstTokenTime !== null) {
+      ttftTotal += Math.max(0, timing2.firstTokenTime - timing2.stepStartTime);
+      ttftSteps += 1;
+    }
+    if (timing2.firstTokenTime === null) continue;
+    const output = outputTokensOf(node.usage);
+    if (output === null) continue;
+    decodeMs += Math.max(0, timing2.completedTime - timing2.firstTokenTime);
+    decodeTokens += output;
+  }
+  const timing = turnTimings.get(turn);
+  const elapsedMs = timing === void 0 ? null : Math.max(0, (timing.endTime ?? (running ? now : timing.startTime)) - timing.startTime);
+  return {
+    speedTps: decodeMs > 0 ? decodeTokens / (decodeMs / 1e3) : null,
+    ttftMs: ttftSteps > 0 ? ttftTotal / ttftSteps : null,
+    elapsedMs,
+    turn
+  };
+}
+function stageReadingFromStats(stats) {
+  if (stats === void 0) return EMPTY_STAGE;
+  return {
+    speedTps: stats.decodeMs > 0 ? stats.decodeTokens / (stats.decodeMs / 1e3) : null,
+    ttftMs: stats.ttftSteps > 0 ? stats.ttftMs / stats.ttftSteps : null,
+    elapsedMs: null,
+    turn: null
+  };
+}
+function contextPercent(pressure) {
+  if (pressure === void 0) return null;
+  const used = pressure.projectedTokens ?? pressure.pressureTokens;
+  const capacity = pressure.contextWindow;
+  if (typeof used !== "number" || typeof capacity !== "number" || capacity <= 0) return null;
+  return Math.min(100, Math.max(0, Math.round(used / capacity * 100)));
+}
+function formatTokenCount(value, exact) {
+  const safe = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+  if (exact) {
+    const digits = String(safe);
+    const groups = [];
+    for (let end = digits.length; end > 0; end -= 3) {
+      groups.unshift(digits.slice(Math.max(0, end - 3), end));
+    }
+    return groups.join(",");
+  }
+  const scaled = (candidate) => candidate >= 100 ? String(Math.round(candidate)) : String(Math.round(candidate * 10) / 10);
+  if (safe < 1e3) return String(safe);
+  if (safe < 1e6) return `${scaled(safe / 1e3)}K`;
+  return `${scaled(safe / 1e6)}M`;
+}
+function formatRate(tps) {
+  const safe = Number.isFinite(tps) ? Math.max(0, tps) : 0;
+  return safe >= 10 ? String(Math.round(safe)) : String(Math.round(safe * 10) / 10);
+}
+function formatSeconds(ms) {
+  const totalMs = Number.isFinite(ms) ? Math.max(0, ms) : 0;
+  const seconds = totalMs / 1e3;
+  if (seconds < 60) {
+    return `${seconds < 10 ? String(Math.round(seconds * 10) / 10) : String(Math.round(seconds))}s`;
+  }
+  const whole = Math.round(seconds);
+  const minutes = Math.floor(whole / 60);
+  if (minutes < 60) return `${minutes}m${String(whole % 60).padStart(2, "0")}s`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h${String(minutes % 60).padStart(2, "0")}m`;
+}
+
+// client/src/features/token-usage/preferences.ts
+var DEFAULT_USAGE_PREFERENCES = {
+  enabled: true,
+  showTokens: true,
+  showSpeed: true,
+  showTtft: true,
+  showElapsed: true,
+  showContext: true,
+  exactTokens: false,
+  liveElapsed: true
+};
+var STORAGE_KEY3 = "dsh-feature-hub.token-usage";
+var listeners4 = /* @__PURE__ */ new Set();
+function booleanOf(value, fallback) {
+  return typeof value === "boolean" ? value : fallback;
+}
+function readUsagePreferences() {
+  let parsed;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY3);
+    if (raw === null || raw === "") return DEFAULT_USAGE_PREFERENCES;
+    parsed = JSON.parse(raw);
+  } catch (_error) {
+    return DEFAULT_USAGE_PREFERENCES;
+  }
+  if (parsed === null || typeof parsed !== "object") return DEFAULT_USAGE_PREFERENCES;
+  const record = parsed;
+  const defaults = DEFAULT_USAGE_PREFERENCES;
+  return {
+    enabled: booleanOf(record.enabled, defaults.enabled),
+    showTokens: booleanOf(record.showTokens, defaults.showTokens),
+    showSpeed: booleanOf(record.showSpeed, defaults.showSpeed),
+    showTtft: booleanOf(record.showTtft, defaults.showTtft),
+    showElapsed: booleanOf(record.showElapsed, defaults.showElapsed),
+    showContext: booleanOf(record.showContext, defaults.showContext),
+    exactTokens: booleanOf(record.exactTokens, defaults.exactTokens),
+    liveElapsed: booleanOf(record.liveElapsed, defaults.liveElapsed)
+  };
+}
+function writeUsagePreferences(preferences) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY3, JSON.stringify(preferences));
+  } catch (_error) {
+  }
+  for (const listener of listeners4) listener();
+  return preferences;
+}
+function resetUsagePreferences() {
+  try {
+    window.localStorage.removeItem(STORAGE_KEY3);
+  } catch (_error) {
+  }
+  for (const listener of listeners4) listener();
+  return DEFAULT_USAGE_PREFERENCES;
+}
+function subscribeUsagePreferences(listener) {
+  listeners4.add(listener);
+  return () => {
+    listeners4.delete(listener);
+  };
+}
+
+// client/src/features/token-usage/locale.ts
+var zh5 = {
+  "consumed.label": "\u5DF2\u6D88\u8017",
+  "consumed.unit": "tok",
+  "speed.label": "\u901F\u5EA6",
+  "speed.unit": "tok/s",
+  "ttft.label": "\u9996\u5B57",
+  "elapsed.label": "\u8017\u65F6",
+  "context.label": "\u4E0A\u4E0B\u6587",
+  "estimate.mark": "\u2248",
+  "estimate.hint": "\u4F30\u7B97\u503C",
+  region: "\u4F1A\u8BDD\u7528\u91CF",
+  "aria.summary": "\u5DF2\u6D88\u8017 {tokens} token\uFF1B\u901F\u5EA6\u7EA6 {speed} tok/s\uFF1B\u9996\u5B57\u7EA6 {ttft}\uFF1B\u8017\u65F6\u7EA6 {elapsed}\uFF1B\u4E0A\u4E0B\u6587\u5DF2\u7528 {percent}%",
+  "settings.title": "\u7528\u91CF\u72B6\u6001\u6761",
+  "settings.description": "\u8F93\u5165\u6846\u4E0A\u65B9\u7684\u4E00\u884C\u5B9E\u65F6\u7528\u91CF\uFF1A\u5DF2\u6D88\u8017 token\u3001\u672C\u9636\u6BB5\u901F\u5EA6\u3001\u9996\u5B57\u5EF6\u8FDF\u3001\u8017\u65F6\u4E0E\u4E0A\u4E0B\u6587\u5360\u7528\u3002",
+  "settings.enabled": "\u663E\u793A\u7528\u91CF\u72B6\u6001\u6761",
+  "settings.enabledHint": "\u5173\u95ED\u540E\u8F93\u5165\u6846\u4E0A\u65B9\u4E0D\u518D\u663E\u793A\u4EFB\u4F55\u7528\u91CF\u4FE1\u606F\u3002",
+  "settings.tokens": "\u5DF2\u6D88\u8017 token",
+  "settings.tokensHint": "\u672C\u4F1A\u8BDD\u7D2F\u8BA1\u7684\u63D0\u793A\u8BCD\u4E0E\u8F93\u51FA token \u5408\u8BA1\uFF08\u4E0E\u4F1A\u8BDD\u7EDF\u8BA1\u540C\u4E00\u53E3\u5F84\uFF09\u3002",
+  "settings.exact": "token \u7528\u7CBE\u786E\u6570\u5B57",
+  "settings.exactHint": "\u6253\u5F00\u540E\u663E\u793A 12,345 \u8FD9\u6837\u7684\u5343\u5206\u4F4D\uFF1B\u5173\u95ED\u65F6\u7528 12.3K / 1.2M \u7D27\u51D1\u5199\u6CD5\u3002",
+  "settings.speed": "\u672C\u9636\u6BB5\u901F\u5EA6",
+  "settings.speedHint": "\u6700\u8FD1\u4E00\u8F6E\u7684\u89E3\u7801\u901F\u5EA6\uFF1B\u9996\u5B57\u7B49\u5F85\u65F6\u95F4\u4E0D\u8BA1\u5165\u541E\u5410\u3002",
+  "settings.ttft": "\u9996\u5B57\u5EF6\u8FDF",
+  "settings.ttftHint": "\u6700\u8FD1\u4E00\u8F6E\u4ECE\u53D1\u51FA\u8BF7\u6C42\u5230\u9996\u4E2A token \u7684\u5E73\u5747\u8017\u65F6\u3002",
+  "settings.elapsed": "\u672C\u8F6E\u8017\u65F6",
+  "settings.elapsedHint": "\u6700\u8FD1\u4E00\u8F6E\u4ECE\u5F00\u59CB\u5230\u7ED3\u675F\u7684\u5899\u949F\u65F6\u95F4\uFF1B\u6267\u884C\u4E2D\u6309\u5F53\u524D\u65F6\u95F4\u4F30\u7B97\u3002",
+  "settings.live": "\u6267\u884C\u4E2D\u5B9E\u65F6\u5237\u65B0\u8017\u65F6",
+  "settings.liveHint": "\u5173\u95ED\u540E\u8017\u65F6\u53EA\u5728\u4E8B\u4EF6\u5230\u8FBE\u65F6\u66F4\u65B0\uFF0C\u51CF\u5C11\u6BCF\u79D2\u91CD\u6E32\u67D3\u3002",
+  "settings.context": "\u4E0A\u4E0B\u6587\u5360\u7528",
+  "settings.contextHint": "\u4E0E\u8F93\u5165\u6846\u4E0B\u65B9\u90A3\u5708\u767E\u5206\u6BD4\u540C\u6E90\uFF1B\u6CA1\u6709\u6A21\u578B\u7A97\u53E3\u4FE1\u606F\u65F6\u4E0D\u663E\u793A\u3002",
+  "settings.resetLabel": "\u6062\u590D\u9ED8\u8BA4\u8BBE\u7F6E",
+  "settings.resetHint": "\u628A\u6240\u6709\u5F00\u5173\u4E0E\u663E\u793A\u65B9\u5F0F\u6539\u56DE\u300C\u5168\u90E8\u5C55\u793A\u300D\u3002",
+  "settings.reset": "\u6062\u590D\u9ED8\u8BA4\uFF08\u5168\u90E8\u5C55\u793A\uFF09"
+};
+var en5 = {
+  "consumed.label": "Used",
+  "consumed.unit": "tok",
+  "speed.label": "Speed",
+  "speed.unit": "tok/s",
+  "ttft.label": "First token",
+  "elapsed.label": "Elapsed",
+  "context.label": "Context",
+  "estimate.mark": "\u2248",
+  "estimate.hint": "Estimated",
+  region: "Session usage",
+  "aria.summary": "Used {tokens} tokens; speed about {speed} tok/s; first token about {ttft}; elapsed about {elapsed}; context {percent}% full",
+  "settings.title": "Usage bar",
+  "settings.description": "One live line above the composer: consumed tokens, this turn\u2019s speed, first-token latency, elapsed time, and context occupancy.",
+  "settings.enabled": "Show the usage bar",
+  "settings.enabledHint": "When off, nothing is rendered above the composer.",
+  "settings.tokens": "Consumed tokens",
+  "settings.tokensHint": "Prompt and output tokens accumulated in this session (the same figure as session statistics).",
+  "settings.exact": "Exact token digits",
+  "settings.exactHint": "Show grouped digits like 12,345; otherwise 12.3K / 1.2M is used.",
+  "settings.speed": "Turn speed",
+  "settings.speedHint": "Decode throughput of the latest turn; first-token wait is excluded.",
+  "settings.ttft": "First-token latency",
+  "settings.ttftHint": "Average wait from request to the first token in the latest turn.",
+  "settings.elapsed": "Turn elapsed",
+  "settings.elapsedHint": "Wall time of the latest turn; while it runs, the figure is estimated from the current clock.",
+  "settings.live": "Tick elapsed while running",
+  "settings.liveHint": "When off, elapsed updates only when events arrive instead of every second.",
+  "settings.context": "Context occupancy",
+  "settings.contextHint": "Shares the percentage ring below the composer; hidden when no context window is known.",
+  "settings.resetLabel": "Reset preferences",
+  "settings.resetHint": "Put every switch and display choice back to \u201Cshow everything\u201D.",
+  "settings.reset": "Reset to defaults (everything shown)"
+};
+
+// client/src/features/token-usage/styles.ts
+var styles4 = `
+.fh-tu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  align-self: center;
+  width: 100%;
+  min-width: 0;
+  max-width: var(--dsh-composer-card-max-width, 712px);
+  padding: 0 14px 2px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+.fh-tu, .fh-tu * { box-sizing: border-box; }
+.fh-tu-item { display: inline-flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+.fh-tu-label { color: color-mix(in srgb, var(--dsw-alias-label-primary) 55%, transparent); }
+.fh-tu-value { display: inline-flex; align-items: baseline; gap: 2px; color: var(--dsw-alias-label-primary); font-weight: 500; }
+.fh-tu-mark { color: color-mix(in srgb, var(--dsw-alias-label-primary) 50%, transparent); }
+.fh-tu-unit { color: color-mix(in srgb, var(--dsw-alias-label-primary) 55%, transparent); font-weight: 400; }
+.fh-tu-sep { color: color-mix(in srgb, var(--dsw-alias-label-primary) 32%, transparent); }
+.fh-tu[data-running='true'] .fh-tu-item[data-metric='elapsed'] .fh-tu-value { color: var(--dsw-alias-state-business-primary); }
+.fh-tu[data-running='true'] .fh-tu-item[data-metric='context'] .fh-tu-value { color: var(--dsw-alias-label-primary); }
+`;
+
+// client/src/features/token-usage/index.ts
+var { useEffect: useEffect4, useState: useState6 } = React;
+var TOKEN_USAGE_NS = "feature-hub.token-usage";
+var TICK_MS = 1e3;
+function ReadingItem(props) {
+  const { reading, estimateHint } = props;
+  return h(
+    "span",
+    { className: "fh-tu-item", "data-metric": reading.key },
+    h("span", { className: "fh-tu-label" }, reading.label),
+    h(
+      "span",
+      { className: "fh-tu-value", title: reading.estimated === true ? estimateHint : void 0 },
+      reading.estimated === true ? h("span", { className: "fh-tu-mark" }, "\u2248") : null,
+      reading.value,
+      reading.unit === void 0 ? null : h("span", { className: "fh-tu-unit" }, reading.unit)
+    )
+  );
+}
+function TokenUsageBar(props) {
+  const { t, sessionId } = props;
+  const usage = props.useProjection("tokenUsage");
+  const pressure = props.useProjection("contextPressure");
+  const stats = props.useProjection("sessionStats");
+  const running = props.useSessions((state) => {
+    const row = state.byId[sessionId];
+    return row === void 0 ? false : row.running === true;
+  });
+  const windowNodes = props.useChat((snapshot) => snapshot.legacy.nodes);
+  const turnTimings = props.useChat((snapshot) => snapshot.legacy.turnTimings);
+  const [prefs, setPrefs] = useState6(readUsagePreferences);
+  const [now, setNow] = useState6(() => Date.now());
+  useEffect4(() => subscribeUsagePreferences(() => setPrefs(readUsagePreferences())), []);
+  useEffect4(() => {
+    if (!running || !prefs.liveElapsed) return;
+    const timer = window.setInterval(() => setNow(Date.now()), TICK_MS);
+    return () => window.clearInterval(timer);
+  }, [running, prefs.liveElapsed]);
+  if (!prefs.enabled) return null;
+  const stage = stageReading(windowNodes, turnTimings, running, now);
+  const fallback = stageReadingFromStats(stats);
+  const speedTps = stage.speedTps ?? fallback.speedTps;
+  const ttftMs = stage.ttftMs ?? fallback.ttftMs;
+  const elapsedMs = stage.elapsedMs ?? fallback.elapsedMs;
+  const percent = contextPercent(pressure);
+  const total = usage === void 0 ? null : billedTokens(usage);
+  const readings = [];
+  if (prefs.showTokens && total !== null) {
+    readings.push({
+      key: "tokens",
+      label: t("consumed.label"),
+      value: formatTokenCount(total, prefs.exactTokens),
+      unit: t("consumed.unit")
+    });
+  }
+  if (prefs.showSpeed && speedTps !== null && speedTps > 0) {
+    readings.push({
+      key: "speed",
+      label: t("speed.label"),
+      value: formatRate(speedTps),
+      unit: t("speed.unit"),
+      estimated: true
+    });
+  }
+  if (prefs.showTtft && ttftMs !== null && ttftMs > 0) {
+    readings.push({
+      key: "ttft",
+      label: t("ttft.label"),
+      value: formatSeconds(ttftMs),
+      estimated: true
+    });
+  }
+  if (prefs.showElapsed && elapsedMs !== null && elapsedMs > 0) {
+    readings.push({
+      key: "elapsed",
+      label: t("elapsed.label"),
+      value: formatSeconds(elapsedMs),
+      estimated: true
+    });
+  }
+  if (prefs.showContext && percent !== null) {
+    readings.push({ key: "context", label: t("context.label"), value: `${percent}%` });
+  }
+  if (readings.length === 0) return null;
+  const estimateHint = t("estimate.hint");
+  const summary = t("aria.summary", {
+    tokens: total === null ? "\u2014" : formatTokenCount(total, true),
+    speed: speedTps === null ? "\u2014" : formatRate(speedTps),
+    ttft: ttftMs === null ? "\u2014" : formatSeconds(ttftMs),
+    elapsed: elapsedMs === null ? "\u2014" : formatSeconds(elapsedMs),
+    percent: percent === null ? "\u2014" : String(percent)
+  });
+  const children = [];
+  readings.forEach((reading, index) => {
+    if (index > 0) {
+      children.push(
+        h("span", { key: `sep-${reading.key}`, className: "fh-tu-sep", "aria-hidden": true }, "\xB7")
+      );
+    }
+    children.push(h(ReadingItem, { key: reading.key, reading, estimateHint }));
+  });
+  return h(
+    "div",
+    {
+      className: "fh-tu",
+      role: "status",
+      "aria-live": "off",
+      "aria-label": summary,
+      "data-running": running
+    },
+    ...children
+  );
+}
+var tokenUsageFeature = {
+  id: "token-usage",
+  order: 30,
+  locale: { ns: TOKEN_USAGE_NS, dicts: { zh: zh5, en: en5 } },
+  styles: styles4,
+  component: TokenUsageBar
+};
+
+// client/src/features/token-usage/settings.ts
+var { useState: useState7 } = React;
+function ToggleRow(props) {
+  return h(
+    "div",
+    { className: "fh-set-row" },
+    h(
+      "div",
+      { className: "fh-set-text" },
+      h("span", { className: "fh-set-label" }, props.label),
+      h("span", { className: "fh-set-help" }, props.hint)
+    ),
+    h(
+      "div",
+      { className: "fh-set-control" },
+      h("input", {
+        className: "fh-set-checkbox",
+        type: "checkbox",
+        checked: props.checked,
+        disabled: props.disabled === true,
+        "aria-label": props.label,
+        onChange: (event) => {
+          props.onChange(event.currentTarget.checked);
+        }
+      })
+    )
+  );
+}
+var ROWS = [
+  { key: "showTokens", label: "settings.tokens", hint: "settings.tokensHint", nested: true },
+  { key: "exactTokens", label: "settings.exact", hint: "settings.exactHint", nested: true },
+  { key: "showSpeed", label: "settings.speed", hint: "settings.speedHint", nested: true },
+  { key: "showTtft", label: "settings.ttft", hint: "settings.ttftHint", nested: true },
+  { key: "showElapsed", label: "settings.elapsed", hint: "settings.elapsedHint", nested: true },
+  { key: "liveElapsed", label: "settings.live", hint: "settings.liveHint", nested: true },
+  { key: "showContext", label: "settings.context", hint: "settings.contextHint", nested: true }
+];
+function TokenUsageSettings(props) {
+  const { t } = props;
+  const [prefs, setPrefs] = useState7(readUsagePreferences);
+  const update = (key, value) => {
+    setPrefs(writeUsagePreferences({ ...prefs, [key]: value }));
+  };
+  const reset = () => {
+    setPrefs(resetUsagePreferences());
+  };
+  const rows = ROWS.map(
+    (row) => h(ToggleRow, {
+      key: row.key,
+      label: t(row.label),
+      hint: t(row.hint),
+      checked: prefs[row.key],
+      disabled: row.nested && !prefs.enabled,
+      onChange: (value) => {
+        update(row.key, value);
+      }
+    })
+  );
+  return h(
+    React.Fragment,
+    null,
+    h(ToggleRow, {
+      key: "enabled",
+      label: t("settings.enabled"),
+      hint: t("settings.enabledHint"),
+      checked: prefs.enabled,
+      onChange: (value) => {
+        update("enabled", value);
+      }
+    }),
+    rows,
+    h(
+      "div",
+      { className: "fh-set-row" },
+      h(
+        "div",
+        { className: "fh-set-text" },
+        h("span", { className: "fh-set-label" }, t("settings.resetLabel")),
+        h("span", { className: "fh-set-help" }, t("settings.resetHint"))
+      ),
+      h(
+        "div",
+        { className: "fh-set-control" },
+        h(
+          "button",
+          {
+            type: "button",
+            className: "fh-set-button",
+            disabled: prefs.enabled === DEFAULT_USAGE_PREFERENCES.enabled && ROWS.every((row) => prefs[row.key] === DEFAULT_USAGE_PREFERENCES[row.key]),
+            onClick: reset
+          },
+          t("settings.reset")
+        )
+      )
+    )
+  );
+}
+var tokenUsageSettings = {
+  id: "token-usage",
+  order: 25,
+  locale: { ns: TOKEN_USAGE_NS, dicts: { zh: zh5, en: en5 } },
+  component: TokenUsageSettings
 };
 
 // client/src/features/task-notify/desktop-notify.ts
@@ -2360,15 +5312,15 @@ var DEFAULT_NOTIFY_PREFERENCES = {
   asked: true,
   system: true
 };
-var STORAGE_KEY2 = "dsh-feature-hub.task-notify";
-var listeners3 = /* @__PURE__ */ new Set();
-function booleanOf(value, fallback) {
+var STORAGE_KEY4 = "dsh-feature-hub.task-notify";
+var listeners5 = /* @__PURE__ */ new Set();
+function booleanOf2(value, fallback) {
   return typeof value === "boolean" ? value : fallback;
 }
 function readNotifyPreferences() {
   let parsed;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY2);
+    const raw = window.localStorage.getItem(STORAGE_KEY4);
     if (raw === null || raw === "") return DEFAULT_NOTIFY_PREFERENCES;
     parsed = JSON.parse(raw);
   } catch (_error) {
@@ -2377,25 +5329,25 @@ function readNotifyPreferences() {
   if (parsed === null || typeof parsed !== "object") return DEFAULT_NOTIFY_PREFERENCES;
   const record = parsed;
   return {
-    enabled: booleanOf(record.enabled, DEFAULT_NOTIFY_PREFERENCES.enabled),
-    completed: booleanOf(record.completed, DEFAULT_NOTIFY_PREFERENCES.completed),
-    failed: booleanOf(record.failed, DEFAULT_NOTIFY_PREFERENCES.failed),
-    asked: booleanOf(record.asked, DEFAULT_NOTIFY_PREFERENCES.asked),
-    system: booleanOf(record.system, DEFAULT_NOTIFY_PREFERENCES.system)
+    enabled: booleanOf2(record.enabled, DEFAULT_NOTIFY_PREFERENCES.enabled),
+    completed: booleanOf2(record.completed, DEFAULT_NOTIFY_PREFERENCES.completed),
+    failed: booleanOf2(record.failed, DEFAULT_NOTIFY_PREFERENCES.failed),
+    asked: booleanOf2(record.asked, DEFAULT_NOTIFY_PREFERENCES.asked),
+    system: booleanOf2(record.system, DEFAULT_NOTIFY_PREFERENCES.system)
   };
 }
 function writeNotifyPreferences(preferences) {
   try {
-    window.localStorage.setItem(STORAGE_KEY2, JSON.stringify(preferences));
+    window.localStorage.setItem(STORAGE_KEY4, JSON.stringify(preferences));
   } catch (_error) {
   }
-  for (const listener of listeners3) listener();
+  for (const listener of listeners5) listener();
   return preferences;
 }
 function subscribeNotifyPreferences(listener) {
-  listeners3.add(listener);
+  listeners5.add(listener);
   return () => {
-    listeners3.delete(listener);
+    listeners5.delete(listener);
   };
 }
 
@@ -2439,16 +5391,16 @@ function createTaskNotifyEngine(ctx, t) {
   let toasts = [];
   let pending = /* @__PURE__ */ new Map();
   let baseline = false;
-  let sequence = 0;
+  let sequence2 = 0;
   let disposed = false;
-  const listeners4 = /* @__PURE__ */ new Set();
+  const listeners6 = /* @__PURE__ */ new Set();
   const timers = /* @__PURE__ */ new Map();
   const disposers = [];
   const running = /* @__PURE__ */ new Map();
   const failures = /* @__PURE__ */ new Map();
   const recent = /* @__PURE__ */ new Map();
-  const emit = () => {
-    for (const listener of listeners4) listener();
+  const emit2 = () => {
+    for (const listener of listeners6) listener();
   };
   const clearTimer = (id) => {
     const timer = timers.get(id);
@@ -2460,7 +5412,7 @@ function createTaskNotifyEngine(ctx, t) {
     clearTimer(id);
     if (!toasts.some((notice) => notice.id === id)) return;
     toasts = toasts.filter((notice) => notice.id !== id);
-    emit();
+    emit2();
   };
   const open = (sessionId) => {
     try {
@@ -2502,7 +5454,7 @@ function createTaskNotifyEngine(ctx, t) {
       for (const dropped of toasts.slice(0, toasts.length - MAX_TOASTS)) clearTimer(dropped.id);
       toasts = toasts.slice(-MAX_TOASTS);
     }
-    emit();
+    emit2();
     timers.set(
       notice.id,
       setTimeout(() => {
@@ -2525,9 +5477,9 @@ function createTaskNotifyEngine(ctx, t) {
     recent.set(stamp, now);
     pruneRecent(now);
     const title = row === void 0 ? t("session.fallback") : row.displayTitle || row.title || t("session.fallback");
-    sequence += 1;
+    sequence2 += 1;
     const notice = {
-      id: `fh-notice-${String(sequence)}`,
+      id: `fh-notice-${String(sequence2)}`,
       kind,
       sessionId,
       title,
@@ -2644,9 +5596,9 @@ function createTaskNotifyEngine(ctx, t) {
   const face = {
     toasts: () => toasts,
     subscribe(listener) {
-      listeners4.add(listener);
+      listeners6.add(listener);
       return () => {
-        listeners4.delete(listener);
+        listeners6.delete(listener);
       };
     },
     dismiss,
@@ -2666,7 +5618,7 @@ function createTaskNotifyEngine(ctx, t) {
       }
       for (const timer of timers.values()) clearTimeout(timer);
       timers.clear();
-      listeners4.clear();
+      listeners6.clear();
       toasts = [];
       closeDesktopNotices();
     }
@@ -2674,7 +5626,7 @@ function createTaskNotifyEngine(ctx, t) {
 }
 
 // client/src/features/task-notify/locale.ts
-var zh4 = {
+var zh6 = {
   region: "\u4EFB\u52A1\u63D0\u9192",
   open: "\u6253\u5F00\u8FD9\u4E2A\u4F1A\u8BDD",
   dismiss: "\u5173\u95ED\u63D0\u9192",
@@ -2710,7 +5662,7 @@ var zh4 = {
   "notify.permission.granted": "\u7CFB\u7EDF\u901A\u77E5\u5DF2\u5141\u8BB8",
   "notify.permission.denied": "\u7CFB\u7EDF\u901A\u77E5\u88AB\u62D2\u7EDD\uFF0C\u53EF\u7A0D\u540E\u5728\u7CFB\u7EDF\u8BBE\u7F6E\u91CC\u6062\u590D"
 };
-var en4 = {
+var en6 = {
   region: "Task notices",
   open: "Open this session",
   dismiss: "Dismiss notice",
@@ -2748,7 +5700,7 @@ var en4 = {
 };
 
 // client/src/features/task-notify/styles.ts
-var styles4 = `
+var styles5 = `
 .fh-tn-stack {
   position: fixed;
   right: 20px;
@@ -2862,7 +5814,7 @@ var styles4 = `
 `;
 
 // client/src/features/task-notify/index.ts
-var { useEffect: useEffect5, useState: useState7 } = React;
+var { useEffect: useEffect5, useState: useState8 } = React;
 var TASK_NOTIFY_NS = "feature-hub.task-notify";
 var TASK_NOTIFY_ID = "task-notify";
 function glyphOf(kind) {
@@ -2890,7 +5842,7 @@ function glyphOf(kind) {
 }
 function TaskNotifyOverlay(props) {
   const { t, subscribe, toasts, dismiss, open } = props;
-  const [items, setItems] = useState7(() => toasts());
+  const [items, setItems] = useState8(() => toasts());
   useEffect5(
     () => subscribe(() => {
       setItems(toasts());
@@ -2950,13 +5902,13 @@ function TaskNotifyOverlay(props) {
 var taskNotify = {
   id: TASK_NOTIFY_ID,
   order: 900,
-  locale: { ns: TASK_NOTIFY_NS, dicts: { zh: zh4, en: en4 } },
-  styles: styles4,
+  locale: { ns: TASK_NOTIFY_NS, dicts: { zh: zh6, en: en6 } },
+  styles: styles5,
   component: TaskNotifyOverlay
 };
 
 // client/src/features/task-notify/settings.ts
-var { useState: useState8 } = React;
+var { useState: useState9 } = React;
 function NotifyToggleRow(props) {
   return h(
     "div",
@@ -2985,9 +5937,9 @@ function NotifyToggleRow(props) {
 }
 function TaskNotifySettings(props) {
   const { t } = props;
-  const [notify, setNotify] = useState8(readNotifyPreferences);
-  const [permission, setPermission] = useState8(desktopNotifyPermission);
-  const [tested, setTested] = useState8(false);
+  const [notify, setNotify] = useState9(readNotifyPreferences);
+  const [permission, setPermission] = useState9(desktopNotifyPermission);
+  const [tested, setTested] = useState9(false);
   const setNotifyPref = (key, value) => {
     const next = { ...notify, [key]: value };
     setNotify(writeNotifyPreferences(next));
@@ -3086,7 +6038,7 @@ function TaskNotifySettings(props) {
 var taskNotifySettings = {
   id: "task-notify",
   order: 30,
-  locale: { ns: TASK_NOTIFY_NS, dicts: { zh: zh4, en: en4 } },
+  locale: { ns: TASK_NOTIFY_NS, dicts: { zh: zh6, en: en6 } },
   component: TaskNotifySettings
 };
 
@@ -3102,7 +6054,7 @@ function installStyles(css) {
 }
 
 // client/src/features/settings/styles.ts
-var styles5 = `
+var styles6 = `
 .fh-set { max-width: 720px; color: var(--dsw-alias-label-primary); }
 .fh-set, .fh-set *, .fh-set *::before, .fh-set *::after { box-sizing: border-box; }
 .fh-set-card {
@@ -3182,11 +6134,11 @@ var styles5 = `
 `;
 
 // client/src/features/settings/locale.ts
-var zh5 = {
+var zh7 = {
   title: "\u529F\u80FD\u96C6",
   "saved.auto": "\u6539\u52A8\u5373\u65F6\u751F\u6548\uFF0C\u65E0\u9700\u4FDD\u5B58"
 };
-var en5 = {
+var en7 = {
   title: "Feature hub",
   "saved.auto": "Changes apply immediately"
 };
@@ -3237,8 +6189,8 @@ function FeatureHubSettings(props) {
 var featureHubSettings = {
   id: "feature-hub",
   order: 60,
-  locale: { ns: SETTINGS_NS, dicts: { zh: zh5, en: en5 } },
-  styles: styles5,
+  locale: { ns: SETTINGS_NS, dicts: { zh: zh7, en: en7 } },
+  styles: styles6,
   component: FeatureHubSettings,
   icon: FeatureHubSettingsIcon
 };
@@ -3256,9 +6208,11 @@ var inject = [
 var SECTIONS = [recentTasksSection];
 var CONTROLS = [gitBranchFeature];
 var RIGHT_CONTROLS = [compactContextFeature];
+var DOCKS = [tokenUsageFeature];
 var SETTINGS = [
   recentTasksSettings,
   compactContextSettings,
+  tokenUsageSettings,
   taskNotifySettings
 ];
 function enabledOf(list) {
@@ -3266,11 +6220,13 @@ function enabledOf(list) {
 }
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(SIDEBAR_NS, SIDEBAR_DICT), "feature-hub:sidebar:dictionaries");
-  ctx.effect(() => installStyles(SIDEBAR_STYLES), "feature-hub:sidebar:styles");
+  ctx.effect(() => installStyles(SIDEBAR_STYLES2), "feature-hub:sidebar:styles");
+  const tSidebar = ctx.locale.bind(SIDEBAR_NS);
   const resources = [
     ...SECTIONS,
     ...CONTROLS,
     ...RIGHT_CONTROLS,
+    ...DOCKS,
     ...SETTINGS,
     featureHubSettings,
     taskNotify
@@ -3329,6 +6285,23 @@ function apply(ctx) {
         )
       ),
       `feature-hub:${control.id}:seat`
+    );
+  }
+  for (const dock of enabledOf(DOCKS)) {
+    ctx.effect(
+      () => ctx.slots.inject(
+        "conversation.input.dock",
+        () => ctx.slots.register(
+          {
+            name: "conversation.input.dock",
+            id: dock.id,
+            order: dock.order,
+            locale: dock.locale.ns
+          },
+          dock.component
+        )
+      ),
+      `feature-hub:${dock.id}:seat`
     );
   }
   const tSettings = ctx.locale.bind(SETTINGS_NS);
@@ -3396,6 +6369,20 @@ function apply(ctx) {
     t: ctx.locale.bind(section.locale.ns),
     showProject: false
   }));
+  const viewStore = createViewStore();
+  const sessions = () => ctx.get?.("sessions");
+  const workspaces = () => ctx.get?.("workspaces");
+  const fail = (key, reason) => {
+    const message = reason instanceof Error ? reason.message : String(reason);
+    pushNotice(tSidebar(key, { message }), "warn");
+  };
+  const searchSessions = async (query, signal) => {
+    const service = sessions();
+    if (service === void 0 || typeof service.search !== "function") return { items: [], hasMore: false };
+    const result = await service.search(query, signal);
+    if (!result.ok) throw new Error(result.error.message);
+    return result.value;
+  };
   ctx.effect(
     () => ctx.slots.inject(
       "sidebar.workspaces",
@@ -3406,29 +6393,122 @@ function apply(ctx) {
           locale: SIDEBAR_NS,
           inject: () => ({
             sections,
+            viewStore,
             openSession: (sessionId) => {
               ctx.uiWorkspace.openSession(sessionId);
             },
             startSession: (workspaceId) => {
               ctx.uiWorkspace.startSession(workspaceId);
             },
-            // 拖拽排序：insertBefore 会先乐观改本地顺序再与 Host 对齐；
-            // 若当前宿主没有这个方法，静默跳过（拖拽退化为无操作，不抛错）。
-            reorderWorkspace: async (workspaceId, beforeWorkspaceId) => {
-              const service = ctx.workspaces;
-              if (typeof service.insertBefore !== "function") return;
-              try {
-                await service.insertBefore(workspaceId, beforeWorkspaceId);
-              } catch (error) {
-                console.error("feature-hub: workspace reorder failed", error);
-              }
+            searchSessions,
+            searchResultLimit: sessions()?.searchResultLimit ?? 50,
+            requestSessionRename: (sessionId, currentTitle) => {
+              setSessionRename({ sessionId, currentTitle });
             },
-            addWorkspace: async () => {
-              const path = await ctx.uiWorkspace.pickDirectory();
-              if (path === null || path === void 0 || path === "") return;
-              const created = await ctx.workspaces.create({ path });
-              const workspaceId = created === void 0 || created === null ? void 0 : created.workspaceId;
-              if (workspaceId !== void 0) ctx.uiWorkspace.startSession(workspaceId);
+            renameSession: async (sessionId, title) => {
+              const service = sessions();
+              if (service === void 0 || typeof service.using !== "function") {
+                throw new Error("sessions service is unavailable");
+              }
+              await service.using(
+                sessionId,
+                { source: "featureHubWorkspaceOperation" },
+                (reference) => reference.binding.session.rename(title)
+              );
+            },
+            notifyArchivedNotOpenable: () => {
+              pushNotice(tSidebar("toast.archivedNotOpenable"), "warn");
+            },
+            renameWorkspace: async (workspaceId, title) => {
+              const service = workspaces();
+              if (service === void 0) throw new Error("workspaces service is unavailable");
+              await service.rename(workspaceId, title);
+            },
+            deleteWorkspace: async (workspaceId) => {
+              const service = workspaces();
+              if (service === void 0) throw new Error("workspaces service is unavailable");
+              await service.delete(workspaceId);
+            },
+            insertWorkspaceBefore: async (workspaceId, beforeWorkspaceId) => {
+              const service = workspaces();
+              if (service === void 0) throw new Error("workspaces service is unavailable");
+              await service.insertBefore(workspaceId, beforeWorkspaceId);
+            },
+            archiveSession: (sessionId) => {
+              const service = workspaces();
+              if (service === void 0) {
+                pushNotice(tSidebar("toast.archiveFailed"), "warn");
+                return;
+              }
+              service.archiveSession(sessionId).catch((reason) => {
+                fail("toast.archiveFailed", reason);
+              });
+            },
+            unarchiveSession: async (sessionId) => {
+              const service = workspaces();
+              if (service === void 0) throw new Error("workspaces service is unavailable");
+              await service.unarchiveSession(sessionId);
+            },
+            pinSession: (sessionId) => {
+              const service = workspaces();
+              if (service === void 0) {
+                pushNotice(tSidebar("toast.pinFailed"), "warn");
+                return;
+              }
+              service.pinSession(sessionId).then(() => {
+                viewStore.actions.pinSessionOrder(sessionId, []);
+              }).catch(() => {
+                pushNotice(tSidebar("toast.pinFailed"), "warn");
+              });
+            },
+            unpinSession: (sessionId) => {
+              const service = workspaces();
+              if (service === void 0) {
+                pushNotice(tSidebar("toast.unpinFailed"), "warn");
+                return;
+              }
+              service.unpinSession(sessionId).catch(() => {
+                pushNotice(tSidebar("toast.unpinFailed"), "warn");
+              });
+            },
+            createWorkspace: async (input) => {
+              const service = workspaces();
+              if (service === void 0) throw new Error("workspaces service is unavailable");
+              return service.create(input);
+            },
+            pickDirectory: () => ctx.uiWorkspace.pickDirectory(),
+            // 只有宿主真的提供列目录时才启用内置浏览对话框；
+            // native 后端只实现 pick()，此时直接走系统对话框。
+            canBrowseDirectories: typeof ctx.uiWorkspace.listDirectory === "function" && typeof ctx.uiWorkspace.createDirectory === "function",
+            listDirectory: async (path) => {
+              const service = ctx.uiWorkspace;
+              if (typeof service.listDirectory !== "function") {
+                throw new Error("directory listing is unavailable");
+              }
+              return service.listDirectory(path);
+            },
+            createDirectory: async (path, name) => {
+              const service = ctx.uiWorkspace;
+              if (typeof service.createDirectory !== "function") {
+                throw new Error("directory creation is unavailable");
+              }
+              return service.createDirectory(path, name);
+            },
+            openContextMenu: (target, point) => {
+              const menus = ctx.get?.("contextMenus");
+              if (menus === void 0) {
+                pushNotice(tSidebar("shell.fallback"), "warn");
+                return;
+              }
+              const value = target.kind === "session" ? { sessionId: target.sessionId, displayTitle: target.displayTitle } : {
+                workspaceId: target.workspaceId,
+                path: target.path,
+                displayTitle: target.displayTitle
+              };
+              menus.open({ kind: target.kind, value }, point);
+            },
+            notify: (message, tone) => {
+              pushNotice(message, tone);
             }
           })
         },
@@ -3436,6 +6516,30 @@ function apply(ctx) {
       )
     ),
     "feature-hub:sidebar"
+  );
+  ctx.effect(
+    () => ctx.slots.inject(
+      "shell.overlay",
+      () => ctx.slots.register(
+        {
+          name: "shell.overlay",
+          id: "feature-hub.shell-overlays",
+          order: 950,
+          locale: SIDEBAR_NS,
+          inject: () => ({
+            state: getSessionRename,
+            subscribe: subscribeRename,
+            close: () => {
+              setSessionRename(null);
+            },
+            confirm: (sessionId, title) => confirmSessionRename(ctx, sessionId, title),
+            t: tSidebar
+          })
+        },
+        ShellOverlays
+      )
+    ),
+    "feature-hub:shell-overlays"
   );
 }
 
