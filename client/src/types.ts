@@ -12,6 +12,14 @@ export type { GitActionInput, GitPayload, RepoState } from '../../types/wire'
 /** 进行中的会话在行上如何显示。 */
 export type StatusTone = 'live' | 'warn' | 'done'
 
+/**
+ * 本插件国风强调色的名称。
+ *
+ * 只在装饰性位置使用（图标、图标底、开关轨道、进度条），文字仍用主题 token；
+ * 对应的 CSS 变量是 `--fh-tone-<name>`，深浅主题各有一套值（见 `lib/palette.ts`）。
+ */
+export type FeatureTone = 'gold' | 'red' | 'blue' | 'green' | 'violet' | 'pink'
+
 /** 状态描述：用哪种色调，以及取哪条字典文案。 */
 export interface StatusMeta {
   readonly tone: StatusTone
@@ -100,6 +108,10 @@ export interface SettingsItemDescriptor {
   readonly styles?: string
   /** 面板组件；只渲染设置行，卡片框架由设置页壳包住。 */
   readonly component: (props: FeatureSettingsProps) => unknown
+  /** 卡片右上角的图标；缺省时卡片头只显示文字。 */
+  readonly icon?: (props: { readonly size?: number }) => unknown
+  /** 卡片的强调色；同时决定图标底色、分组标记、开关轨道与按钮。 */
+  readonly tone?: FeatureTone
   /** 置 false 时整个面板不安装。 */
   readonly enabled?: boolean
 }

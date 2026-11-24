@@ -52,14 +52,16 @@ export const SIDEBAR_STYLES = `
   gap: 0;
   height: 32px;
   padding: 0 4px 0 0;
-  border-radius: 8px;
+  border-radius: 10px;
   /* 描边优先用组件库的边框 token；万一主题没定义，再从主文字色派生一层。 */
   border: 1px solid var(--dsw-alias-border-l4, color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent));
+  background: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-secondary);
   cursor: text;
 }
 .fh-ws-search:focus-within {
-  border-color: color-mix(in srgb, var(--dsw-alias-label-primary) 32%, transparent);
+  border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary) 60%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--dsw-alias-state-business-primary) 16%, transparent);
 }
 /* 放大镜占住输入框左端；右侧清除按钮沿用 .fh-icon-button 的 24px 方框。 */
 .fh-ws-search > svg { flex: none; margin: 0 6px 0 8px; }
@@ -92,12 +94,14 @@ export const SIDEBAR_STYLES = `
   justify-content: center;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 7px;
   background: transparent;
   color: inherit;
   cursor: pointer;
+  transition: background-color 120ms ease;
 }
 .fh-icon-button:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); color: var(--dsw-alias-label-primary); }
+.fh-icon-button:active:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-label-primary) 12%, transparent); }
 .fh-icon-button:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: -2px; }
 .fh-icon-button:disabled { opacity: 0.45; cursor: default; }
 
@@ -152,6 +156,12 @@ export const SIDEBAR_STYLES = `
 .fh-workspace-row:hover .fh-row-folder,
 .fh-ws-group-head:hover .fh-ws-folder { color: var(--dsw-alias-label-primary); }
 .fh-workspace-row:hover .fh-row-folder-active { color: var(--dsw-alias-brand-primary); }
+
+/* 文件夹用藤黄描边 + 低透明同色填充；悬停与当前项目再加深一档。 */
+.fh-folder-body { fill: var(--fh-folder-fill); transition: fill 120ms ease; }
+.fh-workspace-row:hover .fh-folder-body,
+.fh-ws-group-head:hover .fh-folder-body,
+.fh-row-folder-active .fh-folder-body { fill: var(--fh-folder-fill-hover); }
 
 .fh-ws-group-title, .fh-row-title {
   flex: 1 1 auto;
@@ -278,18 +288,27 @@ export const SIDEBAR_STYLES = `
 /* ---- 状态点 ---- */
 .fh-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; display: inline-block; }
 .fh-dot-idle { background: var(--dsw-alias-state-idle-primary); }
-.fh-dot-warning { background: var(--dsw-alias-state-warn-primary); }
-.fh-dot-done { background: var(--dsw-alias-state-success-primary); }
+.fh-dot-warning {
+  background: var(--dsw-alias-state-warn-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 18%, transparent);
+}
+.fh-dot-done {
+  background: var(--dsw-alias-state-success-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-success-primary) 14%, transparent);
+}
 .fh-dot-spinner, .fh-ws-spinner {
   box-sizing: border-box;
   width: 11px;
   height: 11px;
   flex: none;
   border-radius: 50%;
-  border: 1.6px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 22%, transparent);
-  border-top-color: var(--dsw-alias-brand-primary);
+  border: 1.6px solid color-mix(in srgb, var(--dsw-alias-state-business-primary) 22%, transparent);
+  border-top-color: var(--dsw-alias-state-business-primary);
   animation: fh-spin 0.8s linear infinite;
 }
+/* 最近任务分组自带状态点类名（fh-ws-dot*）：几何在功能样式里，这里补一层光晕。 */
+.fh-ws-dot-warn { box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 18%, transparent); }
+.fh-ws-dot-done { box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-success-primary) 14%, transparent); }
 @keyframes fh-spin { to { transform: rotate(360deg); } }
 .fh-visually-hidden {
   position: absolute;
@@ -350,70 +369,116 @@ export const SIDEBAR_STYLES = `
 .fh-hovercard {
   position: fixed;
   z-index: 40;
-  width: 260px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--dsw-alias-border-l1);
-  background: var(--dsw-alias-bg-overlay);
+  width: 292px;
+  max-width: calc(100vw - 16px);
+  padding: 12px;
+  border-radius: 14px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
+  box-shadow: 0 14px 36px color-mix(in srgb, #000 20%, transparent);
   font-size: 12px;
   pointer-events: none;
 }
-.fh-hovercard-body { display: flex; flex-direction: column; gap: 4px; }
-.fh-hovercard-title { font-size: 12px; line-height: 18px; word-break: break-word; }
-.fh-hovercard-path { color: var(--dsw-alias-label-secondary); font-size: 11px; word-break: break-all; }
-.fh-hovercard-time { color: var(--dsw-alias-label-secondary); font-size: 11px; }
-.fh-hovercard-status { display: flex; align-items: center; gap: 6px; color: var(--dsw-alias-label-secondary); }
+.fh-hovercard-body { display: flex; flex-direction: column; gap: 8px; }
+.fh-hovercard-head { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.fh-hovercard-mark {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--fh-tone-gold) 24%, transparent);
+  background: color-mix(in srgb, var(--fh-tone-gold) 11%, transparent);
+}
+.fh-hovercard-session .fh-hovercard-mark {
+  border-color: color-mix(in srgb, var(--fh-tone-blue) 24%, transparent);
+  background: color-mix(in srgb, var(--fh-tone-blue) 11%, transparent);
+}
+.fh-hovercard-title {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 19px;
+  word-break: break-word;
+}
+.fh-hovercard-meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11.5px;
+  line-height: 17px;
+  word-break: break-all;
+}
+.fh-hovercard-ico { flex: none; margin-top: 2px; opacity: 0.75; }
+.fh-hovercard-path { color: var(--dsw-alias-label-secondary); font-size: 11.5px; line-height: 17px; word-break: break-all; }
+.fh-hovercard-time { color: var(--dsw-alias-label-secondary); font-size: 11.5px; line-height: 17px; }
+.fh-hovercard-status { display: flex; align-items: center; gap: 6px; color: var(--dsw-alias-label-secondary); font-size: 11.5px; line-height: 17px; }
 .fh-hovercard-archived { color: var(--dsw-alias-state-warn-primary); }
 .fh-hovercard-copy {
-  margin-top: 6px;
-  padding: 2px 6px;
-  border: 0;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--dsw-alias-label-primary) 9%, transparent);
-  color: var(--dsw-alias-label-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 9px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 14%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 5%, transparent);
+  color: var(--dsw-alias-label-secondary);
   font: inherit;
   font-size: 11px;
+  line-height: 18px;
   pointer-events: auto;
   cursor: pointer;
 }
+.fh-hovercard-copy:hover {
+  color: var(--dsw-alias-label-primary);
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 9%, transparent);
+}
+.fh-hovercard-copy:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 1px; }
 
 /* ---- 菜单（popover） ---- */
 .fh-menu {
   position: fixed;
   inset: auto;
   margin: 0;
-  padding: 4px;
-  min-width: 190px;
-  max-width: 280px;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-overlay);
+  padding: 6px;
+  min-width: 198px;
+  max-width: 288px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);
+  box-shadow: 0 14px 36px color-mix(in srgb, #000 22%, transparent);
   font-size: 13px;
 }
 .fh-menu:popover-open { display: flex; flex-direction: column; }
 .fh-menu-label {
-  padding: 6px 10px 2px;
-  font-size: 11px;
+  padding: 7px 10px 3px;
+  font-size: 10.5px;
+  font-weight: 600;
   line-height: 16px;
+  letter-spacing: 0.05em;
   color: var(--dsw-alias-label-secondary);
 }
 .fh-menu-sep {
   height: 1px;
-  margin: 4px 6px;
-  background: var(--dsw-alias-border-l1);
+  margin: 5px 6px;
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
 }
 .fh-menu-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   width: 100%;
-  padding: 6px 10px;
+  min-height: 32px;
+  padding: 6px 9px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   color: inherit;
   font: inherit;
@@ -423,65 +488,85 @@ export const SIDEBAR_STYLES = `
 .fh-menu-item:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); }
 .fh-menu-item:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: -2px; }
 .fh-menu-item:disabled { opacity: 0.45; cursor: default; }
-.fh-menu-item-selected { color: var(--dsw-alias-brand-primary); }
+.fh-menu-item-selected {
+  background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 8%, transparent);
+  color: var(--dsw-alias-label-primary);
+}
+.fh-menu-item-selected::after {
+  content: '✓';
+  flex: none;
+  margin-left: auto;
+  color: var(--dsw-alias-state-business-primary);
+  font-size: 11px;
+  line-height: 1;
+}
 .fh-menu-item-danger { color: var(--dsw-alias-state-error-primary); }
+.fh-menu-item-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, transparent);
+}
 .fh-menu-item-icon { flex: none; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; }
 .fh-menu-item-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---- 对话框 ---- */
 .fh-dialog {
-  width: min(440px, calc(100vw - 32px));
+  width: min(460px, calc(100vw - 32px));
   max-height: min(70vh, 640px);
   padding: 0;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 12px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 18px;
   background: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-primary);
-  box-shadow: 0 16px 48px color-mix(in srgb, var(--dsw-alias-label-primary) 24%, transparent);
+  box-shadow: 0 24px 64px color-mix(in srgb, #000 30%, transparent);
   font-size: 13px;
 }
-.fh-dialog::backdrop { background: color-mix(in srgb, var(--dsw-alias-label-primary) 32%, transparent); }
+.fh-dialog::backdrop {
+  background: color-mix(in srgb, #000 34%, transparent);
+  backdrop-filter: blur(2px);
+}
 .fh-dialog[open] { display: flex; flex-direction: column; }
 .fh-dialog-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 12px 8px 16px;
+  padding: 16px 14px 10px 18px;
 }
-.fh-dialog-title { flex: 1 1 auto; font-size: 14px; line-height: 20px; }
-.fh-dialog-desc { margin: 0; padding: 0 16px 8px; color: var(--dsw-alias-label-secondary); line-height: 18px; }
-.fh-dialog-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 16px 12px; }
+.fh-dialog-title { flex: 1 1 auto; font-size: 15px; font-weight: 600; line-height: 22px; }
+.fh-dialog-desc { margin: 0; padding: 0 18px 10px; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; }
+.fh-dialog-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 18px 14px; }
 .fh-dialog-foot {
   flex: none;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  padding: 10px 16px 14px;
-  border-top: 1px solid var(--dsw-alias-border-l1);
+  padding: 12px 18px 16px;
+  border-top: 0.5px solid var(--dsw-alias-border-l2);
 }
 .fh-dialog-foot-gap { flex: 1 1 auto; }
 .fh-dialog-error { margin-top: 8px; color: var(--dsw-alias-state-error-primary); font-size: 12px; line-height: 18px; }
 .fh-dialog-status { color: var(--dsw-alias-label-secondary); font-size: 12px; }
 .fh-input {
   width: 100%;
-  height: 32px;
-  padding: 0 8px;
-  border-radius: 6px;
-  border: 1px solid var(--dsw-alias-border-l2);
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1px solid var(--dsw-alias-border-l3);
   background: var(--dsw-alias-bg-base);
   color: var(--dsw-alias-label-primary);
   font: inherit;
   font-size: 13px;
   outline: none;
 }
-.fh-input:focus { border-color: var(--dsw-alias-brand-primary); }
+.fh-input:focus {
+  border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary) 65%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--dsw-alias-state-business-primary) 16%, transparent);
+}
 .fh-button {
   flex: none;
-  height: 30px;
-  padding: 0 12px;
-  border-radius: 6px;
-  border: 1px solid var(--dsw-alias-border-l2);
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 9px;
+  border: 1px solid var(--dsw-alias-border-l3);
   background: transparent;
   color: var(--dsw-alias-label-primary);
   font: inherit;
@@ -490,13 +575,19 @@ export const SIDEBAR_STYLES = `
 }
 .fh-button:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); }
 .fh-button:disabled { opacity: 0.45; cursor: default; }
+.fh-button:focus-visible { outline: 2px solid color-mix(in srgb, var(--dsw-alias-state-business-primary) 60%, transparent); outline-offset: 1px; }
 .fh-button-primary {
   border-color: transparent;
   background: var(--dsw-alias-brand-primary);
   color: var(--dsw-alias-bg-base);
+  font-weight: 500;
 }
 .fh-button-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-brand-primary) 88%, var(--dsw-alias-label-primary)); }
-.fh-button-danger { border-color: var(--dsw-alias-state-error-primary); color: var(--dsw-alias-state-error-primary); }
+.fh-button-danger {
+  border-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 45%, transparent);
+  color: var(--dsw-alias-state-error-primary);
+}
+.fh-button-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 9%, transparent); }
 
 /* ---- 目录选择器 ---- */
 .fh-picker-path { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
@@ -509,8 +600,8 @@ export const SIDEBAR_STYLES = `
   min-height: 120px;
   overflow-y: auto;
   padding: 4px;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 8px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
 }
 .fh-picker-entry {
   display: flex;
@@ -535,18 +626,20 @@ export const SIDEBAR_STYLES = `
 /* ---- 折叠 rail 态 ---- */
 .fh-rail { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; }
 .fh-rail-button {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   color: var(--dsw-alias-label-secondary);
   cursor: pointer;
+  transition: background-color 120ms ease;
 }
 .fh-rail-button:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); color: var(--dsw-alias-label-primary); }
+.fh-rail-button:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: -2px; }
 
 /* ---- 右下角提示 ---- */
 .fh-notices {
@@ -562,12 +655,12 @@ export const SIDEBAR_STYLES = `
 }
 .fh-notice {
   max-width: 360px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--dsw-alias-border-l1);
-  background: var(--dsw-alias-bg-overlay);
+  padding: 9px 13px;
+  border-radius: 12px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
+  box-shadow: 0 12px 32px color-mix(in srgb, #000 22%, transparent);
   font: inherit;
   font-size: 12px;
   line-height: 18px;

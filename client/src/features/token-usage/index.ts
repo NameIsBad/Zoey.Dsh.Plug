@@ -36,6 +36,7 @@ import {
 import { readUsagePreferences, subscribeUsagePreferences, type UsagePreferences } from './preferences'
 import { en, zh } from './locale'
 import { styles } from './styles'
+import type { FeatureTone } from '../../types'
 import type { ReactElement, ReactNode } from 'react'
 import type { StageReading } from './metrics'
 
@@ -59,6 +60,8 @@ interface Reading {
   readonly unit?: string
   /** 是否为估算值：为真时前缀 `≈` 并用悬停提示说明。 */
   readonly estimated?: boolean
+  /** 前面的小圆点颜色；只做区分，不承担语义。 */
+  readonly tone: FeatureTone
 }
 
 /**
@@ -71,6 +74,7 @@ function ReadingItem(props: { reading: Reading; estimateHint: string }): ReactEl
   return h(
     'span',
     { className: 'fh-tu-item', 'data-metric': reading.key },
+    h('span', { className: 'fh-tu-dot', 'data-tone': reading.tone, 'aria-hidden': true }),
     h('span', { className: 'fh-tu-label' }, reading.label),
     h(
       'span',
@@ -128,6 +132,7 @@ export function TokenUsageBar(props: ComposerDockProps): ReactElement | null {
   if (prefs.showTokens && total !== null) {
     readings.push({
       key: 'tokens',
+      tone: 'blue',
       label: t('consumed.label'),
       value: formatTokenCount(total, prefs.exactTokens),
       unit: t('consumed.unit'),
@@ -136,6 +141,7 @@ export function TokenUsageBar(props: ComposerDockProps): ReactElement | null {
   if (prefs.showSpeed && speedTps !== null && speedTps > 0) {
     readings.push({
       key: 'speed',
+      tone: 'green',
       label: t('speed.label'),
       value: formatRate(speedTps),
       unit: t('speed.unit'),
@@ -145,6 +151,7 @@ export function TokenUsageBar(props: ComposerDockProps): ReactElement | null {
   if (prefs.showTtft && ttftMs !== null && ttftMs > 0) {
     readings.push({
       key: 'ttft',
+      tone: 'gold',
       label: t('ttft.label'),
       value: formatSeconds(ttftMs),
       estimated: true,
@@ -153,13 +160,14 @@ export function TokenUsageBar(props: ComposerDockProps): ReactElement | null {
   if (prefs.showElapsed && elapsedMs !== null && elapsedMs > 0) {
     readings.push({
       key: 'elapsed',
+      tone: 'red',
       label: t('elapsed.label'),
       value: formatSeconds(elapsedMs),
       estimated: true,
     })
   }
   if (prefs.showContext && percent !== null) {
-    readings.push({ key: 'context', label: t('context.label'), value: `${percent}%` })
+    readings.push({ key: 'context', tone: 'violet', label: t('context.label'), value: `${percent}%` })
   }
   if (readings.length === 0) return null
 

@@ -23,13 +23,13 @@ export const styles = `
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 10px 10px 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--dsw-alias-border-l1);
+  padding: 11px 10px 11px 13px;
+  border-radius: 14px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
   border-left-width: 3px;
-  background: var(--dsw-alias-bg-overlay);
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
-  box-shadow: 0 10px 28px color-mix(in srgb, var(--dsw-alias-label-primary) 14%, transparent);
+  box-shadow: 0 14px 36px color-mix(in srgb, #000 24%, transparent);
   pointer-events: auto;
   animation: fh-tn-in 160ms ease-out;
 }
@@ -96,7 +96,7 @@ export const styles = `
   justify-content: center;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 7px;
   background: transparent;
   color: var(--dsw-alias-label-secondary);
   font: inherit;

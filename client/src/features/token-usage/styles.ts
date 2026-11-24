@@ -37,6 +37,21 @@ export const styles = `
 }
 .fh-tu, .fh-tu * { box-sizing: border-box; }
 .fh-tu-item { display: inline-flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+/* 每个读数前的小色点：只用于区分指标，不承担语义；颜色见 lib/palette.ts。 */
+.fh-tu-dot {
+  width: 5px;
+  height: 5px;
+  flex: none;
+  align-self: center;
+  border-radius: 50%;
+  background: var(--dsw-alias-label-tertiary);
+}
+.fh-tu-dot[data-tone='gold'] { background: var(--fh-tone-gold); }
+.fh-tu-dot[data-tone='red'] { background: var(--fh-tone-red); }
+.fh-tu-dot[data-tone='blue'] { background: var(--fh-tone-blue); }
+.fh-tu-dot[data-tone='green'] { background: var(--fh-tone-green); }
+.fh-tu-dot[data-tone='violet'] { background: var(--fh-tone-violet); }
+.fh-tu-dot[data-tone='pink'] { background: var(--fh-tone-pink); }
 .fh-tu-label { color: color-mix(in srgb, var(--dsw-alias-label-primary) 55%, transparent); }
 .fh-tu-value { display: inline-flex; align-items: baseline; gap: 2px; color: var(--dsw-alias-label-primary); font-weight: 500; }
 .fh-tu-mark { color: color-mix(in srgb, var(--dsw-alias-label-primary) 50%, transparent); }

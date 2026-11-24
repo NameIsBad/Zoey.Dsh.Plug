@@ -18,6 +18,8 @@ export const zh = {
   'settings.description': '输入框右侧的「压缩上下文」按钮；上下文占用达到阈值后才会出现。',
   'threshold.label': '压缩按钮出现阈值（%）',
   'threshold.hint': '上下文占用达到该百分比才显示按钮；最小 {min}%。',
+  'threshold.presets': '常用阈值',
+  'threshold.presetsHint': '点一下套用常用百分比，滑杆会同步。',
   'threshold.reset': '恢复默认',
 }
 
@@ -37,5 +39,7 @@ export const en: Record<keyof typeof zh, string> = {
     'The Compact context button beside the composer appears once context usage reaches the threshold.',
   'threshold.label': 'Compact button threshold (%)',
   'threshold.hint': 'The button appears once context usage reaches this percentage; minimum {min}%.',
+  'threshold.presets': 'Common thresholds',
+  'threshold.presetsHint': 'Pick a common percentage; the slider follows.',
   'threshold.reset': 'Reset',
 }

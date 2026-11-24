@@ -797,21 +797,21 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
       id: 'workspace',
       label: t('groupBy.workspace'),
       selected: view.groupBy === 'workspace',
-      icon: <IconFolderClose size={14} />,
+      icon: <IconFolderClose size={14} tone="gold" />,
     },
     {
       kind: 'item',
       id: 'workspace-tree',
       label: t('groupBy.workspaceTree'),
       selected: view.groupBy === 'workspace-tree',
-      icon: <IconWorkspaceTree size={14} />,
+      icon: <IconWorkspaceTree size={14} tone="blue" />,
     },
     {
       kind: 'item',
       id: 'flat',
       label: t('groupBy.flat'),
       selected: view.groupBy === 'flat',
-      icon: <IconFlatList size={14} />,
+      icon: <IconFlatList size={14} tone="violet" />,
     },
     { kind: 'separator', id: 'order-sep' },
     { kind: 'label', id: 'order-by', text: t('orderBy.label') },
@@ -820,14 +820,14 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
       id: 'manual',
       label: t('orderBy.manual'),
       selected: view.orderBy === 'manual',
-      icon: <IconChevronsUpDown size={14} />,
+      icon: <IconChevronsUpDown size={14} tone="gold" />,
     },
     {
       kind: 'item',
       id: 'updated',
       label: t('orderBy.updated'),
       selected: view.orderBy === 'updated',
-      icon: <IconClock size={14} />,
+      icon: <IconClock size={14} tone="green" />,
     },
     { kind: 'separator', id: 'archived-sep' },
     { kind: 'label', id: 'filter-by', text: t('filterBy.label') },
@@ -836,21 +836,21 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
       id: 'hide-archived',
       label: t('viewOptions.hideArchived'),
       selected: view.archivedFilter === 'default',
-      icon: <IconArchiveOff size={14} />,
+      icon: <IconArchiveOff size={14} tone="blue" />,
     },
     {
       kind: 'item',
       id: 'show-archived',
       label: t('viewOptions.showArchived'),
       selected: view.archivedFilter === 'show',
-      icon: <IconQueue size={14} />,
+      icon: <IconQueue size={14} tone="blue" />,
     },
     {
       kind: 'item',
       id: 'only-archived',
       label: t('viewOptions.onlyArchived'),
       selected: view.archivedFilter === 'only',
-      icon: <IconArchiveCheck size={14} />,
+      icon: <IconArchiveCheck size={14} tone="blue" />,
     },
   ]
 
@@ -932,10 +932,21 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
 
   /** 工作区菜单项：顺序与原生一致（重命名 → 在文件夹显示 → 删除工作区）。 */
   const workspaceMenuItems: readonly MenuItem[] = [
-    { kind: 'item', id: 'rename', label: t('rename'), icon: <IconEdit size={14} /> },
-    { kind: 'item', id: 'reveal', label: t('workspace.reveal'), icon: <IconFolderOpen size={14} /> },
+    { kind: 'item', id: 'rename', label: t('rename'), icon: <IconEdit size={14} tone="blue" /> },
+    {
+      kind: 'item',
+      id: 'reveal',
+      label: t('workspace.reveal'),
+      icon: <IconFolderOpen size={14} tone="gold" />,
+    },
     { kind: 'separator', id: 'workspace-delete-sep' },
-    { kind: 'item', id: 'delete', label: t('delete.workspace'), icon: <IconTrash size={14} />, danger: true },
+    {
+      kind: 'item',
+      id: 'delete',
+      label: t('delete.workspace'),
+      icon: <IconTrash size={14} tone="red" />,
+      danger: true,
+    },
   ]
 
   /**
@@ -1276,7 +1287,7 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
           aria-label={t('search.aria')}
           onClick={railSearch}
         >
-          <IconSearch size={18} />
+          <IconSearch size={18} tone="blue" />
         </button>
         <button
           type="button"
@@ -1285,7 +1296,7 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
           aria-label={t('workspace.add')}
           onClick={openAddWorkspace}
         >
-          <IconProjectAdd size={18} />
+          <IconProjectAdd size={18} tone="green" />
         </button>
       </div>
     )
@@ -1312,7 +1323,7 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
               focusSearch()
             }}
           >
-            <IconSearch size={14} />
+            <IconSearch size={14} tone="blue" />
             <input
               ref={searchInput}
               className="fh-ws-search-input"
@@ -1355,13 +1366,13 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
             aria-expanded={false}
             onClick={openSearch}
           >
-            <IconSearch size={14} />
+            <IconSearch size={14} tone="blue" />
           </button>
         )}
         <div className="fh-ws-head-actions">
           <Menu
             label={t('viewOptions.label')}
-            icon={<IconSliders size={16} />}
+            icon={<IconSliders size={16} tone="violet" />}
             className="fh-icon-button"
             items={viewItems}
             onSelect={onViewSelect}
@@ -1375,7 +1386,7 @@ export function WorkspaceBrowser(props: WorkspaceBrowserProps): ReactTypes.JSX.E
             disabled={adding}
             onClick={openAddWorkspace}
           >
-            <IconProjectAdd size={16} />
+            <IconProjectAdd size={16} tone="green" />
           </button>
         </div>
       </div>

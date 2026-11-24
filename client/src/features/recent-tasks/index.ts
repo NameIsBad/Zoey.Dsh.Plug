@@ -245,16 +245,18 @@ export function RecentTasksSection(props: SidebarSectionProps): ReactElement {
 
   // 不再画小三角：收起/展开用同一套 Lucide 线性图标区分——
   // 展开是「时钟」，收起是「历史」（带反向箭头），两者的轮廓一眼可分。
+  // 时钟用藤黄：与侧边栏的文件夹图标同属暖色，一眼能认出是「按时间」的分组。
   const lead = h(
     'svg',
     {
       width: 16,
       height: 16,
       viewBox: '0 0 24 24',
+      className: 'fh-recent-glyph',
       'aria-hidden': true,
       focusable: false,
       fill: 'none',
-      stroke: 'currentColor',
+      stroke: 'var(--fh-tone-gold)',
       strokeWidth: 1.8,
       strokeLinecap: 'round',
       strokeLinejoin: 'round',
@@ -265,7 +267,15 @@ export function RecentTasksSection(props: SidebarSectionProps): ReactElement {
           h('path', { d: 'M3 3v5h5' }),
           h('path', { d: 'M12 7v5l4 2' }),
         ]
-      : [h('circle', { cx: 12, cy: 12, r: 9 }), h('path', { d: 'M12 7v5l3.2 1.9' })]),
+      : [
+          h('circle', {
+            cx: 12,
+            cy: 12,
+            r: 9,
+            fill: 'color-mix(in srgb, var(--fh-tone-gold) 16%, transparent)',
+          }),
+          h('path', { d: 'M12 7v5l3.2 1.9' }),
+        ]),
   )
 
   const header = h(

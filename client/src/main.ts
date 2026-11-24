@@ -43,6 +43,7 @@ import {
 } from './features/task-notify/index'
 import { taskNotifySettings } from './features/task-notify/settings'
 import { installStyles } from './lib/dom'
+import { PALETTE_STYLES } from './lib/palette'
 import {
   FeatureHubSettings,
   FeatureHubSettingsIcon,
@@ -132,6 +133,9 @@ function enabledOf<T extends { enabled?: boolean }>(list: readonly T[]): readonl
  * @param ctx 客户端上下文（插槽、字典、会话与工作区动作）。
  */
 export function apply(ctx: ClientContext): void {
+  // 国风强调色只在装饰性位置使用（图标、图标底、开关轨道），由设置页、侧边栏
+  // 与输入框控件共用；变量名带 `--fh-` 前缀，深浅主题各一套值。
+  ctx.effect(() => installStyles(PALETTE_STYLES), 'feature-hub:palette')
   // 外壳自身的字典与样式。
   ctx.effect(() => ctx.locale.register(SIDEBAR_NS, SIDEBAR_DICT), 'feature-hub:sidebar:dictionaries')
   ctx.effect(() => installStyles(SIDEBAR_STYLES), 'feature-hub:sidebar:styles')
@@ -241,6 +245,8 @@ export function apply(ctx: ClientContext): void {
     order: item.order,
     component: item.component,
     t: ctx.locale.bind(item.locale.ns),
+    icon: item.icon,
+    tone: item.tone,
   }))
   ctx.effect(
     () =>

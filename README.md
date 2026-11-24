@@ -4,14 +4,14 @@
 
 当前已实现：
 
-| 功能                     | 位置                      | 说明                                                     |
-| ------------------------ | ------------------------- | -------------------------------------------------------- |
-| 最近任务 `recent-tasks`  | 侧边栏「工作区」列表顶部  | 全部项目按活动时间倒序的最近若干条会话，可折叠、条数可配 |
-| 当前分支 `git-branch`    | 输入框工具行              | 项目名 + 当前 git 分支，点击向上弹出切换面板             |
-| 压缩上下文               | 输入框工具行右侧          | 一键执行 `/compact`，不经过输入框、不动草稿              |
-| 用量状态条 `token-usage` | 输入框正上方（内容末尾）  | 已消耗 token、本阶段速度、首字、耗时、上下文占用实时读数 |
-| 任务提醒 `task-notify`   | Windows 通知中心          | 完成 / 失败 / 询问发系统通知，最小化或关闭到托盘仍收到   |
-| 侧边栏外壳               | 接管 `sidebar.workspaces` | 在上面功能之外，重建了工作区列表本身                     |
+| 功能                     | 位置                      | 说明                                                            |
+| ------------------------ | ------------------------- | --------------------------------------------------------------- |
+| 最近任务 `recent-tasks`  | 侧边栏「工作区」列表顶部  | 全部项目按活动时间倒序的最近若干条会话，可折叠、条数可配        |
+| 当前分支 `git-branch`    | 输入框工具行              | 项目名（点击复制名称）+ 当前 git 分支，点击分支向上弹出切换面板 |
+| 压缩上下文               | 输入框工具行右侧          | 一键执行 `/compact`，不经过输入框、不动草稿                     |
+| 用量状态条 `token-usage` | 输入框正上方（内容末尾）  | 已消耗 token、本阶段速度、首字、耗时、上下文占用实时读数        |
+| 任务提醒 `task-notify`   | Windows 通知中心          | 完成 / 失败 / 询问发系统通知，最小化或关闭到托盘仍收到          |
+| 侧边栏外壳               | 接管 `sidebar.workspaces` | 在上面功能之外，重建了工作区列表本身                            |
 
 > 侧边栏之所以要"接管"，是因为 DSH 的「工作区」列表没有"往里加一个分组"的扩展点：`sidebar.workspaces` 是单占位槽，想在列表里出现内容只能连列表一起渲染。接管后原生浏览区的部分能力未移植，见文末「已知缺口」。
 
@@ -20,7 +20,7 @@
 ### 最近任务（`recent-tasks`）
 
 - 固定分组，位于项目分组之上；外观与工作区分组一致（36px 区头、32px 行）。左侧图标随折叠状态切换（展开 = 时钟，收起 = 带反向箭头的历史）；不使用小三角。
-- 全侧边栏图标统一用 **Lucide** 线性风格（24 网格、1.8 描边、圆头圆角），内联 SVG 跟随主题色，见 `client/src/shell/icons.tsx`。
+- 全侧边栏图标统一用 **Lucide** 线性风格（24 网格、1.8 描边、圆头圆角）；在保持几何一致的前提下按语义上色：文件夹与「最近任务」用藤黄、分支用竹青、搜索与归档用石青、视图选项用紫棠、新建用竹绿。色值由 `client/src/lib/palette.ts` 提供，深浅主题各一套，见 `client/src/shell/icons.tsx`。
 - 取数：全部项目里按会话活动时间倒序的前 N 条（**默认 5**，在「设置 → 功能集」里改，范围 1–50，改完即时生效）。活动时间取 DSH 会话列表的 `updatedAt`（用户发出消息时推进），不按创建时间排序。
 - **运行中 / 待确认的会话永不被裁掉**：先取 N 条，再把超出 N 的进行中会话按时间补进来，因此列表可能长于 N；标题右侧徽标是实际条数。
 - 跳过草稿（含当前新建会话：它们还没有用户消息，按创建时间排会霸占最前面）、子代理、已归档会话；没有任何可见会话的项目不出现。
@@ -41,11 +41,12 @@
 ### 当前分支（`git-branch`）
 
 - 两个胶囊：**项目名**（文件夹图标，悬停显示完整路径）+ **分支名**（分支图标，完整不省略）。
+- **点击项目胶囊即复制项目名称**（就是胶囊上显示的那段文字：工作区标题，重命名过就用新名字；未分组会话退回目录名）；悬停时右侧露出一个复制图标，复制成功/失败会在胶囊上短暂显示「已复制 / 复制失败」，1.6 秒后复原，不弹窗、不打断输入。`navigator.clipboard` 不可用（非安全上下文）时自动退回 `execCommand('copy')`。
 - 分支名来自会话工作目录；不在 git 仓库里时整个控件不渲染。
 - 工作区有未提交改动时分支胶囊带一个小黄点，悬停显示文件数。
 - 点击**向上弹出**面板：搜索本地分支、点选切换、底部「新分支名 + 创建并切换」；git 的报错原样显示。
 - **切换前警告**：会话还没跑过（blank）时直接切；已跑过或正在执行时，先弹出黄色确认块（写明原因与脏文件数），确认后才执行 checkout。创建分支不警告。
-- 每 10 秒（页面可见时）+ 窗口聚焦时刷新，避免"切了分支界面还显示旧分支"。
+- 只在会话（cwd）变化与点击胶囊时重新读取分支，不轮询：手动在终端里切过分支后，再点一次胶囊即可刷新。
 
 ### 压缩上下文（`compact-context`）
 
@@ -87,6 +88,13 @@
 - 会话行：状态指示、标题、相对时间、置顶标记、选中高亮；等待回答 / 等待确认时行尾显示琥珀色胶囊（悬停或键盘聚焦时依旧保留，只让时间与置顶让位给操作按钮）；右键 / Shift+F10 打开**原生会话菜单**（重命名、分支、复制 ID、归档、置顶、在应用中打开）。
 - 渲染抛错时降级为简版列表 + 一行提示，不会让整块区域空白。
 
+### 外观与配色
+
+- **设置页「功能集」**：页头（彩色四色方块标 + 功能数徽标）下面是一排功能标签页（每个功能一个彩色图标 + 名称，键盘 ←/→/Home/End 可切换，上次停留的标签会记住），一次只看一个功能的设置；卡片里保留该功能的说明，再按「显示内容 / 速度与耗时 / 提醒时机」等分组。开关换成 38×22 胶囊、阈值用滑杆 + 常用值胶囊、条数用步进器，全部有键盘焦点环与禁用态。控件在 `client/src/lib/settings-controls.tsx`，标签页与卡片框架、`.fh-set-*` 样式契约在 `client/src/features/settings/`。
+- **一套国风强调色**（`client/src/lib/palette.ts`）：朱砂、藤黄、石青、竹青、紫棠、胭脂。浅色主题用压深的色值、深色主题用提亮的色值；只用于图标、图标底座、开关轨道、进度条与分组标记，文字与边框仍走 `--dsw-alias-*` 主题 token，所以两套主题下对比度都成立。
+- **侧边栏细节**：文件夹图标是同色低透明填充（悬停加深），最近任务计数是藤黄色胶囊；菜单、悬停卡片、对话框统一 12–18px 圆角与双层阴影，菜单选中项带主题蓝勾选、危险项悬停泛红；用量状态条的每个读数前有一个 5px 色点区分指标。
+- 所有颜色都在 `light` 与 `dark` 两套 token 下实测过（设置页、侧边栏、菜单、悬停卡片）。
+
 ## 结构
 
 源码是 **TypeScript**，运行时只认构建产物。
@@ -99,12 +107,15 @@ client/client.js             构建产物（唯一被浏览器加载的文件，
 client/src/main.ts                       总控：外壳 + SECTIONS / CONTROLS / RIGHT_CONTROLS / DOCKS / SETTINGS 清单与装配
 client/src/shell/sidebar.ts              侧边栏外壳：区头、列表、项目分组、会话行、拖拽、错误兜底
 client/src/features/recent-tasks/        功能：最近任务（index / settings / preferences / locale / styles）
-client/src/features/git-branch/          功能：分支胶囊（index / locale / styles / branch-name）
-client/src/features/settings/            设置页壳：只做卡片框架、排序与 .fh-set-* 样式契约
+client/src/features/git-branch/          功能：分支胶囊（index / locale / styles / branch-name / clipboard）
+client/src/features/settings/            设置页壳：页头、卡片框架、彩色图标底座、排序与 .fh-set-* 样式契约
 client/src/features/compact-context/     功能：压缩上下文按钮（index / runner / settings / threshold / locale / styles）
 client/src/features/token-usage/         功能：用量状态条（index / metrics / preferences / settings / locale / styles）
 client/src/features/task-notify/         功能：任务提醒（index / settings / engine / preferences / desktop-notify / locale / styles）
-client/src/lib/*.ts                      真正跨域共用的工具（dom、status、time）
+client/src/lib/palette.ts                国风强调色变量（浅色 / 深色两套值）
+client/src/lib/settings-controls.tsx     设置页共用控件（开关 / 步进器 / 滑杆 / 胶囊 / 按钮）
+client/src/lib/settings-icons.tsx        设置卡片图标（时钟 / 压缩 / 仪表 / 铃铛）
+client/src/lib/*.ts                      其它跨域共用工具（dom、status、time）
 client/src/types.ts                      本插件自有的类型（功能/设置描述对象、上下文等）
 types/dsh-client.d.ts        DSH 客户端环境声明（手写：插槽 props、React/h、Host 上下文）
 types/dsh-observed.generated.md  自动生成：当前 DSH 的真实数据形状 + 与契约的漂移报告
@@ -187,11 +198,13 @@ export const myFeatureSettings = {
   id: 'my-feature',
   order: 20,
   locale: { ns: 'feature-hub.my-feature', dicts: { zh, en } },
-  component: MyFeatureSettings, // 只渲染 .fh-set-row，标题/描述用 settings.title / settings.description
+  component: MyFeatureSettings, // 只渲染 .fh-set-row / .fh-set-group，描述用 settings.description
+  icon: MySettingsIcon, // 标签页与面板的图标（可来自 lib/settings-icons.tsx）
+  tone: 'blue', // 标签页与卡片强调色：gold / red / blue / green / violet / pink
 }
 ```
 
-设置面板的卡片标题与描述由页壳统一渲染：功能字典里提供 `settings.title`、`settings.description` 两个键；面板内部复用页壳的 `.fh-set-*` 类名（与侧边栏外壳的 `fh-ws-*` 契约同理）即可。然后在 `main.ts` 的 `SETTINGS` 清单里登记一行，停用功能时整块卡片一起消失。
+设置页按功能分标签（标签文字取功能字典的 `settings.title`，说明取 `settings.description`，都由页壳统一渲染）：面板内部复用页壳的 `.fh-set-*` 类名（与侧边栏外壳的 `fh-ws-*` 契约同理）即可。开关、步进器、滑杆、常用值胶囊与按钮从 `lib/settings-controls.tsx` 引用，不要在功能里重写一套控件。然后在 `main.ts` 的 `SETTINGS` 清单里登记一行，停用功能时整个标签与卡片一起消失。只有一个功能时页壳不渲染标签栏，改为在卡片里显示标题。
 
 ## 已知缺口（相对原生浏览区）
 

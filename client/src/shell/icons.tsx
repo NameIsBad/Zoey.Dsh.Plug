@@ -1,11 +1,15 @@
 import type * as ReactTypes from 'react'
+import type { FeatureTone } from '../types'
 /**
  * 侧边栏浏览区用到的图标。
  *
  * 统一采用 **Lucide** 的几何（24×24 网格、圆头圆角、均匀 1.8 描边），
  * 这样侧边栏里的放大镜、滑杆、文件夹、消息、归档、垃圾桶等图标观感一致，
- * 也和页面里原生控件的现代线性风格接近。全部是内联 SVG，颜色走
- * `currentColor`，跟随主题文字色，不需要为浅色/深色各写一套。
+ * 也和页面里原生控件的现代线性风格接近。全部是内联 SVG；默认颜色走
+ * `currentColor`，也可以用 `tone` 指定本插件的国风强调色（见 `lib/palette.ts`）。
+ *
+ * 文件夹图标额外有一层低透明度的同色填充（`.fh-folder-body`），让侧边栏里的
+ * 项目图标不再是一根灰线，但仍比实心图标克制。
  *
  * 为什么不能直接依赖图标包：客户端模块表只给 React，运行时 import 任何 npm 包
  * 都会在浏览器里失败；所以这里按 Lucide（ISC 许可）的形状手写路径，
@@ -18,6 +22,17 @@ export interface IconProps {
   readonly size?: number
   /** 额外类名。 */
   readonly className?: string
+  /** 强调色名；缺省时跟随 `currentColor`（主题文字色）。 */
+  readonly tone?: FeatureTone
+}
+
+/**
+ * 把色调名换成 CSS 变量；没有指定时返回 undefined，让 SVG 用 currentColor。
+ * @param tone 色调名。
+ * @returns `var(--fh-tone-*)` 或 undefined。
+ */
+function tonePaint(tone: FeatureTone | undefined): string | undefined {
+  return tone === undefined ? undefined : `var(--fh-tone-${tone})`
 }
 
 /** 描边图标的公共外壳；`viewBox` 固定 24，保证所有图标几何一致。 */
@@ -31,7 +46,7 @@ function Stroke(props: IconProps & { readonly children: ReactTypes.ReactNode }):
       aria-hidden
       focusable={false}
       fill="none"
-      stroke="currentColor"
+      stroke={tonePaint(props.tone) ?? 'currentColor'}
       strokeWidth={1.8}
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -51,7 +66,7 @@ function Solid(props: IconProps & { readonly children: ReactTypes.ReactNode }): 
       className={props.className}
       aria-hidden
       focusable={false}
-      fill="currentColor"
+      fill={tonePaint(props.tone) ?? 'currentColor'}
     >
       {props.children}
     </svg>
@@ -103,7 +118,10 @@ export function IconSliders(props: IconProps): ReactTypes.JSX.Element {
 export function IconFolderOpen(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
+      <path
+        className="fh-folder-body"
+        d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"
+      />
     </Stroke>
   )
 }
@@ -112,7 +130,10 @@ export function IconFolderOpen(props: IconProps): ReactTypes.JSX.Element {
 export function IconFolderClose(props: IconProps): ReactTypes.JSX.Element {
   return (
     <Stroke {...props}>
-      <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+      <path
+        className="fh-folder-body"
+        d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"
+      />
     </Stroke>
   )
 }
@@ -284,6 +305,16 @@ export function IconArrowUp(props: IconProps): ReactTypes.JSX.Element {
     <Stroke {...props}>
       <path d="m5 12 7-7 7 7" />
       <path d="M12 19V5" />
+    </Stroke>
+  )
+}
+
+/** 复制：悬停卡片里复制工作区路径。 */
+export function IconCopy(props: IconProps): ReactTypes.JSX.Element {
+  return (
+    <Stroke {...props}>
+      <rect x={9} y={9} width={11} height={11} rx={2} />
+      <path d="M5 15V6a2 2 0 0 1 2-2h9" />
     </Stroke>
   )
 }

@@ -1,8 +1,9 @@
 /**
  * 「任务提醒」的设置面板：总开关、三类提醒开关、系统通知开关与测试按钮。
  *
- * 面板只渲染设置行，卡片框架由「功能集」页壳统一包住；偏好、投递封装与
- * 文案都在本功能目录内，删掉这个功能时整块设置一起消失。
+ * 面板按「提醒时机 / 投递方式」分组：总开关是强调行，关闭后其余开关统一置灰；
+ * 测试按钮放在投递方式组里，按完把结果直接写在旁边。
+ * 卡片框架与 `.fh-set-*` 样式由「功能集」页壳提供。
  */
 
 import {
@@ -18,62 +19,36 @@ import {
   writeNotifyPreferences,
   type NotifyPreferences,
 } from './preferences'
+import { SettingsButton, SettingsGroup, SettingsRow, SettingsSwitch } from '../../lib/settings-controls'
+import { SettingsBellIcon } from '../../lib/settings-icons'
 import { TASK_NOTIFY_NS } from './index'
 import { en, zh } from './locale'
+import type { SettingsItemDescriptor } from '../../types'
 import type { ReactElement } from 'react'
 
 const { useEffect, useState } = React
 
-/** 一行「文案在左、开关在右」的偏好行。 */
-interface NotifyToggleRowProps {
-  /** 左侧主文案。 */
+/** 一行开关的文案键与偏好字段。 */
+interface ToggleSpec {
+  /** 偏好字段。 */
+  readonly key: keyof NotifyPreferences
+  /** 主文案键。 */
   readonly label: string
-  /** 左侧说明。 */
+  /** 说明文案键。 */
   readonly hint: string
-  /** 开关是否打开。 */
-  readonly checked: boolean
-  /** 总开关关闭时禁掉子项，避免用户以为它们还在生效。 */
-  readonly disabled?: boolean
-  /** 用户切换开关后调用。 */
-  readonly onChange: (checked: boolean) => void
 }
 
-/**
- * 渲染一行复选框偏好。
- * @param props 文案、当前值与切换回调。
- * @returns 设置行元素。
- */
-function NotifyToggleRow(props: NotifyToggleRowProps): ReactElement {
-  return h(
-    'div',
-    { className: 'fh-set-row' },
-    h(
-      'div',
-      { className: 'fh-set-text' },
-      h('span', { className: 'fh-set-label' }, props.label),
-      h('span', { className: 'fh-set-help' }, props.hint),
-    ),
-    h(
-      'div',
-      { className: 'fh-set-control' },
-      h('input', {
-        className: 'fh-set-checkbox',
-        type: 'checkbox',
-        checked: props.checked,
-        disabled: props.disabled === true,
-        'aria-label': props.label,
-        onChange: (event: { currentTarget: HTMLInputElement }) => {
-          props.onChange(event.currentTarget.checked)
-        },
-      }),
-    ),
-  )
-}
+/** 「提醒时机」组的开关。 */
+const WHEN_ROWS: readonly ToggleSpec[] = [
+  { key: 'completed', label: 'notify.completed', hint: 'notify.completedHint' },
+  { key: 'failed', label: 'notify.failed', hint: 'notify.failedHint' },
+  { key: 'asked', label: 'notify.asked', hint: 'notify.askedHint' },
+]
 
 /**
  * 任务提醒的设置行。
  * @param props 本功能的翻译函数。
- * @returns 总开关 + 三类提醒 + 系统通知 + 测试按钮。
+ * @returns 总开关 + 两类分组 + 测试按钮。
  */
 export function TaskNotifySettings(props: FeatureSettingsProps): ReactElement {
   const { t } = props
@@ -109,85 +84,72 @@ export function TaskNotifySettings(props: FeatureSettingsProps): ReactElement {
     })()
   }
 
+  /** 总开关关闭时子项全部禁用，避免用户以为它们还在生效。 */
+  const disabled = !notify.enabled
+
   return h(
     React.Fragment,
     null,
-    h(NotifyToggleRow, {
-      key: 'notify.enabled',
-      label: t('notify.enabled'),
-      hint: t('notify.enabledHint'),
-      checked: notify.enabled,
-      onChange: (value: boolean) => {
-        setNotifyPref('enabled', value)
-      },
-    }),
-    h(NotifyToggleRow, {
-      key: 'notify.completed',
-      label: t('notify.completed'),
-      hint: t('notify.completedHint'),
-      checked: notify.completed,
-      disabled: !notify.enabled,
-      onChange: (value: boolean) => {
-        setNotifyPref('completed', value)
-      },
-    }),
-    h(NotifyToggleRow, {
-      key: 'notify.failed',
-      label: t('notify.failed'),
-      hint: t('notify.failedHint'),
-      checked: notify.failed,
-      disabled: !notify.enabled,
-      onChange: (value: boolean) => {
-        setNotifyPref('failed', value)
-      },
-    }),
-    h(NotifyToggleRow, {
-      key: 'notify.asked',
-      label: t('notify.asked'),
-      hint: t('notify.askedHint'),
-      checked: notify.asked,
-      disabled: !notify.enabled,
-      onChange: (value: boolean) => {
-        setNotifyPref('asked', value)
-      },
-    }),
-    h(NotifyToggleRow, {
-      key: 'notify.system',
-      label: t('notify.system'),
-      hint: t('notify.systemHint'),
-      checked: notify.system,
-      disabled: !notify.enabled,
-      onChange: (value: boolean) => {
-        setNotifyPref('system', value)
-      },
-    }),
     h(
-      'div',
-      { className: 'fh-set-row' },
+      SettingsRow,
+      { hero: true, label: t('notify.enabled'), hint: t('notify.enabledHint') },
+      h(SettingsSwitch, {
+        label: t('notify.enabled'),
+        checked: notify.enabled,
+        onChange: (value: boolean) => {
+          setNotifyPref('enabled', value)
+        },
+      }),
+    ),
+    h(
+      SettingsGroup,
+      { title: t('group.when') },
+      WHEN_ROWS.map((row) =>
+        h(
+          SettingsRow,
+          { key: row.key, label: t(row.label), hint: t(row.hint) },
+          h(SettingsSwitch, {
+            label: t(row.label),
+            checked: notify[row.key],
+            disabled,
+            onChange: (value: boolean) => {
+              setNotifyPref(row.key, value)
+            },
+          }),
+        ),
+      ),
+    ),
+    h(
+      SettingsGroup,
+      { title: t('group.how') },
       h(
-        'div',
-        { className: 'fh-set-text' },
-        h('span', { className: 'fh-set-label' }, t('notify.test')),
-        h('span', { className: 'fh-set-help' }, t(`notify.permission.${permission}`)),
+        SettingsRow,
+        { label: t('notify.system'), hint: t('notify.systemHint') },
+        h(SettingsSwitch, {
+          label: t('notify.system'),
+          checked: notify.system,
+          disabled,
+          onChange: (value: boolean) => {
+            setNotifyPref('system', value)
+          },
+        }),
       ),
       h(
-        'div',
-        { className: 'fh-set-control' },
-        h(
-          'button',
-          { type: 'button', className: 'fh-set-button', onClick: sendTest },
-          t('notify.testAction'),
-        ),
-        tested ? h('span', { className: 'fh-set-help' }, t('notify.testSent')) : null,
+        SettingsRow,
+        { label: t('notify.test'), hint: t(`notify.permission.${permission}`) },
+        h(SettingsButton, { variant: 'soft', onClick: sendTest, disabled }, t('notify.testAction')),
+        tested ? h('span', { className: 'fh-set-note fh-set-note-ok' }, t('notify.testSent')) : null,
       ),
     ),
   )
 }
 
 /** 供 `main.ts` 的 SETTINGS 清单登记。 */
-export const taskNotifySettings = {
+export const taskNotifySettings: SettingsItemDescriptor = {
   id: 'task-notify',
   order: 30,
   locale: { ns: TASK_NOTIFY_NS, dicts: { zh, en } },
   component: TaskNotifySettings,
+  icon: SettingsBellIcon,
+  tone: 'red',
 }

@@ -23,8 +23,9 @@ export const styles = `
   line-height: 18px;
   cursor: pointer;
 }
-.fh-cx-button:hover { color: var(--dsw-alias-label-primary); background: color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent); }
-.fh-cx-button:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 1px; }
+.fh-cx-button:hover { color: var(--dsw-alias-label-primary); background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 8%, transparent); }
+.fh-cx-button svg { filter: drop-shadow(0 1px 2px color-mix(in srgb, #000 22%, transparent)); }
+.fh-cx-button:focus-visible { outline: 2px solid color-mix(in srgb, var(--dsw-alias-state-business-primary) 60%, transparent); outline-offset: 1px; }
 .fh-cx-button-disabled { opacity: 0.5; cursor: default; }
 .fh-cx-button-disabled:hover { color: var(--dsw-alias-label-secondary); background: transparent; }
 .fh-cx-button[aria-busy='true'] { cursor: progress; }

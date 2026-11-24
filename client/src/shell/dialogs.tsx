@@ -621,7 +621,7 @@ export function DirectoryDialog(props: DirectoryDialogProps): ReactTypes.JSX.Ele
               load(entry.path)
             }}
           >
-            <IconFolderClose size={14} />
+            <IconFolderClose size={14} tone="gold" />
             <span className="fh-picker-entry-name">{entry.name}</span>
           </button>
         ))}

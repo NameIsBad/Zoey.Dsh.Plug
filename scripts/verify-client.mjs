@@ -490,9 +490,72 @@ check(
   ),
 )
 check(
+  'each settings card declares an icon and a palette tone',
+  panels.every((panel) => typeof panel.icon === 'function' && typeof panel.tone === 'string'),
+  JSON.stringify(panels.map((panel) => [panel.id, panel.tone])),
+)
+check(
   'settings panel titles resolve from feature dictionaries',
   panels.length === 4 && panels[0].t('settings.title') === '最近任务',
   panels.length === 0 ? 'no panels' : String(panels[0].t('settings.title')),
+)
+
+/**
+ * Collect stub elements that carry `className` as one of their class tokens
+ * from a rendered element tree. `h` returns `{ type, props, children }` with
+ * array children, so walk both, and match whole tokens (`fh-set-panel` must not
+ * match the `fh-set-panels` container).
+ */
+function collectByClass(node, className, out = []) {
+  if (node === null || node === undefined) return out
+  if (Array.isArray(node)) {
+    for (const child of node) collectByClass(child, className, out)
+    return out
+  }
+  if (typeof node !== 'object') return out
+  const tokens = String((node.props || {}).className || '').split(/\s+/)
+  if (tokens.includes(className)) out.push(node)
+  for (const child of node.children || []) collectByClass(child, className, out)
+  return out
+}
+
+// The settings page groups features into tabs: one tab per feature, one panel
+// per feature, and only the remembered (here: the first) tab's panel visible.
+const settingsTree =
+  settingsEntry === undefined
+    ? null
+    : settingsEntry.component({ t: ctx.locale.bind('feature-hub.settings'), panels })
+const tabNodes = collectByClass(settingsTree, 'fh-set-tab')
+const panelNodes = collectByClass(settingsTree, 'fh-set-panel')
+check('settings page renders one tab per feature', tabNodes.length === 4, String(tabNodes.length))
+check(
+  'each tab carries its feature tone and accessible tab state',
+  tabNodes.every(
+    (node) =>
+      typeof node.props['data-tone'] === 'string' &&
+      node.props.role === 'tab' &&
+      typeof node.props['aria-controls'] === 'string',
+  ),
+  JSON.stringify(tabNodes.map((node) => [node.props['data-tone'], node.props['aria-selected']])),
+)
+check(
+  'only the first tab is selected and only its panel is shown',
+  tabNodes.length === 4 &&
+    tabNodes[0].props['aria-selected'] === true &&
+    tabNodes.slice(1).every((node) => node.props['aria-selected'] === false) &&
+    panelNodes.length === 4 &&
+    panelNodes[0].props.hidden === false &&
+    panelNodes.slice(1).every((node) => node.props.hidden === true),
+  JSON.stringify(panelNodes.map((node) => node.props.hidden)),
+)
+check(
+  'each panel points at the tab that owns it',
+  panelNodes.every(
+    (node) =>
+      node.props.role === 'tabpanel' &&
+      node.props['aria-labelledby'] === node.props.id.replace('fh-set-panel-', 'fh-set-tab-'),
+  ),
+  JSON.stringify(panelNodes.map((node) => [node.props.id, node.props['aria-labelledby']])),
 )
 const occupant = registrations.find((entry) => entry.options.name === 'sidebar.workspaces')
 check('occupant targets sidebar.workspaces', occupant !== undefined)
@@ -518,8 +581,8 @@ check(
     localeRegistrations.some((entry) => entry.ns === 'feature-hub.task-notify'),
   JSON.stringify(localeRegistrations.map((entry) => entry.ns)),
 )
-check('every feature installs its stylesheet', styleElements.length === 7, String(styleElements.length))
-check('one effect per resource plus the registrations', effects.length === 23, String(effects.length))
+check('every feature installs its stylesheet', styleElements.length === 8, String(styleElements.length))
+check('one effect per resource plus the registrations', effects.length === 24, String(effects.length))
 check('shell component is a function', typeof occupant.component === 'function')
 
 const injected = occupant.options.inject()

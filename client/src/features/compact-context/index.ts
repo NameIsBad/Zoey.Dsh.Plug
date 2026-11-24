@@ -51,7 +51,16 @@ function CompactGlyph(props: { percent: number }): ReactElement {
   return h(
     'svg',
     { width: 18, height: 18, viewBox: '0 0 20 20', 'aria-hidden': true, focusable: false },
-    h('circle', { cx: 10, cy: 10, r: 9, fill }),
+    h('circle', {
+      cx: 10,
+      cy: 10,
+      r: 9,
+      fill,
+      stroke: 'color-mix(in srgb, #000 12%, transparent)',
+      strokeWidth: 0.6,
+    }),
+    // 左上角的一小块高光：让实心圆看起来像有厚度的小按钮，而不是平涂色块。
+    h('circle', { cx: 7, cy: 6.2, r: 3.4, fill: '#fff', opacity: 0.22 }),
     h('path', { d: 'M10 5.6 V14.4', stroke: ink, strokeWidth: 1.7, strokeLinecap: 'round' }),
     h('path', {
       d: 'M6 7.4 L8.5 10 L6 12.6',

@@ -1,8 +1,9 @@
 /**
  * 「用量状态条」的设置面板：总开关、各项指标开关、精确数字与实时刷新。
  *
- * 面板只渲染设置行，卡片框架由「功能集」页壳统一包住；偏好、文案与控件都在
- * 本功能目录内，删掉这个功能时整块设置一起消失。
+ * 面板按「显示内容 / 速度与耗时 / 运行行为」分三组：八行开关平铺会很难扫读，
+ * 分组之后每组只回答一件事。总开关单独做成强调行，关闭时子项统一置灰。
+ * 卡片框架与 `.fh-set-*` 样式由「功能集」页壳提供。
  */
 
 import {
@@ -12,79 +13,48 @@ import {
   writeUsagePreferences,
   type UsagePreferences,
 } from './preferences'
+import { SettingsButton, SettingsGroup, SettingsRow, SettingsSwitch } from '../../lib/settings-controls'
+import { SettingsGaugeIcon } from '../../lib/settings-icons'
 import { TOKEN_USAGE_NS } from './index'
 import { en, zh } from './locale'
+import type { SettingsItemDescriptor } from '../../types'
 import type { ReactElement } from 'react'
 
 const { useState } = React
 
-/** 一行「文案在左、开关在右」的偏好行。 */
-interface ToggleRowProps {
-  /** 左侧主文案。 */
-  readonly label: string
-  /** 左侧说明。 */
-  readonly hint: string
-  /** 开关是否打开。 */
-  readonly checked: boolean
-  /** 总开关关闭时禁掉子项，避免用户以为它们还在生效。 */
-  readonly disabled?: boolean
-  /** 用户切换开关后调用。 */
-  readonly onChange: (checked: boolean) => void
-}
-
-/**
- * 渲染一行复选框偏好。
- * @param props 文案、当前值与切换回调。
- * @returns 设置行元素。
- */
-function ToggleRow(props: ToggleRowProps): ReactElement {
-  return h(
-    'div',
-    { className: 'fh-set-row' },
-    h(
-      'div',
-      { className: 'fh-set-text' },
-      h('span', { className: 'fh-set-label' }, props.label),
-      h('span', { className: 'fh-set-help' }, props.hint),
-    ),
-    h(
-      'div',
-      { className: 'fh-set-control' },
-      h('input', {
-        className: 'fh-set-checkbox',
-        type: 'checkbox',
-        checked: props.checked,
-        disabled: props.disabled === true,
-        'aria-label': props.label,
-        onChange: (event: { currentTarget: HTMLInputElement }) => {
-          props.onChange(event.currentTarget.checked)
-        },
-      }),
-    ),
-  )
-}
-
-/** 设置行清单：顺序、偏好字段与文案键一一对应，避免手写六份重复结构。 */
-const ROWS: readonly {
+/** 一行开关的文案键与偏好字段。 */
+interface ToggleSpec {
+  /** 偏好字段。 */
   readonly key: keyof UsagePreferences
+  /** 主文案键。 */
   readonly label: string
+  /** 说明文案键。 */
   readonly hint: string
-  /** 总开关关闭时是否跟着禁用。 */
-  readonly nested: boolean
-}[] = [
-  { key: 'showTokens', label: 'settings.tokens', hint: 'settings.tokensHint', nested: true },
-  { key: 'exactTokens', label: 'settings.exact', hint: 'settings.exactHint', nested: true },
-  { key: 'showSpeed', label: 'settings.speed', hint: 'settings.speedHint', nested: true },
-  { key: 'showTtft', label: 'settings.ttft', hint: 'settings.ttftHint', nested: true },
-  { key: 'showElapsed', label: 'settings.elapsed', hint: 'settings.elapsedHint', nested: true },
-  { key: 'liveElapsed', label: 'settings.live', hint: 'settings.liveHint', nested: true },
-  { key: 'showContext', label: 'settings.context', hint: 'settings.contextHint', nested: true },
+}
+
+/** 「显示内容」组的开关。 */
+const DISPLAY_ROWS: readonly ToggleSpec[] = [
+  { key: 'showTokens', label: 'settings.tokens', hint: 'settings.tokensHint' },
+  { key: 'exactTokens', label: 'settings.exact', hint: 'settings.exactHint' },
+  { key: 'showContext', label: 'settings.context', hint: 'settings.contextHint' },
+]
+
+/** 「速度与耗时」组的开关。 */
+const TIMING_ROWS: readonly ToggleSpec[] = [
+  { key: 'showSpeed', label: 'settings.speed', hint: 'settings.speedHint' },
+  { key: 'showTtft', label: 'settings.ttft', hint: 'settings.ttftHint' },
+  { key: 'showElapsed', label: 'settings.elapsed', hint: 'settings.elapsedHint' },
+]
+
+/** 「运行行为」组的开关。 */
+const BEHAVIOR_ROWS: readonly ToggleSpec[] = [
+  { key: 'liveElapsed', label: 'settings.live', hint: 'settings.liveHint' },
 ]
 
 /**
- * 用量状态条的设置行。
+ * 用量状态条的设置面板。
  * @param props 本功能的翻译函数。
- * @returns 总开关 + 各指标开关 + 恢复默认。
+ * @returns 总开关 + 三组开关 + 恢复默认。
  */
 export function TokenUsageSettings(props: FeatureSettingsProps): ReactElement {
   const { t } = props
@@ -100,65 +70,64 @@ export function TokenUsageSettings(props: FeatureSettingsProps): ReactElement {
     setPrefs(resetUsagePreferences())
   }
 
-  const rows: ReactElement[] = ROWS.map((row) =>
-    h(ToggleRow, {
-      key: row.key,
-      label: t(row.label),
-      hint: t(row.hint),
-      checked: prefs[row.key],
-      disabled: row.nested && !prefs.enabled,
-      onChange: (value: boolean) => {
-        update(row.key, value)
-      },
-    }),
-  )
+  /** 总开关关闭时子项全部禁用，避免用户以为它们还在生效。 */
+  const disabled = !prefs.enabled
+
+  /** 渲染一组开关行。 */
+  const renderRows = (rows: readonly ToggleSpec[]): ReactElement[] =>
+    rows.map((row) =>
+      h(
+        SettingsRow,
+        { key: row.key, label: t(row.label), hint: t(row.hint) },
+        h(SettingsSwitch, {
+          label: t(row.label),
+          checked: prefs[row.key],
+          disabled,
+          onChange: (value: boolean) => {
+            update(row.key, value)
+          },
+        }),
+      ),
+    )
+
+  /** 与默认值完全一致时禁用「恢复默认」，避免一个按了没反应的按钮。 */
+  const isDefault =
+    prefs.enabled === DEFAULT_USAGE_PREFERENCES.enabled &&
+    (Object.keys(DEFAULT_USAGE_PREFERENCES) as (keyof UsagePreferences)[]).every(
+      (key) => prefs[key] === DEFAULT_USAGE_PREFERENCES[key],
+    )
 
   return h(
     React.Fragment,
     null,
-    h(ToggleRow, {
-      key: 'enabled',
-      label: t('settings.enabled'),
-      hint: t('settings.enabledHint'),
-      checked: prefs.enabled,
-      onChange: (value: boolean) => {
-        update('enabled', value)
-      },
-    }),
-    rows,
     h(
-      'div',
-      { className: 'fh-set-row' },
-      h(
-        'div',
-        { className: 'fh-set-text' },
-        h('span', { className: 'fh-set-label' }, t('settings.resetLabel')),
-        h('span', { className: 'fh-set-help' }, t('settings.resetHint')),
-      ),
-      h(
-        'div',
-        { className: 'fh-set-control' },
-        h(
-          'button',
-          {
-            type: 'button',
-            className: 'fh-set-button',
-            disabled:
-              prefs.enabled === DEFAULT_USAGE_PREFERENCES.enabled &&
-              ROWS.every((row) => prefs[row.key] === DEFAULT_USAGE_PREFERENCES[row.key]),
-            onClick: reset,
-          },
-          t('settings.reset'),
-        ),
-      ),
+      SettingsRow,
+      { hero: true, label: t('settings.enabled'), hint: t('settings.enabledHint') },
+      h(SettingsSwitch, {
+        label: t('settings.enabled'),
+        checked: prefs.enabled,
+        onChange: (value: boolean) => {
+          update('enabled', value)
+        },
+      }),
+    ),
+    h(SettingsGroup, { title: t('group.display') }, renderRows(DISPLAY_ROWS)),
+    h(SettingsGroup, { title: t('group.timing') }, renderRows(TIMING_ROWS)),
+    h(SettingsGroup, { title: t('group.behavior') }, renderRows(BEHAVIOR_ROWS)),
+    h(
+      SettingsRow,
+      { label: t('settings.resetLabel'), hint: t('settings.resetHint') },
+      h(SettingsButton, { onClick: reset, disabled: isDefault }, t('settings.reset')),
     ),
   )
 }
 
 /** 供 `main.ts` 的 SETTINGS 清单登记。 */
-export const tokenUsageSettings = {
+export const tokenUsageSettings: SettingsItemDescriptor = {
   id: 'token-usage',
   order: 25,
   locale: { ns: TOKEN_USAGE_NS, dicts: { zh, en } },
   component: TokenUsageSettings,
+  icon: SettingsGaugeIcon,
+  tone: 'green',
 }

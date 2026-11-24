@@ -10,12 +10,33 @@ export const styles = `
   padding: 0 8px;
   border-radius: 999px;
   border: 1px solid transparent;
+  background: transparent;
   color: var(--dsw-alias-label-secondary);
+  font: inherit;
   font-size: 12px;
   line-height: 18px;
   white-space: nowrap;
   max-width: 40vw;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
 }
+.fh-br-project:hover {
+  color: var(--dsw-alias-label-primary);
+  background: color-mix(in srgb, var(--fh-tone-gold) 8%, transparent);
+}
+.fh-br-project:focus-visible { outline: 2px solid color-mix(in srgb, var(--fh-tone-gold) 55%, transparent); outline-offset: 1px; }
+.fh-br-project-copied, .fh-br-project-copied:hover {
+  color: var(--dsw-alias-state-success-primary);
+  background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 12%, transparent);
+}
+.fh-br-project-failed, .fh-br-project-failed:hover {
+  color: var(--dsw-alias-state-error-primary);
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, transparent);
+}
+/* 复制图标只在悬停或键盘聚焦时露面：常态下胶囊仍是「项目名」，不喧宾夺主。 */
+.fh-br-copy { flex: none; opacity: 0; transition: opacity 120ms ease; }
+.fh-br-project:hover .fh-br-copy, .fh-br-project:focus-visible .fh-br-copy { opacity: 0.7; }
+.fh-br-result { flex: none; }
 .fh-br-project-name { line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fh-br-chip {
   display: inline-flex;
@@ -32,8 +53,8 @@ export const styles = `
   line-height: 18px;
   cursor: pointer;
 }
-.fh-br-chip:hover { color: var(--dsw-alias-label-primary); background: color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent); }
-.fh-br-chip:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 1px; }
+.fh-br-chip:hover { color: var(--dsw-alias-label-primary); background: color-mix(in srgb, var(--fh-tone-green) 9%, transparent); border-color: color-mix(in srgb, var(--fh-tone-green) 30%, transparent); }
+.fh-br-chip:focus-visible { outline: 2px solid color-mix(in srgb, var(--fh-tone-green) 55%, transparent); outline-offset: 1px; }
 .fh-br-name { line-height: 18px; white-space: nowrap; }
 .fh-br-dirty { width: 6px; height: 6px; border-radius: 50%; background: var(--dsw-alias-state-warn-primary); flex: none; }
 
@@ -46,15 +67,15 @@ export const styles = `
   inset: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
   width: min(460px, 92vw);
   max-height: 52vh;
-  padding: 8px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);
-  background: var(--dsw-alias-bg-base);
+  padding: 10px;
+  border-radius: 14px;
+  border: 0.5px solid var(--dsw-alias-border-l3, color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent));
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
-  box-shadow: 0 18px 44px color-mix(in srgb, #000 38%, transparent);
+  box-shadow: 0 16px 40px color-mix(in srgb, #000 26%, transparent);
   font-size: 13px;
   overflow: hidden;
 }

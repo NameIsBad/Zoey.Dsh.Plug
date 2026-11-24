@@ -20,6 +20,7 @@ export const zh = {
   'settings.description': '侧边栏顶部的「最近任务」分组列出全部项目最近的会话。',
   'limit.label': '最近任务条数',
   'limit.hint': '默认 5 条；运行中或等待确认的任务不会被这个数量裁掉，会额外列出。1–{max}。',
+  'limit.unit': '条',
   'limit.reset': '恢复默认',
 }
 
@@ -48,6 +49,7 @@ export const en: Record<keyof typeof zh, string> = {
   'limit.label': 'Recent tasks shown',
   'limit.hint':
     'Five by default; running or waiting sessions are listed on top of this number instead of being cut. Range 1–{max}.',
+  'limit.unit': 'items',
   'limit.reset': 'Reset',
 }
 

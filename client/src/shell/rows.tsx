@@ -15,6 +15,8 @@ import type * as ReactTypes from 'react'
 
 import {
   IconArchive,
+  IconClock,
+  IconCopy,
   IconPinFill,
   IconUnarchive,
   IconFolderClose,
@@ -273,6 +275,7 @@ function HoverCard(props: {
                 )
               }}
             >
+              <IconCopy size={11} />
               {copied ? (props.copiedLabel ?? props.copyLabel ?? '') : (props.copyLabel ?? '')}
             </button>
           )}
@@ -328,11 +331,24 @@ export function ProjectRow(props: ProjectRowProps): ReactTypes.JSX.Element {
       copyLabel={props.t('copy')}
       copiedLabel={props.t('hover.copied')}
       content={
-        <div className="fh-hovercard-body">
-          <div className="fh-hovercard-title">{label}</div>
-          {group.cwd === undefined ? null : <div className="fh-hovercard-path">{group.cwd}</div>}
+        <div className="fh-hovercard-body fh-hovercard-workspace">
+          <div className="fh-hovercard-head">
+            <span className="fh-hovercard-mark">
+              <IconFolderOpen size={15} tone="gold" />
+            </span>
+            <span className="fh-hovercard-title">{label}</span>
+          </div>
+          {group.cwd === undefined ? null : (
+            <div className="fh-hovercard-meta">
+              <IconFolderClose size={11} tone="gold" className="fh-hovercard-ico" />
+              <span>{group.cwd}</span>
+            </div>
+          )}
           {group.createdAt === undefined ? null : (
-            <div className="fh-hovercard-time">{createdLabel(group.createdAt, props.t)}</div>
+            <div className="fh-hovercard-meta">
+              <IconClock size={11} className="fh-hovercard-ico" />
+              <span>{createdLabel(group.createdAt, props.t)}</span>
+            </div>
           )}
         </div>
       }
@@ -405,7 +421,11 @@ export function ProjectRow(props: ProjectRowProps): ReactTypes.JSX.Element {
         }
       >
         <span className={`fh-row-folder${props.active ? ' fh-row-folder-active' : ''}`}>
-          {group.expanded ? <IconFolderOpen size={16} /> : <IconFolderClose size={16} />}
+          {group.expanded ? (
+            <IconFolderOpen size={16} tone="gold" />
+          ) : (
+            <IconFolderClose size={16} tone="gold" />
+          )}
         </span>
         <span className="fh-row-title">{label}</span>
         <span className="fh-row-actions" onClick={(event) => event.stopPropagation()}>
@@ -431,7 +451,7 @@ export function ProjectRow(props: ProjectRowProps): ReactTypes.JSX.Element {
               aria-label={props.t('actions.newSession.aria', { name: label })}
               onClick={props.onCreate}
             >
-              <IconNewChat size={14} />
+              <IconNewChat size={14} tone="green" />
             </button>
           )}
         </span>
@@ -504,11 +524,24 @@ export function SessionRow(props: SessionRowProps): ReactTypes.JSX.Element {
       copyLabel={props.t('copy')}
       copiedLabel={props.t('hover.copied')}
       content={
-        <div className="fh-hovercard-body">
-          <div className="fh-hovercard-title">{title}</div>
-          {node.cwd === undefined ? null : <div className="fh-hovercard-path">{node.cwd}</div>}
+        <div className="fh-hovercard-body fh-hovercard-session">
+          <div className="fh-hovercard-head">
+            <span className="fh-hovercard-mark">
+              <IconNewChat size={15} tone="blue" />
+            </span>
+            <span className="fh-hovercard-title">{title}</span>
+          </div>
+          {node.cwd === undefined ? null : (
+            <div className="fh-hovercard-meta">
+              <IconFolderClose size={11} tone="gold" className="fh-hovercard-ico" />
+              <span>{node.cwd}</span>
+            </div>
+          )}
           {node.blank ? null : (
-            <div className="fh-hovercard-time">{hoverTimeLabel(node.updatedAt, props.now, props.t)}</div>
+            <div className="fh-hovercard-meta">
+              <IconClock size={11} className="fh-hovercard-ico" />
+              <span>{hoverTimeLabel(node.updatedAt, props.now, props.t)}</span>
+            </div>
           )}
           {statuses
             .filter((status) => !(node.archived && (status.state === 'done' || status.state === 'idle')))
@@ -520,7 +553,7 @@ export function SessionRow(props: SessionRowProps): ReactTypes.JSX.Element {
             ))}
           {node.archived ? (
             <div className="fh-hovercard-status fh-hovercard-archived">
-              <IconArchive size={14} />
+              <IconArchive size={14} tone="blue" />
               <span>{props.t('row.archived')}</span>
             </div>
           ) : null}
@@ -649,7 +682,7 @@ export function SessionRow(props: SessionRowProps): ReactTypes.JSX.Element {
                 role="img"
                 aria-label={props.t('row.pinned')}
               >
-                <IconPinFill size={12} />
+                <IconPinFill size={12} tone="gold" />
               </span>
             ) : null}
           </span>
@@ -677,7 +710,7 @@ export function SessionRow(props: SessionRowProps): ReactTypes.JSX.Element {
                   aria-label={props.t('actions.unarchive')}
                   onClick={props.onUnarchive}
                 >
-                  <IconUnarchive size={14} />
+                  <IconUnarchive size={14} tone="green" />
                 </button>
               )
             ) : props.pinned ? (
@@ -689,7 +722,7 @@ export function SessionRow(props: SessionRowProps): ReactTypes.JSX.Element {
                   aria-label={props.t('row.pinned')}
                   onClick={props.onPin}
                 >
-                  <IconPinFill size={12} />
+                  <IconPinFill size={12} tone="gold" />
                 </button>
               )
             ) : props.onPin === undefined ? null : (
@@ -700,7 +733,7 @@ export function SessionRow(props: SessionRowProps): ReactTypes.JSX.Element {
                 aria-label={props.t('row.pinned')}
                 onClick={props.onPin}
               >
-                <IconPinFill size={12} />
+                <IconPinFill size={12} tone="gold" />
               </button>
             )}
             {node.archived || props.onArchive === undefined ? null : (
@@ -711,7 +744,7 @@ export function SessionRow(props: SessionRowProps): ReactTypes.JSX.Element {
                 aria-label={props.t('row.archived')}
                 onClick={props.onArchive}
               >
-                <IconArchive size={14} />
+                <IconArchive size={14} tone="blue" />
               </button>
             )}
           </span>
@@ -776,7 +809,7 @@ export function SearchResultRow(props: SearchResultRowProps): ReactTypes.JSX.Ele
               aria-label={props.t('actions.unarchive')}
               onClick={props.onUnarchive}
             >
-              <IconUnarchive size={14} />
+              <IconUnarchive size={14} tone="green" />
             </button>
           </span>
         ) : null}

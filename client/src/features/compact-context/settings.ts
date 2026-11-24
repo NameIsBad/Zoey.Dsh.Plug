@@ -1,8 +1,9 @@
 /**
  * 「压缩上下文」的设置面板：按钮出现阈值。
  *
- * 面板只渲染设置行，卡片框架由「功能集」页壳统一包住；文案、偏好读写与
- * 组件都在本功能目录内，删掉这个功能时整块设置一起消失。
+ * 阈值用滑杆 + 常用值胶囊呈现：这是一个 20–100 的百分比，滑杆比数字输入框
+ * 更容易凭手感调整；「恢复默认」放在滑杆旁边，随时可以撤回。
+ * 卡片框架与 `.fh-set-*` 样式由「功能集」页壳提供。
  */
 
 import {
@@ -13,84 +14,77 @@ import {
   resetCompactThreshold,
   writeCompactThreshold,
 } from './threshold'
+import { SettingsButton, SettingsPresets, SettingsRow, SettingsSlider } from '../../lib/settings-controls'
+import { SettingsCompressIcon } from '../../lib/settings-icons'
 import { COMPACT_NS } from './index'
 import { en, zh } from './locale'
+import type { SettingsItemDescriptor } from '../../types'
 import type { ReactElement } from 'react'
 
 const { useState } = React
 
+/** 滑杆旁边的常用阈值；与默认值 50 一起覆盖「早一点 / 正常 / 晚一点」。 */
+const PRESETS: readonly number[] = [30, 50, 70, 85]
+
 /**
  * 压缩按钮阈值的设置行。
  * @param props 本功能的翻译函数。
- * @returns 一条「文案 + 数字输入 + 恢复默认」的设置行。
+ * @returns 滑杆行 + 常用阈值行。
  */
 export function CompactContextSettings(props: FeatureSettingsProps): ReactElement {
   const { t } = props
-  // 输入框只保存「正在输入的文本」：边输边夹紧会把「30」变成「20」再变成「100」，
-  // 所以只在失焦/回车时提交，提交后再把显示对齐到实际落盘值。
-  const [text, setText] = useState<string>(() => String(readCompactThreshold()))
+  const [value, setValue] = useState<number>(readCompactThreshold)
 
-  /** 提交输入框文本：越界值夹到合法范围并落盘；清空则回到当前生效值。 */
-  const commit = (): void => {
-    if (text.trim() === '') {
-      setText(String(readCompactThreshold()))
-      return
-    }
-    setText(String(writeCompactThreshold(text)))
+  /** 写入阈值并同步本地显示；越界值在写入时夹到合法范围。 */
+  const commit = (next: number): void => {
+    setValue(writeCompactThreshold(next))
   }
   /** 清除用户覆盖值，回到默认阈值。 */
   const reset = (): void => {
     resetCompactThreshold()
-    setText(String(DEFAULT_COMPACT_THRESHOLD))
+    setValue(DEFAULT_COMPACT_THRESHOLD)
   }
 
   return h(
-    'div',
-    { className: 'fh-set-row' },
+    React.Fragment,
+    null,
     h(
-      'div',
-      { className: 'fh-set-text' },
-      h('span', { className: 'fh-set-label' }, t('threshold.label')),
-      h('span', { className: 'fh-set-help' }, t('threshold.hint', { min: MIN_COMPACT_THRESHOLD })),
-    ),
-    h(
-      'div',
-      { className: 'fh-set-control' },
-      h('input', {
-        className: 'fh-set-input',
-        type: 'number',
+      SettingsRow,
+      {
+        label: t('threshold.label'),
+        hint: t('threshold.hint', { min: MIN_COMPACT_THRESHOLD }),
+      },
+      h(SettingsSlider, {
+        label: t('threshold.label'),
+        value,
         min: MIN_COMPACT_THRESHOLD,
         max: MAX_COMPACT_THRESHOLD,
-        step: 1,
-        value: text,
-        'aria-label': t('threshold.label'),
-        onChange: (event: { currentTarget: HTMLInputElement }) => {
-          setText(event.currentTarget.value)
-        },
-        onBlur: () => {
-          commit()
-        },
-        onKeyDown: (event: { key: string }) => {
-          if (event.key === 'Enter') commit()
-        },
+        step: 5,
+        suffix: '%',
+        onChange: commit,
       }),
-      h(
-        'button',
-        {
-          type: 'button',
-          className: 'fh-set-reset',
-          onClick: reset,
-        },
-        t('threshold.reset'),
-      ),
+    ),
+    h(
+      SettingsRow,
+      { label: t('threshold.presets'), hint: t('threshold.presetsHint') },
+      h(SettingsPresets, {
+        label: t('threshold.presets'),
+        options: PRESETS,
+        value,
+        suffix: '%',
+        onChange: commit,
+      }),
+      h(SettingsButton, { onClick: reset }, t('threshold.reset')),
     ),
   )
 }
 
 /** 供 `main.ts` 的 SETTINGS 清单登记。 */
-export const compactContextSettings = {
+export const compactContextSettings: SettingsItemDescriptor = {
   id: 'compact-context',
   order: 20,
   locale: { ns: COMPACT_NS, dicts: { zh, en } },
   component: CompactContextSettings,
+  icon: SettingsCompressIcon,
+  tone: 'blue',
 }

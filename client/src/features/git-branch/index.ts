@@ -5,7 +5,7 @@
  * 错误的分支上。因此这里始终显示会话工作目录当前所在的分支，并且可以直接切换。
  *
  * 组成：
- *   - 项目胶囊：显示会话所属项目名（文件夹图标），悬停显示完整目录；
+ *   - 项目胶囊：显示会话所属项目名（文件夹图标），点击把项目名复制到剪贴板；
  *   - 分支胶囊：显示当前分支，未提交改动时带一个小黄点；
  *   - 向上弹出的面板：搜索本地分支、点选切换、创建并切换。
  *
@@ -30,6 +30,7 @@
  */
 
 import { BRANCH_NAME_MAX, BRANCH_NAME_PATTERN } from './branch-name'
+import { copyText } from './clipboard'
 import type { GitPayload, RepoState } from '../../types'
 import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent } from 'react'
 
@@ -38,9 +39,14 @@ const { useCallback, useEffect, useRef, useState } = React
 /** 本功能的字典命名空间。 */
 export const BRANCH_NS = 'feature-hub.branch'
 
-/** 页面可见时重新读取分支的间隔（毫秒）。 */
+/** 复制结果在项目胶囊上停留的时长（毫秒）：够看清，又不至于挡着项目名。 */
+const COPY_FEEDBACK_MS = 1600
+
 /** 面板与胶囊之间的间距（像素）。 */
 const GAP = 8
+
+/** 项目胶囊上复制反馈的三种状态：正常、已复制、复制失败。 */
+type CopyState = 'idle' | 'copied' | 'failed'
 
 /**
  * 把一个本插件的路由解析成绝对地址。
@@ -94,7 +100,7 @@ function basename(path: string | undefined): string {
   return parts.length === 0 ? '' : String(parts[parts.length - 1])
 }
 
-/** 项目胶囊里的文件夹图标。 */
+/** 项目胶囊里的文件夹图标：藤黄描边 + 淡金填充，与侧边栏的文件夹一致。 */
 function FolderGlyph(): ReturnType<typeof h> {
   return h(
     'svg',
@@ -105,17 +111,75 @@ function FolderGlyph(): ReturnType<typeof h> {
       'aria-hidden': true,
       focusable: false,
       fill: 'none',
-      stroke: 'currentColor',
+      stroke: 'var(--fh-tone-gold)',
       strokeWidth: 1.3,
       strokeLinejoin: 'round',
     },
     h('path', {
+      fill: 'var(--fh-folder-fill)',
       d: 'M1.8 4.2 A1 1 0 0 1 2.8 3.2 H6 L7.4 4.6 H13.2 A1 1 0 0 1 14.2 5.6 V11.4 A1 1 0 0 1 13.2 12.4 H2.8 A1 1 0 0 1 1.8 11.4 Z',
     }),
   )
 }
 
-/** 分支胶囊与面板里的分支图标。 */
+/**
+ * 项目胶囊悬停时露出的复制图标：两个错位圆角方框，取 Lucide 的 copy 形制。
+ *
+ * 用 `currentColor` 描边：颜色跟着胶囊走（悬停变主文案色、复制失败变错误色），
+ * 不需要再传一套颜色参数。
+ *
+ * @param props 图标边长，默认 11。
+ * @returns 图标元素。
+ */
+function CopyGlyph(props: { size?: number }): ReturnType<typeof h> {
+  const size = props.size ?? 11
+  return h(
+    'svg',
+    {
+      width: size,
+      height: size,
+      viewBox: '0 0 16 16',
+      'aria-hidden': true,
+      focusable: false,
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 1.3,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      className: 'fh-br-copy',
+    },
+    h('rect', { x: 5.6, y: 5.6, width: 8.2, height: 8.2, rx: 1.5 }),
+    h('path', { d: 'M10.4 2.4 H3.6 A1.4 1.4 0 0 0 2.2 3.8 V10.6' }),
+  )
+}
+
+/**
+ * 复制结果图标：成功是一次勾，失败是一个叉。
+ * @param props 边长与是否成功。
+ * @returns 图标元素。
+ */
+function ResultGlyph(props: { size?: number; ok: boolean }): ReturnType<typeof h> {
+  const size = props.size ?? 11
+  return h(
+    'svg',
+    {
+      width: size,
+      height: size,
+      viewBox: '0 0 16 16',
+      'aria-hidden': true,
+      focusable: false,
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 1.5,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      className: 'fh-br-result',
+    },
+    h('path', { d: props.ok ? 'M3.2 8.4 L6.4 11.6 L12.8 4.6' : 'M4.2 4.2 L11.8 11.8 M11.8 4.2 L4.2 11.8' }),
+  )
+}
+
+/** 分支胶囊与面板里的分支图标：竹青，和「项目」的暖金区分开。 */
 function BranchGlyph(props: { size?: number }): ReturnType<typeof h> {
   const size = props.size ?? 14
   return h(
@@ -127,7 +191,7 @@ function BranchGlyph(props: { size?: number }): ReturnType<typeof h> {
       'aria-hidden': true,
       focusable: false,
       fill: 'none',
-      stroke: 'currentColor',
+      stroke: 'var(--fh-tone-green)',
       strokeWidth: 1.3,
       strokeLinecap: 'round',
       strokeLinejoin: 'round',
@@ -175,9 +239,11 @@ export function BranchChip(props: ComposerLeftProps): ReturnType<typeof h> | nul
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [draft, setDraft] = useState('')
+  const [copyState, setCopyState] = useState<CopyState>('idle')
   const chipRef = useRef<HTMLButtonElement | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
   const searchRef = useRef<HTMLInputElement | null>(null)
+  const copyTimer = useRef<number | undefined>(undefined)
 
   /** 重新读取仓库状态；目录缺失或不是仓库时隐藏控件而不是报错。 */
   const load = useCallback(async (): Promise<void> => {
@@ -202,6 +268,14 @@ export function BranchChip(props: ComposerLeftProps): ReturnType<typeof h> | nul
   useEffect(() => {
     void load()
   }, [load])
+
+  // 卸载时收掉复制反馈的计时器：组件已经消失就不该再 setState。
+  useEffect(
+    () => () => {
+      if (copyTimer.current !== undefined) window.clearTimeout(copyTimer.current)
+    },
+    [],
+  )
 
   /** 把面板摆到胶囊正上方（视口坐标系，且不超出左右边界）。 */
   const place = useCallback((): void => {
@@ -260,6 +334,31 @@ export function BranchChip(props: ComposerLeftProps): ReturnType<typeof h> | nul
 
   if (typeof cwd !== 'string' || cwd === '' || state === null) return null
 
+  // 只复制项目名称：优先用工作区标题；未分组会话没有标题，退回会话目录名。
+  const projectName = projectTitle === '' ? basename(cwd) : projectTitle
+  // 项目胶囊平时显示项目名；复制结果只停留 COPY_FEEDBACK_MS，随后复原。
+  let projectLabel = projectTitle === '' ? t('project.unknown') : projectTitle
+  if (copyState === 'copied') projectLabel = t('project.copied')
+  else if (copyState === 'failed') projectLabel = t('project.copyFailed')
+  const projectClass =
+    copyState === 'copied'
+      ? 'fh-br-project fh-br-project-copied'
+      : copyState === 'failed'
+        ? 'fh-br-project fh-br-project-failed'
+        : 'fh-br-project'
+
+  /** 点击项目胶囊：把项目名写进剪贴板，并在胶囊上短暂显示结果。 */
+  const copyProject = (): void => {
+    if (copyTimer.current !== undefined) window.clearTimeout(copyTimer.current)
+    void copyText(projectName).then((ok) => {
+      setCopyState(ok ? 'copied' : 'failed')
+      copyTimer.current = window.setTimeout(() => {
+        setCopyState('idle')
+        copyTimer.current = undefined
+      }, COPY_FEEDBACK_MS)
+    })
+  }
+
   const label = state.detached ? t('detached') : state.branch
   const needle = query.trim().toLowerCase()
   const branches = state.branches.filter(
@@ -303,14 +402,19 @@ export function BranchChip(props: ComposerLeftProps): ReturnType<typeof h> | nul
     'span',
     { className: 'fh-br' },
     h(
-      'span',
-      { className: 'fh-br-project', title: cwd },
+      'button',
+      {
+        type: 'button',
+        className: projectClass,
+        title: t('project.copy', { name: projectName }),
+        'aria-label': t('project.copy', { name: projectName }),
+        onClick: copyProject,
+      },
       h(FolderGlyph),
-      h(
-        'span',
-        { className: 'fh-br-project-name' },
-        projectTitle === '' ? t('project.unknown') : projectTitle,
-      ),
+      h('span', { className: 'fh-br-project-name' }, projectLabel),
+      copyState === 'idle'
+        ? h(CopyGlyph, { size: 11 })
+        : h(ResultGlyph, { size: 11, ok: copyState === 'copied' }),
     ),
     h(
       'button',

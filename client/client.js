@@ -47,6 +47,9 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 
 // client/src/shell/icons.tsx
+function tonePaint(tone) {
+  return tone === void 0 ? void 0 : `var(--fh-tone-${tone})`;
+}
 function Stroke(props) {
   return /* @__PURE__ */ h(
     "svg",
@@ -58,7 +61,7 @@ function Stroke(props) {
       "aria-hidden": true,
       focusable: false,
       fill: "none",
-      stroke: "currentColor",
+      stroke: tonePaint(props.tone) ?? "currentColor",
       strokeWidth: 1.8,
       strokeLinecap: "round",
       strokeLinejoin: "round"
@@ -76,7 +79,7 @@ function Solid(props) {
       className: props.className,
       "aria-hidden": true,
       focusable: false,
-      fill: "currentColor"
+      fill: tonePaint(props.tone) ?? "currentColor"
     },
     props.children
   );
@@ -91,10 +94,22 @@ function IconSliders(props) {
   return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M21 4h-7" }), /* @__PURE__ */ h("path", { d: "M10 4H3" }), /* @__PURE__ */ h("path", { d: "M21 12h-9" }), /* @__PURE__ */ h("path", { d: "M8 12H3" }), /* @__PURE__ */ h("path", { d: "M21 20h-5" }), /* @__PURE__ */ h("path", { d: "M12 20H3" }), /* @__PURE__ */ h("path", { d: "M14 2v4" }), /* @__PURE__ */ h("path", { d: "M8 10v4" }), /* @__PURE__ */ h("path", { d: "M16 18v4" }));
 }
 function IconFolderOpen(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" }));
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h(
+    "path",
+    {
+      className: "fh-folder-body",
+      d: "m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"
+    }
+  ));
 }
 function IconFolderClose(props) {
-  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" }));
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h(
+    "path",
+    {
+      className: "fh-folder-body",
+      d: "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"
+    }
+  ));
 }
 function IconNewChat(props) {
   return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" }), /* @__PURE__ */ h("path", { d: "M12 7v6" }), /* @__PURE__ */ h("path", { d: "M9 10h6" }));
@@ -140,6 +155,9 @@ function IconTrash(props) {
 }
 function IconArrowUp(props) {
   return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("path", { d: "m5 12 7-7 7 7" }), /* @__PURE__ */ h("path", { d: "M12 19V5" }));
+}
+function IconCopy(props) {
+  return /* @__PURE__ */ h(Stroke, { ...props }, /* @__PURE__ */ h("rect", { x: 9, y: 9, width: 11, height: 11, rx: 2 }), /* @__PURE__ */ h("path", { d: "M5 15V6a2 2 0 0 1 2-2h9" }));
 }
 
 // client/src/shell/menu.tsx
@@ -434,6 +452,7 @@ function HoverCard(props) {
           );
         }
       },
+      /* @__PURE__ */ h(IconCopy, { size: 11 }),
       copied ? props.copiedLabel ?? props.copyLabel ?? "" : props.copyLabel ?? ""
     ))
   );
@@ -454,7 +473,7 @@ function ProjectRow(props) {
       copyText: group.cwd,
       copyLabel: props.t("copy"),
       copiedLabel: props.t("hover.copied"),
-      content: /* @__PURE__ */ h("div", { className: "fh-hovercard-body" }, /* @__PURE__ */ h("div", { className: "fh-hovercard-title" }, label), group.cwd === void 0 ? null : /* @__PURE__ */ h("div", { className: "fh-hovercard-path" }, group.cwd), group.createdAt === void 0 ? null : /* @__PURE__ */ h("div", { className: "fh-hovercard-time" }, createdLabel(group.createdAt, props.t)))
+      content: /* @__PURE__ */ h("div", { className: "fh-hovercard-body fh-hovercard-workspace" }, /* @__PURE__ */ h("div", { className: "fh-hovercard-head" }, /* @__PURE__ */ h("span", { className: "fh-hovercard-mark" }, /* @__PURE__ */ h(IconFolderOpen, { size: 15, tone: "gold" })), /* @__PURE__ */ h("span", { className: "fh-hovercard-title" }, label)), group.cwd === void 0 ? null : /* @__PURE__ */ h("div", { className: "fh-hovercard-meta" }, /* @__PURE__ */ h(IconFolderClose, { size: 11, tone: "gold", className: "fh-hovercard-ico" }), /* @__PURE__ */ h("span", null, group.cwd)), group.createdAt === void 0 ? null : /* @__PURE__ */ h("div", { className: "fh-hovercard-meta" }, /* @__PURE__ */ h(IconClock, { size: 11, className: "fh-hovercard-ico" }), /* @__PURE__ */ h("span", null, createdLabel(group.createdAt, props.t))))
     },
     /* @__PURE__ */ h(
       "div",
@@ -504,7 +523,7 @@ function ProjectRow(props) {
           drag.drop(event.clientY < box.top + box.height / 2 ? "before" : "after");
         }
       },
-      /* @__PURE__ */ h("span", { className: `fh-row-folder${props.active ? " fh-row-folder-active" : ""}` }, group.expanded ? /* @__PURE__ */ h(IconFolderOpen, { size: 16 }) : /* @__PURE__ */ h(IconFolderClose, { size: 16 })),
+      /* @__PURE__ */ h("span", { className: `fh-row-folder${props.active ? " fh-row-folder-active" : ""}` }, group.expanded ? /* @__PURE__ */ h(IconFolderOpen, { size: 16, tone: "gold" }) : /* @__PURE__ */ h(IconFolderClose, { size: 16, tone: "gold" })),
       /* @__PURE__ */ h("span", { className: "fh-row-title" }, label),
       /* @__PURE__ */ h("span", { className: "fh-row-actions", onClick: (event) => event.stopPropagation() }, props.onMenu === void 0 ? null : /* @__PURE__ */ h(
         "button",
@@ -528,7 +547,7 @@ function ProjectRow(props) {
           "aria-label": props.t("actions.newSession.aria", { name: label }),
           onClick: props.onCreate
         },
-        /* @__PURE__ */ h(IconNewChat, { size: 14 })
+        /* @__PURE__ */ h(IconNewChat, { size: 14, tone: "green" })
       ))
     )
   );
@@ -559,7 +578,7 @@ function SessionRow(props) {
       copyText: node.blank || node.title === "" ? void 0 : node.title,
       copyLabel: props.t("copy"),
       copiedLabel: props.t("hover.copied"),
-      content: /* @__PURE__ */ h("div", { className: "fh-hovercard-body" }, /* @__PURE__ */ h("div", { className: "fh-hovercard-title" }, title), node.cwd === void 0 ? null : /* @__PURE__ */ h("div", { className: "fh-hovercard-path" }, node.cwd), node.blank ? null : /* @__PURE__ */ h("div", { className: "fh-hovercard-time" }, hoverTimeLabel(node.updatedAt, props.now, props.t)), statuses.filter((status) => !(node.archived && (status.state === "done" || status.state === "idle"))).map((status) => /* @__PURE__ */ h("div", { className: "fh-hovercard-status", key: status.label }, /* @__PURE__ */ h(StatusDot, { state: status.state }), /* @__PURE__ */ h("span", null, status.label))), node.archived ? /* @__PURE__ */ h("div", { className: "fh-hovercard-status fh-hovercard-archived" }, /* @__PURE__ */ h(IconArchive, { size: 14 }), /* @__PURE__ */ h("span", null, props.t("row.archived"))) : null)
+      content: /* @__PURE__ */ h("div", { className: "fh-hovercard-body fh-hovercard-session" }, /* @__PURE__ */ h("div", { className: "fh-hovercard-head" }, /* @__PURE__ */ h("span", { className: "fh-hovercard-mark" }, /* @__PURE__ */ h(IconNewChat, { size: 15, tone: "blue" })), /* @__PURE__ */ h("span", { className: "fh-hovercard-title" }, title)), node.cwd === void 0 ? null : /* @__PURE__ */ h("div", { className: "fh-hovercard-meta" }, /* @__PURE__ */ h(IconFolderClose, { size: 11, tone: "gold", className: "fh-hovercard-ico" }), /* @__PURE__ */ h("span", null, node.cwd)), node.blank ? null : /* @__PURE__ */ h("div", { className: "fh-hovercard-meta" }, /* @__PURE__ */ h(IconClock, { size: 11, className: "fh-hovercard-ico" }), /* @__PURE__ */ h("span", null, hoverTimeLabel(node.updatedAt, props.now, props.t))), statuses.filter((status) => !(node.archived && (status.state === "done" || status.state === "idle"))).map((status) => /* @__PURE__ */ h("div", { className: "fh-hovercard-status", key: status.label }, /* @__PURE__ */ h(StatusDot, { state: status.state }), /* @__PURE__ */ h("span", null, status.label))), node.archived ? /* @__PURE__ */ h("div", { className: "fh-hovercard-status fh-hovercard-archived" }, /* @__PURE__ */ h(IconArchive, { size: 14, tone: "blue" }), /* @__PURE__ */ h("span", null, props.t("row.archived"))) : null)
     },
     /* @__PURE__ */ h(
       "div",
@@ -649,7 +668,7 @@ function SessionRow(props) {
           role: "img",
           "aria-label": props.t("row.pinned")
         },
-        /* @__PURE__ */ h(IconPinFill, { size: 12 })
+        /* @__PURE__ */ h(IconPinFill, { size: 12, tone: "gold" })
       ) : null),
       node.blank ? null : /* @__PURE__ */ h("span", { className: "fh-row-actions", onClick: (event) => event.stopPropagation() }, /* @__PURE__ */ h(
         "button",
@@ -673,7 +692,7 @@ function SessionRow(props) {
           "aria-label": props.t("actions.unarchive"),
           onClick: props.onUnarchive
         },
-        /* @__PURE__ */ h(IconUnarchive, { size: 14 })
+        /* @__PURE__ */ h(IconUnarchive, { size: 14, tone: "green" })
       ) : props.pinned ? props.onPin === void 0 ? null : /* @__PURE__ */ h(
         "button",
         {
@@ -683,7 +702,7 @@ function SessionRow(props) {
           "aria-label": props.t("row.pinned"),
           onClick: props.onPin
         },
-        /* @__PURE__ */ h(IconPinFill, { size: 12 })
+        /* @__PURE__ */ h(IconPinFill, { size: 12, tone: "gold" })
       ) : props.onPin === void 0 ? null : /* @__PURE__ */ h(
         "button",
         {
@@ -693,7 +712,7 @@ function SessionRow(props) {
           "aria-label": props.t("row.pinned"),
           onClick: props.onPin
         },
-        /* @__PURE__ */ h(IconPinFill, { size: 12 })
+        /* @__PURE__ */ h(IconPinFill, { size: 12, tone: "gold" })
       ), node.archived || props.onArchive === void 0 ? null : /* @__PURE__ */ h(
         "button",
         {
@@ -703,7 +722,7 @@ function SessionRow(props) {
           "aria-label": props.t("row.archived"),
           onClick: props.onArchive
         },
-        /* @__PURE__ */ h(IconArchive, { size: 14 })
+        /* @__PURE__ */ h(IconArchive, { size: 14, tone: "blue" })
       ))
     )
   );
@@ -738,7 +757,7 @@ function SearchResultRow(props) {
         "aria-label": props.t("actions.unarchive"),
         onClick: props.onUnarchive
       },
-      /* @__PURE__ */ h(IconUnarchive, { size: 14 })
+      /* @__PURE__ */ h(IconUnarchive, { size: 14, tone: "green" })
     )) : null),
     /* @__PURE__ */ h("span", { className: "fh-search-meta" }, /* @__PURE__ */ h("span", { className: "fh-search-workspace" }, result.workspace === "" ? props.t("group.ungrouped") : result.workspace), result.snippet === void 0 ? null : /* @__PURE__ */ h("span", { className: "fh-search-snippet" }, result.snippet))
   );
@@ -1119,7 +1138,7 @@ function DirectoryDialog(props) {
           load(entry.path);
         }
       },
-      /* @__PURE__ */ h(IconFolderClose, { size: 14 }),
+      /* @__PURE__ */ h(IconFolderClose, { size: 14, tone: "gold" }),
       /* @__PURE__ */ h("span", { className: "fh-picker-entry-name" }, entry.name)
     ))),
     /* @__PURE__ */ h("div", { className: "fh-picker-new" }, /* @__PURE__ */ h(
@@ -2124,21 +2143,21 @@ function WorkspaceBrowser(props) {
       id: "workspace",
       label: t("groupBy.workspace"),
       selected: view.groupBy === "workspace",
-      icon: /* @__PURE__ */ h(IconFolderClose, { size: 14 })
+      icon: /* @__PURE__ */ h(IconFolderClose, { size: 14, tone: "gold" })
     },
     {
       kind: "item",
       id: "workspace-tree",
       label: t("groupBy.workspaceTree"),
       selected: view.groupBy === "workspace-tree",
-      icon: /* @__PURE__ */ h(IconWorkspaceTree, { size: 14 })
+      icon: /* @__PURE__ */ h(IconWorkspaceTree, { size: 14, tone: "blue" })
     },
     {
       kind: "item",
       id: "flat",
       label: t("groupBy.flat"),
       selected: view.groupBy === "flat",
-      icon: /* @__PURE__ */ h(IconFlatList, { size: 14 })
+      icon: /* @__PURE__ */ h(IconFlatList, { size: 14, tone: "violet" })
     },
     { kind: "separator", id: "order-sep" },
     { kind: "label", id: "order-by", text: t("orderBy.label") },
@@ -2147,14 +2166,14 @@ function WorkspaceBrowser(props) {
       id: "manual",
       label: t("orderBy.manual"),
       selected: view.orderBy === "manual",
-      icon: /* @__PURE__ */ h(IconChevronsUpDown, { size: 14 })
+      icon: /* @__PURE__ */ h(IconChevronsUpDown, { size: 14, tone: "gold" })
     },
     {
       kind: "item",
       id: "updated",
       label: t("orderBy.updated"),
       selected: view.orderBy === "updated",
-      icon: /* @__PURE__ */ h(IconClock, { size: 14 })
+      icon: /* @__PURE__ */ h(IconClock, { size: 14, tone: "green" })
     },
     { kind: "separator", id: "archived-sep" },
     { kind: "label", id: "filter-by", text: t("filterBy.label") },
@@ -2163,21 +2182,21 @@ function WorkspaceBrowser(props) {
       id: "hide-archived",
       label: t("viewOptions.hideArchived"),
       selected: view.archivedFilter === "default",
-      icon: /* @__PURE__ */ h(IconArchiveOff, { size: 14 })
+      icon: /* @__PURE__ */ h(IconArchiveOff, { size: 14, tone: "blue" })
     },
     {
       kind: "item",
       id: "show-archived",
       label: t("viewOptions.showArchived"),
       selected: view.archivedFilter === "show",
-      icon: /* @__PURE__ */ h(IconQueue, { size: 14 })
+      icon: /* @__PURE__ */ h(IconQueue, { size: 14, tone: "blue" })
     },
     {
       kind: "item",
       id: "only-archived",
       label: t("viewOptions.onlyArchived"),
       selected: view.archivedFilter === "only",
-      icon: /* @__PURE__ */ h(IconArchiveCheck, { size: 14 })
+      icon: /* @__PURE__ */ h(IconArchiveCheck, { size: 14, tone: "blue" })
     }
   ];
   const onViewSelect = (id) => {
@@ -2214,10 +2233,21 @@ function WorkspaceBrowser(props) {
     };
   };
   const workspaceMenuItems = [
-    { kind: "item", id: "rename", label: t("rename"), icon: /* @__PURE__ */ h(IconEdit, { size: 14 }) },
-    { kind: "item", id: "reveal", label: t("workspace.reveal"), icon: /* @__PURE__ */ h(IconFolderOpen, { size: 14 }) },
+    { kind: "item", id: "rename", label: t("rename"), icon: /* @__PURE__ */ h(IconEdit, { size: 14, tone: "blue" }) },
+    {
+      kind: "item",
+      id: "reveal",
+      label: t("workspace.reveal"),
+      icon: /* @__PURE__ */ h(IconFolderOpen, { size: 14, tone: "gold" })
+    },
     { kind: "separator", id: "workspace-delete-sep" },
-    { kind: "item", id: "delete", label: t("delete.workspace"), icon: /* @__PURE__ */ h(IconTrash, { size: 14 }), danger: true }
+    {
+      kind: "item",
+      id: "delete",
+      label: t("delete.workspace"),
+      icon: /* @__PURE__ */ h(IconTrash, { size: 14, tone: "red" }),
+      danger: true
+    }
   ];
   const onWorkspaceMenuSelect = (id) => {
     const current2 = workspaceMenu;
@@ -2464,7 +2494,7 @@ function WorkspaceBrowser(props) {
         "aria-label": t("search.aria"),
         onClick: railSearch
       },
-      /* @__PURE__ */ h(IconSearch, { size: 18 })
+      /* @__PURE__ */ h(IconSearch, { size: 18, tone: "blue" })
     ), /* @__PURE__ */ h(
       "button",
       {
@@ -2474,7 +2504,7 @@ function WorkspaceBrowser(props) {
         "aria-label": t("workspace.add"),
         onClick: openAddWorkspace
       },
-      /* @__PURE__ */ h(IconProjectAdd, { size: 18 })
+      /* @__PURE__ */ h(IconProjectAdd, { size: 18, tone: "green" })
     ));
   }
   const rootGroups = parents.size === 0 ? groups : groups.filter((group) => parents.get(group.key) === void 0);
@@ -2488,7 +2518,7 @@ function WorkspaceBrowser(props) {
         focusSearch();
       }
     },
-    /* @__PURE__ */ h(IconSearch, { size: 14 }),
+    /* @__PURE__ */ h(IconSearch, { size: 14, tone: "blue" }),
     /* @__PURE__ */ h(
       "input",
       {
@@ -2535,12 +2565,12 @@ function WorkspaceBrowser(props) {
       "aria-expanded": false,
       onClick: openSearch
     },
-    /* @__PURE__ */ h(IconSearch, { size: 14 })
+    /* @__PURE__ */ h(IconSearch, { size: 14, tone: "blue" })
   ), /* @__PURE__ */ h("div", { className: "fh-ws-head-actions" }, /* @__PURE__ */ h(
     Menu,
     {
       label: t("viewOptions.label"),
-      icon: /* @__PURE__ */ h(IconSliders, { size: 16 }),
+      icon: /* @__PURE__ */ h(IconSliders, { size: 16, tone: "violet" }),
       className: "fh-icon-button",
       items: viewItems,
       onSelect: onViewSelect,
@@ -2556,7 +2586,7 @@ function WorkspaceBrowser(props) {
       disabled: adding,
       onClick: openAddWorkspace
     },
-    /* @__PURE__ */ h(IconProjectAdd, { size: 16 })
+    /* @__PURE__ */ h(IconProjectAdd, { size: 16, tone: "green" })
   ))), /* @__PURE__ */ h("div", { className: "fh-ws-list", ref: listRef, "data-sidebar-list-area": "" }, normalizedQuery !== "" ? renderSearch() : /* @__PURE__ */ h(Fragment, null, sections.filter((section) => section !== void 0 && section !== null).slice().sort((left, right) => (left.order || 0) - (right.order || 0)).map(
     (section) => React.createElement(section.component, {
       key: section.id,
@@ -2668,14 +2698,16 @@ var SIDEBAR_STYLES = `
   gap: 0;
   height: 32px;
   padding: 0 4px 0 0;
-  border-radius: 8px;
+  border-radius: 10px;
   /* \u63CF\u8FB9\u4F18\u5148\u7528\u7EC4\u4EF6\u5E93\u7684\u8FB9\u6846 token\uFF1B\u4E07\u4E00\u4E3B\u9898\u6CA1\u5B9A\u4E49\uFF0C\u518D\u4ECE\u4E3B\u6587\u5B57\u8272\u6D3E\u751F\u4E00\u5C42\u3002 */
   border: 1px solid var(--dsw-alias-border-l4, color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent));
+  background: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-secondary);
   cursor: text;
 }
 .fh-ws-search:focus-within {
-  border-color: color-mix(in srgb, var(--dsw-alias-label-primary) 32%, transparent);
+  border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary) 60%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--dsw-alias-state-business-primary) 16%, transparent);
 }
 /* \u653E\u5927\u955C\u5360\u4F4F\u8F93\u5165\u6846\u5DE6\u7AEF\uFF1B\u53F3\u4FA7\u6E05\u9664\u6309\u94AE\u6CBF\u7528 .fh-icon-button \u7684 24px \u65B9\u6846\u3002 */
 .fh-ws-search > svg { flex: none; margin: 0 6px 0 8px; }
@@ -2708,12 +2740,14 @@ var SIDEBAR_STYLES = `
   justify-content: center;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 7px;
   background: transparent;
   color: inherit;
   cursor: pointer;
+  transition: background-color 120ms ease;
 }
 .fh-icon-button:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); color: var(--dsw-alias-label-primary); }
+.fh-icon-button:active:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-label-primary) 12%, transparent); }
 .fh-icon-button:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: -2px; }
 .fh-icon-button:disabled { opacity: 0.45; cursor: default; }
 
@@ -2768,6 +2802,12 @@ var SIDEBAR_STYLES = `
 .fh-workspace-row:hover .fh-row-folder,
 .fh-ws-group-head:hover .fh-ws-folder { color: var(--dsw-alias-label-primary); }
 .fh-workspace-row:hover .fh-row-folder-active { color: var(--dsw-alias-brand-primary); }
+
+/* \u6587\u4EF6\u5939\u7528\u85E4\u9EC4\u63CF\u8FB9 + \u4F4E\u900F\u660E\u540C\u8272\u586B\u5145\uFF1B\u60AC\u505C\u4E0E\u5F53\u524D\u9879\u76EE\u518D\u52A0\u6DF1\u4E00\u6863\u3002 */
+.fh-folder-body { fill: var(--fh-folder-fill); transition: fill 120ms ease; }
+.fh-workspace-row:hover .fh-folder-body,
+.fh-ws-group-head:hover .fh-folder-body,
+.fh-row-folder-active .fh-folder-body { fill: var(--fh-folder-fill-hover); }
 
 .fh-ws-group-title, .fh-row-title {
   flex: 1 1 auto;
@@ -2894,18 +2934,27 @@ var SIDEBAR_STYLES = `
 /* ---- \u72B6\u6001\u70B9 ---- */
 .fh-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; display: inline-block; }
 .fh-dot-idle { background: var(--dsw-alias-state-idle-primary); }
-.fh-dot-warning { background: var(--dsw-alias-state-warn-primary); }
-.fh-dot-done { background: var(--dsw-alias-state-success-primary); }
+.fh-dot-warning {
+  background: var(--dsw-alias-state-warn-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 18%, transparent);
+}
+.fh-dot-done {
+  background: var(--dsw-alias-state-success-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-success-primary) 14%, transparent);
+}
 .fh-dot-spinner, .fh-ws-spinner {
   box-sizing: border-box;
   width: 11px;
   height: 11px;
   flex: none;
   border-radius: 50%;
-  border: 1.6px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 22%, transparent);
-  border-top-color: var(--dsw-alias-brand-primary);
+  border: 1.6px solid color-mix(in srgb, var(--dsw-alias-state-business-primary) 22%, transparent);
+  border-top-color: var(--dsw-alias-state-business-primary);
   animation: fh-spin 0.8s linear infinite;
 }
+/* \u6700\u8FD1\u4EFB\u52A1\u5206\u7EC4\u81EA\u5E26\u72B6\u6001\u70B9\u7C7B\u540D\uFF08fh-ws-dot*\uFF09\uFF1A\u51E0\u4F55\u5728\u529F\u80FD\u6837\u5F0F\u91CC\uFF0C\u8FD9\u91CC\u8865\u4E00\u5C42\u5149\u6655\u3002 */
+.fh-ws-dot-warn { box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 18%, transparent); }
+.fh-ws-dot-done { box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-success-primary) 14%, transparent); }
 @keyframes fh-spin { to { transform: rotate(360deg); } }
 .fh-visually-hidden {
   position: absolute;
@@ -2966,70 +3015,116 @@ var SIDEBAR_STYLES = `
 .fh-hovercard {
   position: fixed;
   z-index: 40;
-  width: 260px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--dsw-alias-border-l1);
-  background: var(--dsw-alias-bg-overlay);
+  width: 292px;
+  max-width: calc(100vw - 16px);
+  padding: 12px;
+  border-radius: 14px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
+  box-shadow: 0 14px 36px color-mix(in srgb, #000 20%, transparent);
   font-size: 12px;
   pointer-events: none;
 }
-.fh-hovercard-body { display: flex; flex-direction: column; gap: 4px; }
-.fh-hovercard-title { font-size: 12px; line-height: 18px; word-break: break-word; }
-.fh-hovercard-path { color: var(--dsw-alias-label-secondary); font-size: 11px; word-break: break-all; }
-.fh-hovercard-time { color: var(--dsw-alias-label-secondary); font-size: 11px; }
-.fh-hovercard-status { display: flex; align-items: center; gap: 6px; color: var(--dsw-alias-label-secondary); }
+.fh-hovercard-body { display: flex; flex-direction: column; gap: 8px; }
+.fh-hovercard-head { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.fh-hovercard-mark {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--fh-tone-gold) 24%, transparent);
+  background: color-mix(in srgb, var(--fh-tone-gold) 11%, transparent);
+}
+.fh-hovercard-session .fh-hovercard-mark {
+  border-color: color-mix(in srgb, var(--fh-tone-blue) 24%, transparent);
+  background: color-mix(in srgb, var(--fh-tone-blue) 11%, transparent);
+}
+.fh-hovercard-title {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 19px;
+  word-break: break-word;
+}
+.fh-hovercard-meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11.5px;
+  line-height: 17px;
+  word-break: break-all;
+}
+.fh-hovercard-ico { flex: none; margin-top: 2px; opacity: 0.75; }
+.fh-hovercard-path { color: var(--dsw-alias-label-secondary); font-size: 11.5px; line-height: 17px; word-break: break-all; }
+.fh-hovercard-time { color: var(--dsw-alias-label-secondary); font-size: 11.5px; line-height: 17px; }
+.fh-hovercard-status { display: flex; align-items: center; gap: 6px; color: var(--dsw-alias-label-secondary); font-size: 11.5px; line-height: 17px; }
 .fh-hovercard-archived { color: var(--dsw-alias-state-warn-primary); }
 .fh-hovercard-copy {
-  margin-top: 6px;
-  padding: 2px 6px;
-  border: 0;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--dsw-alias-label-primary) 9%, transparent);
-  color: var(--dsw-alias-label-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 9px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 14%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 5%, transparent);
+  color: var(--dsw-alias-label-secondary);
   font: inherit;
   font-size: 11px;
+  line-height: 18px;
   pointer-events: auto;
   cursor: pointer;
 }
+.fh-hovercard-copy:hover {
+  color: var(--dsw-alias-label-primary);
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 9%, transparent);
+}
+.fh-hovercard-copy:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 1px; }
 
 /* ---- \u83DC\u5355\uFF08popover\uFF09 ---- */
 .fh-menu {
   position: fixed;
   inset: auto;
   margin: 0;
-  padding: 4px;
-  min-width: 190px;
-  max-width: 280px;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-overlay);
+  padding: 6px;
+  min-width: 198px;
+  max-width: 288px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);
+  box-shadow: 0 14px 36px color-mix(in srgb, #000 22%, transparent);
   font-size: 13px;
 }
 .fh-menu:popover-open { display: flex; flex-direction: column; }
 .fh-menu-label {
-  padding: 6px 10px 2px;
-  font-size: 11px;
+  padding: 7px 10px 3px;
+  font-size: 10.5px;
+  font-weight: 600;
   line-height: 16px;
+  letter-spacing: 0.05em;
   color: var(--dsw-alias-label-secondary);
 }
 .fh-menu-sep {
   height: 1px;
-  margin: 4px 6px;
-  background: var(--dsw-alias-border-l1);
+  margin: 5px 6px;
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
 }
 .fh-menu-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   width: 100%;
-  padding: 6px 10px;
+  min-height: 32px;
+  padding: 6px 9px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   color: inherit;
   font: inherit;
@@ -3039,65 +3134,85 @@ var SIDEBAR_STYLES = `
 .fh-menu-item:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); }
 .fh-menu-item:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: -2px; }
 .fh-menu-item:disabled { opacity: 0.45; cursor: default; }
-.fh-menu-item-selected { color: var(--dsw-alias-brand-primary); }
+.fh-menu-item-selected {
+  background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 8%, transparent);
+  color: var(--dsw-alias-label-primary);
+}
+.fh-menu-item-selected::after {
+  content: '\u2713';
+  flex: none;
+  margin-left: auto;
+  color: var(--dsw-alias-state-business-primary);
+  font-size: 11px;
+  line-height: 1;
+}
 .fh-menu-item-danger { color: var(--dsw-alias-state-error-primary); }
+.fh-menu-item-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, transparent);
+}
 .fh-menu-item-icon { flex: none; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; }
 .fh-menu-item-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---- \u5BF9\u8BDD\u6846 ---- */
 .fh-dialog {
-  width: min(440px, calc(100vw - 32px));
+  width: min(460px, calc(100vw - 32px));
   max-height: min(70vh, 640px);
   padding: 0;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 12px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 18px;
   background: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-primary);
-  box-shadow: 0 16px 48px color-mix(in srgb, var(--dsw-alias-label-primary) 24%, transparent);
+  box-shadow: 0 24px 64px color-mix(in srgb, #000 30%, transparent);
   font-size: 13px;
 }
-.fh-dialog::backdrop { background: color-mix(in srgb, var(--dsw-alias-label-primary) 32%, transparent); }
+.fh-dialog::backdrop {
+  background: color-mix(in srgb, #000 34%, transparent);
+  backdrop-filter: blur(2px);
+}
 .fh-dialog[open] { display: flex; flex-direction: column; }
 .fh-dialog-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 12px 8px 16px;
+  padding: 16px 14px 10px 18px;
 }
-.fh-dialog-title { flex: 1 1 auto; font-size: 14px; line-height: 20px; }
-.fh-dialog-desc { margin: 0; padding: 0 16px 8px; color: var(--dsw-alias-label-secondary); line-height: 18px; }
-.fh-dialog-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 16px 12px; }
+.fh-dialog-title { flex: 1 1 auto; font-size: 15px; font-weight: 600; line-height: 22px; }
+.fh-dialog-desc { margin: 0; padding: 0 18px 10px; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; }
+.fh-dialog-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 18px 14px; }
 .fh-dialog-foot {
   flex: none;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  padding: 10px 16px 14px;
-  border-top: 1px solid var(--dsw-alias-border-l1);
+  padding: 12px 18px 16px;
+  border-top: 0.5px solid var(--dsw-alias-border-l2);
 }
 .fh-dialog-foot-gap { flex: 1 1 auto; }
 .fh-dialog-error { margin-top: 8px; color: var(--dsw-alias-state-error-primary); font-size: 12px; line-height: 18px; }
 .fh-dialog-status { color: var(--dsw-alias-label-secondary); font-size: 12px; }
 .fh-input {
   width: 100%;
-  height: 32px;
-  padding: 0 8px;
-  border-radius: 6px;
-  border: 1px solid var(--dsw-alias-border-l2);
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1px solid var(--dsw-alias-border-l3);
   background: var(--dsw-alias-bg-base);
   color: var(--dsw-alias-label-primary);
   font: inherit;
   font-size: 13px;
   outline: none;
 }
-.fh-input:focus { border-color: var(--dsw-alias-brand-primary); }
+.fh-input:focus {
+  border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary) 65%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--dsw-alias-state-business-primary) 16%, transparent);
+}
 .fh-button {
   flex: none;
-  height: 30px;
-  padding: 0 12px;
-  border-radius: 6px;
-  border: 1px solid var(--dsw-alias-border-l2);
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 9px;
+  border: 1px solid var(--dsw-alias-border-l3);
   background: transparent;
   color: var(--dsw-alias-label-primary);
   font: inherit;
@@ -3106,13 +3221,19 @@ var SIDEBAR_STYLES = `
 }
 .fh-button:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); }
 .fh-button:disabled { opacity: 0.45; cursor: default; }
+.fh-button:focus-visible { outline: 2px solid color-mix(in srgb, var(--dsw-alias-state-business-primary) 60%, transparent); outline-offset: 1px; }
 .fh-button-primary {
   border-color: transparent;
   background: var(--dsw-alias-brand-primary);
   color: var(--dsw-alias-bg-base);
+  font-weight: 500;
 }
 .fh-button-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-brand-primary) 88%, var(--dsw-alias-label-primary)); }
-.fh-button-danger { border-color: var(--dsw-alias-state-error-primary); color: var(--dsw-alias-state-error-primary); }
+.fh-button-danger {
+  border-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 45%, transparent);
+  color: var(--dsw-alias-state-error-primary);
+}
+.fh-button-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 9%, transparent); }
 
 /* ---- \u76EE\u5F55\u9009\u62E9\u5668 ---- */
 .fh-picker-path { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
@@ -3125,8 +3246,8 @@ var SIDEBAR_STYLES = `
   min-height: 120px;
   overflow-y: auto;
   padding: 4px;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 8px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
 }
 .fh-picker-entry {
   display: flex;
@@ -3151,18 +3272,20 @@ var SIDEBAR_STYLES = `
 /* ---- \u6298\u53E0 rail \u6001 ---- */
 .fh-rail { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; }
 .fh-rail-button {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   color: var(--dsw-alias-label-secondary);
   cursor: pointer;
+  transition: background-color 120ms ease;
 }
 .fh-rail-button:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); color: var(--dsw-alias-label-primary); }
+.fh-rail-button:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: -2px; }
 
 /* ---- \u53F3\u4E0B\u89D2\u63D0\u793A ---- */
 .fh-notices {
@@ -3178,12 +3301,12 @@ var SIDEBAR_STYLES = `
 }
 .fh-notice {
   max-width: 360px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--dsw-alias-border-l1);
-  background: var(--dsw-alias-bg-overlay);
+  padding: 9px 13px;
+  border-radius: 12px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
+  box-shadow: 0 12px 32px color-mix(in srgb, #000 22%, transparent);
   font: inherit;
   font-size: 12px;
   line-height: 18px;
@@ -3592,18 +3715,19 @@ function statusIcon(meta, label) {
 
 // client/src/features/recent-tasks/styles.ts
 var styles = `
-/* \u5206\u7EC4\u8BA1\u6570\u5FBD\u6807 */
+/* \u5206\u7EC4\u8BA1\u6570\u5FBD\u6807\uFF1A\u85E4\u9EC4\u6DE1\u5E95\uFF0C\u4E0E\u65F6\u949F\u56FE\u6807\u540C\u4E00\u8272\u7CFB\u3002 */
 .fh-ws-recent .fh-ws-count {
   flex: none;
   min-width: 18px;
   padding: 0 6px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 12%, transparent);
-  background: color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--fh-tone-gold) 26%, transparent);
+  background: color-mix(in srgb, var(--fh-tone-gold) 11%, transparent);
   font-size: 10px;
   line-height: 16px;
   text-align: center;
-  color: var(--dsw-alias-label-secondary);
+  color: color-mix(in srgb, var(--fh-tone-gold) 72%, var(--dsw-alias-label-primary));
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -3652,6 +3776,7 @@ var zh2 = {
   "settings.description": "\u4FA7\u8FB9\u680F\u9876\u90E8\u7684\u300C\u6700\u8FD1\u4EFB\u52A1\u300D\u5206\u7EC4\u5217\u51FA\u5168\u90E8\u9879\u76EE\u6700\u8FD1\u7684\u4F1A\u8BDD\u3002",
   "limit.label": "\u6700\u8FD1\u4EFB\u52A1\u6761\u6570",
   "limit.hint": "\u9ED8\u8BA4 5 \u6761\uFF1B\u8FD0\u884C\u4E2D\u6216\u7B49\u5F85\u786E\u8BA4\u7684\u4EFB\u52A1\u4E0D\u4F1A\u88AB\u8FD9\u4E2A\u6570\u91CF\u88C1\u6389\uFF0C\u4F1A\u989D\u5916\u5217\u51FA\u30021\u2013{max}\u3002",
+  "limit.unit": "\u6761",
   "limit.reset": "\u6062\u590D\u9ED8\u8BA4"
 };
 var en2 = {
@@ -3675,6 +3800,7 @@ var en2 = {
   "settings.description": "The group at the top of the sidebar lists the newest sessions across all projects.",
   "limit.label": "Recent tasks shown",
   "limit.hint": "Five by default; running or waiting sessions are listed on top of this number instead of being cut. Range 1\u2013{max}.",
+  "limit.unit": "items",
   "limit.reset": "Reset"
 };
 
@@ -3800,10 +3926,11 @@ function RecentTasksSection(props) {
       width: 16,
       height: 16,
       viewBox: "0 0 24 24",
+      className: "fh-recent-glyph",
       "aria-hidden": true,
       focusable: false,
       fill: "none",
-      stroke: "currentColor",
+      stroke: "var(--fh-tone-gold)",
       strokeWidth: 1.8,
       strokeLinecap: "round",
       strokeLinejoin: "round"
@@ -3812,7 +3939,15 @@ function RecentTasksSection(props) {
       h("path", { d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" }),
       h("path", { d: "M3 3v5h5" }),
       h("path", { d: "M12 7v5l4 2" })
-    ] : [h("circle", { cx: 12, cy: 12, r: 9 }), h("path", { d: "M12 7v5l3.2 1.9" })]
+    ] : [
+      h("circle", {
+        cx: 12,
+        cy: 12,
+        r: 9,
+        fill: "color-mix(in srgb, var(--fh-tone-gold) 16%, transparent)"
+      }),
+      h("path", { d: "M12 7v5l3.2 1.9" })
+    ]
   );
   const header = h(
     "div",
@@ -3918,11 +4053,202 @@ var recentTasksSection = {
   component: RecentTasksSection
 };
 
+// client/src/lib/settings-controls.tsx
+var { useEffect: useEffect2, useState: useState2 } = React;
+function SettingsRow(props) {
+  return /* @__PURE__ */ h("div", { className: `fh-set-row${props.hero === true ? " fh-set-row-hero" : ""}` }, /* @__PURE__ */ h("div", { className: "fh-set-text" }, /* @__PURE__ */ h("span", { className: "fh-set-label" }, props.label), props.hint === void 0 ? null : /* @__PURE__ */ h("span", { className: "fh-set-help" }, props.hint)), props.children === void 0 ? null : /* @__PURE__ */ h("div", { className: "fh-set-control" }, props.children));
+}
+function SettingsGroup(props) {
+  return /* @__PURE__ */ h("div", { className: "fh-set-group" }, /* @__PURE__ */ h("div", { className: "fh-set-group-title" }, props.title), props.children);
+}
+function SettingsSwitch(props) {
+  const checked = props.checked;
+  return /* @__PURE__ */ h(
+    "button",
+    {
+      type: "button",
+      role: "switch",
+      "aria-checked": checked,
+      "aria-label": props.label,
+      className: "fh-set-switch",
+      "data-on": checked,
+      disabled: props.disabled === true,
+      onClick: () => {
+        props.onChange(!props.checked);
+      }
+    },
+    /* @__PURE__ */ h("span", { className: "fh-set-switch-thumb", "aria-hidden": true })
+  );
+}
+function clampInt(value, min, max) {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, Math.round(value)));
+}
+function SettingsStepper(props) {
+  const step = props.step ?? 1;
+  const [text, setText] = useState2(String(props.value));
+  useEffect2(() => {
+    setText(String(props.value));
+  }, [props.value]);
+  const commit = () => {
+    const parsed = Number(text.trim());
+    if (text.trim() === "" || !Number.isFinite(parsed)) {
+      setText(String(props.value));
+      return;
+    }
+    const next = clampInt(parsed, props.min, props.max);
+    setText(String(next));
+    if (next !== props.value) props.onChange(next);
+  };
+  const nudge = (delta) => {
+    const next = clampInt(props.value + delta, props.min, props.max);
+    if (next === props.value) return;
+    setText(String(next));
+    props.onChange(next);
+  };
+  return /* @__PURE__ */ h("div", { className: "fh-set-stepper", role: "group", "aria-label": props.label }, /* @__PURE__ */ h(
+    "button",
+    {
+      type: "button",
+      className: "fh-set-stepper-btn",
+      "aria-label": `${props.label} -`,
+      disabled: props.value <= props.min,
+      onClick: () => {
+        nudge(-step);
+      }
+    },
+    "\u2212"
+  ), /* @__PURE__ */ h(
+    "input",
+    {
+      className: "fh-set-stepper-input",
+      type: "text",
+      inputMode: "numeric",
+      "aria-label": props.label,
+      value: text,
+      onChange: (event) => {
+        setText(event.currentTarget.value);
+      },
+      onBlur: commit,
+      onKeyDown: (event) => {
+        if (event.key === "Enter") {
+          commit();
+          event.currentTarget.blur();
+          return;
+        }
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          nudge(step);
+        } else if (event.key === "ArrowDown") {
+          event.preventDefault();
+          nudge(-step);
+        }
+      }
+    }
+  ), props.unit === void 0 ? null : /* @__PURE__ */ h("span", { className: "fh-set-stepper-unit" }, props.unit), /* @__PURE__ */ h(
+    "button",
+    {
+      type: "button",
+      className: "fh-set-stepper-btn",
+      "aria-label": `${props.label} +`,
+      disabled: props.value >= props.max,
+      onClick: () => {
+        nudge(step);
+      }
+    },
+    "+"
+  ));
+}
+function SettingsSlider(props) {
+  const span = props.max - props.min;
+  const percent = span <= 0 ? 0 : Math.min(100, Math.max(0, (props.value - props.min) / span * 100));
+  const style = { "--fh-pct": `${percent}%` };
+  return /* @__PURE__ */ h("div", { className: "fh-set-slider" }, /* @__PURE__ */ h(
+    "input",
+    {
+      className: "fh-set-range",
+      type: "range",
+      min: props.min,
+      max: props.max,
+      step: props.step ?? 1,
+      value: props.value,
+      "aria-label": props.label,
+      style,
+      onChange: (event) => {
+        props.onChange(Number(event.currentTarget.value));
+      }
+    }
+  ), /* @__PURE__ */ h("span", { className: "fh-set-range-value" }, props.value, props.suffix ?? ""));
+}
+function SettingsPresets(props) {
+  return /* @__PURE__ */ h("div", { className: "fh-set-presets", role: "group", "aria-label": props.label }, props.options.map((option) => /* @__PURE__ */ h(
+    "button",
+    {
+      key: option,
+      type: "button",
+      className: "fh-set-preset",
+      "data-active": option === props.value,
+      "aria-pressed": option === props.value,
+      onClick: () => {
+        props.onChange(option);
+      }
+    },
+    option,
+    props.suffix ?? ""
+  )));
+}
+function SettingsButton(props) {
+  return /* @__PURE__ */ h(
+    "button",
+    {
+      type: "button",
+      className: `fh-set-button${props.variant === void 0 || props.variant === "ghost" ? "" : ` fh-set-button-${props.variant}`}`,
+      disabled: props.disabled === true,
+      title: props.title,
+      onClick: props.onClick
+    },
+    props.children
+  );
+}
+
+// client/src/lib/settings-icons.tsx
+function Glyph(props) {
+  const size = props.size ?? 16;
+  return /* @__PURE__ */ h(
+    "svg",
+    {
+      width: size,
+      height: size,
+      viewBox: "0 0 24 24",
+      "aria-hidden": true,
+      focusable: false,
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: 1.8,
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
+    },
+    props.children
+  );
+}
+function SettingsClockIcon(props) {
+  return /* @__PURE__ */ h(Glyph, { ...props }, /* @__PURE__ */ h("circle", { cx: 12, cy: 12, r: 8.4 }), /* @__PURE__ */ h("path", { d: "M12 7.4v5l3.2 1.9" }), /* @__PURE__ */ h("path", { d: "M12 3.6v1.2M20.4 12h-1.2M12 20.4v-1.2M3.6 12h1.2", opacity: 0.55 }));
+}
+function SettingsCompressIcon(props) {
+  return /* @__PURE__ */ h(Glyph, { ...props }, /* @__PURE__ */ h("path", { d: "M10.4 12H3.6" }), /* @__PURE__ */ h("path", { d: "m6.4 8.8-3.2 3.2 3.2 3.2" }), /* @__PURE__ */ h("path", { d: "M13.6 12h6.8" }), /* @__PURE__ */ h("path", { d: "m17.6 8.8 3.2 3.2-3.2 3.2" }), /* @__PURE__ */ h("path", { d: "M12 4.6v3.2M12 16.2v3.2", opacity: 0.55 }));
+}
+function SettingsGaugeIcon(props) {
+  return /* @__PURE__ */ h(Glyph, { ...props }, /* @__PURE__ */ h("path", { d: "M4 17.4a9 9 0 1 1 16 0" }), /* @__PURE__ */ h("path", { d: "m12 13.4 4.2-4.2" }), /* @__PURE__ */ h("circle", { cx: 12, cy: 14.2, r: 1.3, fill: "currentColor", stroke: "none" }), /* @__PURE__ */ h("path", { d: "M5.4 20.2h13.2", opacity: 0.55 }));
+}
+function SettingsBellIcon(props) {
+  return /* @__PURE__ */ h(Glyph, { ...props }, /* @__PURE__ */ h("path", { d: "M6.4 10.2a5.6 5.6 0 0 1 11.2 0c0 3.4 1.2 4.8 1.8 5.5.4.4.1 1.1-.4 1.1H5c-.5 0-.8-.7-.4-1.1.6-.7 1.8-2.1 1.8-5.5Z" }), /* @__PURE__ */ h("path", { d: "M10.2 20.1a2 2 0 0 0 3.6 0" }), /* @__PURE__ */ h("path", { d: "M12 3.2v1", opacity: 0.55 }));
+}
+
 // client/src/features/recent-tasks/settings.ts
-var { useState: useState2 } = React;
+var { useState: useState3 } = React;
 function RecentTasksSettings(props) {
   const { t } = props;
-  const [limit, setLimit] = useState2(readRecentLimit);
+  const [limit, setLimit] = useState3(readRecentLimit);
   const commit = (value) => {
     setLimit(writeRecentLimit(value));
   };
@@ -3931,51 +4257,64 @@ function RecentTasksSettings(props) {
     setLimit(DEFAULT_RECENT_LIMIT);
   };
   return h(
-    "div",
-    { className: "fh-set-row" },
-    h(
-      "div",
-      { className: "fh-set-text" },
-      h("span", { className: "fh-set-label" }, t("limit.label")),
-      h("span", { className: "fh-set-help" }, t("limit.hint", { max: MAX_RECENT_LIMIT }))
-    ),
-    h(
-      "div",
-      { className: "fh-set-control" },
-      h("input", {
-        className: "fh-set-input",
-        type: "number",
-        min: 1,
-        max: MAX_RECENT_LIMIT,
-        step: 1,
-        value: limit,
-        "aria-label": t("limit.label"),
-        onChange: (event) => {
-          commit(event.currentTarget.value);
-        }
-      }),
-      h(
-        "button",
-        {
-          type: "button",
-          className: "fh-set-reset",
-          onClick: reset
-        },
-        t("limit.reset")
-      )
-    )
+    SettingsRow,
+    { label: t("limit.label"), hint: t("limit.hint", { max: MAX_RECENT_LIMIT }) },
+    h(SettingsStepper, {
+      label: t("limit.label"),
+      value: limit,
+      min: 1,
+      max: MAX_RECENT_LIMIT,
+      unit: t("limit.unit"),
+      onChange: commit
+    }),
+    h(SettingsButton, { onClick: reset }, t("limit.reset"))
   );
 }
 var recentTasksSettings = {
   id: "recent-tasks",
   order: 10,
   locale: { ns: RECENT_TASKS_NS, dicts: { zh: zh2, en: en2 } },
-  component: RecentTasksSettings
+  component: RecentTasksSettings,
+  icon: SettingsClockIcon,
+  tone: "gold"
 };
 
 // client/src/features/git-branch/branch-name.ts
 var BRANCH_NAME_MAX = 120;
 var BRANCH_NAME_PATTERN = /^[A-Za-z0-9._/-]+$/;
+
+// client/src/features/git-branch/clipboard.ts
+async function copyText(text) {
+  if (text === "") return false;
+  const clipboard = typeof navigator === "undefined" ? void 0 : navigator.clipboard;
+  if (clipboard !== void 0 && typeof clipboard.writeText === "function") {
+    try {
+      await clipboard.writeText(text);
+      return true;
+    } catch (_failure) {
+    }
+  }
+  return legacyCopy(text);
+}
+function legacyCopy(text) {
+  if (typeof document === "undefined" || document.body === null) return false;
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.setAttribute("readonly", "");
+  area.style.position = "fixed";
+  area.style.top = "-1000px";
+  area.style.left = "-1000px";
+  area.style.opacity = "0";
+  document.body.appendChild(area);
+  try {
+    area.select();
+    return document.execCommand("copy");
+  } catch (_failure) {
+    return false;
+  } finally {
+    area.remove();
+  }
+}
 
 // client/src/features/git-branch/styles.ts
 var styles2 = `
@@ -3989,12 +4328,33 @@ var styles2 = `
   padding: 0 8px;
   border-radius: 999px;
   border: 1px solid transparent;
+  background: transparent;
   color: var(--dsw-alias-label-secondary);
+  font: inherit;
   font-size: 12px;
   line-height: 18px;
   white-space: nowrap;
   max-width: 40vw;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
 }
+.fh-br-project:hover {
+  color: var(--dsw-alias-label-primary);
+  background: color-mix(in srgb, var(--fh-tone-gold) 8%, transparent);
+}
+.fh-br-project:focus-visible { outline: 2px solid color-mix(in srgb, var(--fh-tone-gold) 55%, transparent); outline-offset: 1px; }
+.fh-br-project-copied, .fh-br-project-copied:hover {
+  color: var(--dsw-alias-state-success-primary);
+  background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 12%, transparent);
+}
+.fh-br-project-failed, .fh-br-project-failed:hover {
+  color: var(--dsw-alias-state-error-primary);
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, transparent);
+}
+/* \u590D\u5236\u56FE\u6807\u53EA\u5728\u60AC\u505C\u6216\u952E\u76D8\u805A\u7126\u65F6\u9732\u9762\uFF1A\u5E38\u6001\u4E0B\u80F6\u56CA\u4ECD\u662F\u300C\u9879\u76EE\u540D\u300D\uFF0C\u4E0D\u55A7\u5BBE\u593A\u4E3B\u3002 */
+.fh-br-copy { flex: none; opacity: 0; transition: opacity 120ms ease; }
+.fh-br-project:hover .fh-br-copy, .fh-br-project:focus-visible .fh-br-copy { opacity: 0.7; }
+.fh-br-result { flex: none; }
 .fh-br-project-name { line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fh-br-chip {
   display: inline-flex;
@@ -4011,8 +4371,8 @@ var styles2 = `
   line-height: 18px;
   cursor: pointer;
 }
-.fh-br-chip:hover { color: var(--dsw-alias-label-primary); background: color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent); }
-.fh-br-chip:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 1px; }
+.fh-br-chip:hover { color: var(--dsw-alias-label-primary); background: color-mix(in srgb, var(--fh-tone-green) 9%, transparent); border-color: color-mix(in srgb, var(--fh-tone-green) 30%, transparent); }
+.fh-br-chip:focus-visible { outline: 2px solid color-mix(in srgb, var(--fh-tone-green) 55%, transparent); outline-offset: 1px; }
 .fh-br-name { line-height: 18px; white-space: nowrap; }
 .fh-br-dirty { width: 6px; height: 6px; border-radius: 50%; background: var(--dsw-alias-state-warn-primary); flex: none; }
 
@@ -4025,15 +4385,15 @@ var styles2 = `
   inset: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
   width: min(460px, 92vw);
   max-height: 52vh;
-  padding: 8px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);
-  background: var(--dsw-alias-bg-base);
+  padding: 10px;
+  border-radius: 14px;
+  border: 0.5px solid var(--dsw-alias-border-l3, color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent));
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
-  box-shadow: 0 18px 44px color-mix(in srgb, #000 38%, transparent);
+  box-shadow: 0 16px 40px color-mix(in srgb, #000 26%, transparent);
   font-size: 13px;
   overflow: hidden;
 }
@@ -4141,6 +4501,9 @@ var zh3 = {
   "error.unreachable": "\u65E0\u6CD5\u8FDE\u63A5 Host",
   "error.branchName": "\u5206\u652F\u540D\u4E0D\u5408\u6CD5",
   "project.unknown": "\u672A\u5F52\u5C5E\u9879\u76EE",
+  "project.copy": "\u70B9\u51FB\u590D\u5236\u9879\u76EE\u540D\u79F0\uFF1A{name}",
+  "project.copied": "\u5DF2\u590D\u5236",
+  "project.copyFailed": "\u590D\u5236\u5931\u8D25",
   "warn.text": "\u8BE5\u4F1A\u8BDD\u5DF2\u5F00\u59CB\u5DE5\u4F5C\uFF0C\u5207\u5230 {branch} \u53EF\u80FD\u4E22\u5931\u672A\u63D0\u4EA4\u7684\u6539\u52A8\uFF08\u5F53\u524D {count} \u4E2A\u6587\u4EF6\u6709\u6539\u52A8\uFF09\u3002\u786E\u5B9A\u5207\u6362\uFF1F",
   "warn.running": "\u8BE5\u4F1A\u8BDD\u6B63\u5728\u6267\u884C\u4E2D\uFF0C\u5207\u5230 {branch} \u53EF\u80FD\u6253\u65AD\u6267\u884C\u5E76\u4E22\u5931\u4EE3\u7801\uFF08\u5F53\u524D {count} \u4E2A\u6587\u4EF6\u6709\u6539\u52A8\uFF09\u3002\u786E\u5B9A\u5207\u6362\uFF1F",
   "warn.cancel": "\u53D6\u6D88",
@@ -4162,6 +4525,9 @@ var en3 = {
   "error.unreachable": "Cannot reach the Host",
   "error.branchName": "That branch name is not valid",
   "project.unknown": "No project",
+  "project.copy": "Select to copy the project name: {name}",
+  "project.copied": "Copied",
+  "project.copyFailed": "Copy failed",
   "warn.text": "This session has already run work; switching to {branch} can strand uncommitted changes ({count} files changed). Switch anyway?",
   "warn.running": "This session is running; switching to {branch} can interrupt it and drop code ({count} files changed). Switch anyway?",
   "warn.cancel": "Cancel",
@@ -4169,8 +4535,9 @@ var en3 = {
 };
 
 // client/src/features/git-branch/index.ts
-var { useCallback, useEffect: useEffect2, useRef, useState: useState3 } = React;
+var { useCallback, useEffect: useEffect3, useRef, useState: useState4 } = React;
 var BRANCH_NS = "feature-hub.branch";
+var COPY_FEEDBACK_MS = 1600;
 var GAP = 8;
 function routeUrl(subpath, params) {
   const base = typeof document === "undefined" ? "http://dsh.internal/" : document.baseURI;
@@ -4203,13 +4570,55 @@ function FolderGlyph() {
       "aria-hidden": true,
       focusable: false,
       fill: "none",
-      stroke: "currentColor",
+      stroke: "var(--fh-tone-gold)",
       strokeWidth: 1.3,
       strokeLinejoin: "round"
     },
     h("path", {
+      fill: "var(--fh-folder-fill)",
       d: "M1.8 4.2 A1 1 0 0 1 2.8 3.2 H6 L7.4 4.6 H13.2 A1 1 0 0 1 14.2 5.6 V11.4 A1 1 0 0 1 13.2 12.4 H2.8 A1 1 0 0 1 1.8 11.4 Z"
     })
+  );
+}
+function CopyGlyph(props) {
+  const size = props.size ?? 11;
+  return h(
+    "svg",
+    {
+      width: size,
+      height: size,
+      viewBox: "0 0 16 16",
+      "aria-hidden": true,
+      focusable: false,
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: 1.3,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      className: "fh-br-copy"
+    },
+    h("rect", { x: 5.6, y: 5.6, width: 8.2, height: 8.2, rx: 1.5 }),
+    h("path", { d: "M10.4 2.4 H3.6 A1.4 1.4 0 0 0 2.2 3.8 V10.6" })
+  );
+}
+function ResultGlyph(props) {
+  const size = props.size ?? 11;
+  return h(
+    "svg",
+    {
+      width: size,
+      height: size,
+      viewBox: "0 0 16 16",
+      "aria-hidden": true,
+      focusable: false,
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: 1.5,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      className: "fh-br-result"
+    },
+    h("path", { d: props.ok ? "M3.2 8.4 L6.4 11.6 L12.8 4.6" : "M4.2 4.2 L11.8 11.8 M11.8 4.2 L4.2 11.8" })
   );
 }
 function BranchGlyph(props) {
@@ -4223,7 +4632,7 @@ function BranchGlyph(props) {
       "aria-hidden": true,
       focusable: false,
       fill: "none",
-      stroke: "currentColor",
+      stroke: "var(--fh-tone-green)",
       strokeWidth: 1.3,
       strokeLinecap: "round",
       strokeLinejoin: "round"
@@ -4255,16 +4664,18 @@ function BranchChip(props) {
     const row = snapshot.byId[sessionId];
     return row === void 0 ? true : row.blank === true;
   });
-  const [state, setState] = useState3(null);
-  const [pending, setPending] = useState3(null);
-  const [error, setError] = useState3("");
-  const [busy, setBusy] = useState3(false);
-  const [open, setOpen] = useState3(false);
-  const [query, setQuery] = useState3("");
-  const [draft, setDraft] = useState3("");
+  const [state, setState] = useState4(null);
+  const [pending, setPending] = useState4(null);
+  const [error, setError] = useState4("");
+  const [busy, setBusy] = useState4(false);
+  const [open, setOpen] = useState4(false);
+  const [query, setQuery] = useState4("");
+  const [draft, setDraft] = useState4("");
+  const [copyState, setCopyState] = useState4("idle");
   const chipRef = useRef(null);
   const panelRef = useRef(null);
   const searchRef = useRef(null);
+  const copyTimer = useRef(void 0);
   const load = useCallback(async () => {
     if (typeof cwd !== "string" || cwd === "") return;
     try {
@@ -4280,9 +4691,15 @@ function BranchChip(props) {
       setState(null);
     }
   }, [cwd]);
-  useEffect2(() => {
+  useEffect3(() => {
     void load();
   }, [load]);
+  useEffect3(
+    () => () => {
+      if (copyTimer.current !== void 0) window.clearTimeout(copyTimer.current);
+    },
+    []
+  );
   const place = useCallback(() => {
     const panel = panelRef.current;
     const chip = chipRef.current;
@@ -4296,7 +4713,7 @@ function BranchChip(props) {
     panel.style.top = `${Math.round(top)}px`;
     panel.style.left = `${Math.round(left)}px`;
   }, []);
-  useEffect2(() => {
+  useEffect3(() => {
     const panel = panelRef.current;
     if (panel === null) return;
     if (typeof panel.showPopover !== "function") {
@@ -4313,7 +4730,7 @@ function BranchChip(props) {
     }
     if (!open && panel.matches(":popover-open")) panel.hidePopover();
   }, [open, state?.branches.length, place]);
-  useEffect2(() => {
+  useEffect3(() => {
     const panel = panelRef.current;
     if (panel === null) return;
     const onToggle = (event) => {
@@ -4333,6 +4750,21 @@ function BranchChip(props) {
     };
   }, [place]);
   if (typeof cwd !== "string" || cwd === "" || state === null) return null;
+  const projectName = projectTitle === "" ? basename2(cwd) : projectTitle;
+  let projectLabel = projectTitle === "" ? t("project.unknown") : projectTitle;
+  if (copyState === "copied") projectLabel = t("project.copied");
+  else if (copyState === "failed") projectLabel = t("project.copyFailed");
+  const projectClass = copyState === "copied" ? "fh-br-project fh-br-project-copied" : copyState === "failed" ? "fh-br-project fh-br-project-failed" : "fh-br-project";
+  const copyProject = () => {
+    if (copyTimer.current !== void 0) window.clearTimeout(copyTimer.current);
+    void copyText(projectName).then((ok) => {
+      setCopyState(ok ? "copied" : "failed");
+      copyTimer.current = window.setTimeout(() => {
+        setCopyState("idle");
+        copyTimer.current = void 0;
+      }, COPY_FEEDBACK_MS);
+    });
+  };
   const label = state.detached ? t("detached") : state.branch;
   const needle = query.trim().toLowerCase();
   const branches = state.branches.filter(
@@ -4368,14 +4800,17 @@ function BranchChip(props) {
     "span",
     { className: "fh-br" },
     h(
-      "span",
-      { className: "fh-br-project", title: cwd },
+      "button",
+      {
+        type: "button",
+        className: projectClass,
+        title: t("project.copy", { name: projectName }),
+        "aria-label": t("project.copy", { name: projectName }),
+        onClick: copyProject
+      },
       h(FolderGlyph),
-      h(
-        "span",
-        { className: "fh-br-project-name" },
-        projectTitle === "" ? t("project.unknown") : projectTitle
-      )
+      h("span", { className: "fh-br-project-name" }, projectLabel),
+      copyState === "idle" ? h(CopyGlyph, { size: 11 }) : h(ResultGlyph, { size: 11, ok: copyState === "copied" })
     ),
     h(
       "button",
@@ -4637,6 +5072,8 @@ var zh4 = {
   "settings.description": "\u8F93\u5165\u6846\u53F3\u4FA7\u7684\u300C\u538B\u7F29\u4E0A\u4E0B\u6587\u300D\u6309\u94AE\uFF1B\u4E0A\u4E0B\u6587\u5360\u7528\u8FBE\u5230\u9608\u503C\u540E\u624D\u4F1A\u51FA\u73B0\u3002",
   "threshold.label": "\u538B\u7F29\u6309\u94AE\u51FA\u73B0\u9608\u503C\uFF08%\uFF09",
   "threshold.hint": "\u4E0A\u4E0B\u6587\u5360\u7528\u8FBE\u5230\u8BE5\u767E\u5206\u6BD4\u624D\u663E\u793A\u6309\u94AE\uFF1B\u6700\u5C0F {min}%\u3002",
+  "threshold.presets": "\u5E38\u7528\u9608\u503C",
+  "threshold.presetsHint": "\u70B9\u4E00\u4E0B\u5957\u7528\u5E38\u7528\u767E\u5206\u6BD4\uFF0C\u6ED1\u6746\u4F1A\u540C\u6B65\u3002",
   "threshold.reset": "\u6062\u590D\u9ED8\u8BA4"
 };
 var en4 = {
@@ -4652,6 +5089,8 @@ var en4 = {
   "settings.description": "The Compact context button beside the composer appears once context usage reaches the threshold.",
   "threshold.label": "Compact button threshold (%)",
   "threshold.hint": "The button appears once context usage reaches this percentage; minimum {min}%.",
+  "threshold.presets": "Common thresholds",
+  "threshold.presetsHint": "Pick a common percentage; the slider follows.",
   "threshold.reset": "Reset"
 };
 
@@ -4675,8 +5114,9 @@ var styles3 = `
   line-height: 18px;
   cursor: pointer;
 }
-.fh-cx-button:hover { color: var(--dsw-alias-label-primary); background: color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent); }
-.fh-cx-button:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 1px; }
+.fh-cx-button:hover { color: var(--dsw-alias-label-primary); background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 8%, transparent); }
+.fh-cx-button svg { filter: drop-shadow(0 1px 2px color-mix(in srgb, #000 22%, transparent)); }
+.fh-cx-button:focus-visible { outline: 2px solid color-mix(in srgb, var(--dsw-alias-state-business-primary) 60%, transparent); outline-offset: 1px; }
 .fh-cx-button-disabled { opacity: 0.5; cursor: default; }
 .fh-cx-button-disabled:hover { color: var(--dsw-alias-label-secondary); background: transparent; }
 .fh-cx-button[aria-busy='true'] { cursor: progress; }
@@ -4699,7 +5139,7 @@ var styles3 = `
 `;
 
 // client/src/features/compact-context/index.ts
-var { useEffect: useEffect3, useRef: useRef2, useState: useState4 } = React;
+var { useEffect: useEffect4, useRef: useRef2, useState: useState5 } = React;
 var COMPACT_NS = "feature-hub.compact";
 var NOTE_VISIBLE_MS = 9e3;
 function CompactGlyph(props) {
@@ -4709,7 +5149,16 @@ function CompactGlyph(props) {
   return h(
     "svg",
     { width: 18, height: 18, viewBox: "0 0 20 20", "aria-hidden": true, focusable: false },
-    h("circle", { cx: 10, cy: 10, r: 9, fill }),
+    h("circle", {
+      cx: 10,
+      cy: 10,
+      r: 9,
+      fill,
+      stroke: "color-mix(in srgb, #000 12%, transparent)",
+      strokeWidth: 0.6
+    }),
+    // 左上角的一小块高光：让实心圆看起来像有厚度的小按钮，而不是平涂色块。
+    h("circle", { cx: 7, cy: 6.2, r: 3.4, fill: "#fff", opacity: 0.22 }),
     h("path", { d: "M10 5.6 V14.4", stroke: ink, strokeWidth: 1.7, strokeLinecap: "round" }),
     h("path", {
       d: "M6 7.4 L8.5 10 L6 12.6",
@@ -4737,23 +5186,23 @@ function CompactButton(props) {
     const row = state.byId[sessionId];
     return row === void 0 ? false : row.running === true;
   });
-  const [threshold, setThreshold] = useState4(readCompactThreshold);
-  const [pending, setPending] = useState4(false);
-  const [note, setNote] = useState4(null);
+  const [threshold, setThreshold] = useState5(readCompactThreshold);
+  const [pending, setPending] = useState5(false);
+  const [note, setNote] = useState5(null);
   const alive = useRef2(true);
-  useEffect3(() => {
+  useEffect4(() => {
     alive.current = true;
     return () => {
       alive.current = false;
     };
   }, []);
-  useEffect3(
+  useEffect4(
     () => subscribeCompactThreshold(() => {
       setThreshold(readCompactThreshold());
     }),
     []
   );
-  useEffect3(() => {
+  useEffect4(() => {
     if (note === null) return;
     const timer = window.setTimeout(() => {
       if (alive.current) setNote(null);
@@ -4816,60 +5265,48 @@ var compactContextFeature = {
 };
 
 // client/src/features/compact-context/settings.ts
-var { useState: useState5 } = React;
+var { useState: useState6 } = React;
+var PRESETS = [30, 50, 70, 85];
 function CompactContextSettings(props) {
   const { t } = props;
-  const [text, setText] = useState5(() => String(readCompactThreshold()));
-  const commit = () => {
-    if (text.trim() === "") {
-      setText(String(readCompactThreshold()));
-      return;
-    }
-    setText(String(writeCompactThreshold(text)));
+  const [value, setValue] = useState6(readCompactThreshold);
+  const commit = (next) => {
+    setValue(writeCompactThreshold(next));
   };
   const reset = () => {
     resetCompactThreshold();
-    setText(String(DEFAULT_COMPACT_THRESHOLD));
+    setValue(DEFAULT_COMPACT_THRESHOLD);
   };
   return h(
-    "div",
-    { className: "fh-set-row" },
+    React.Fragment,
+    null,
     h(
-      "div",
-      { className: "fh-set-text" },
-      h("span", { className: "fh-set-label" }, t("threshold.label")),
-      h("span", { className: "fh-set-help" }, t("threshold.hint", { min: MIN_COMPACT_THRESHOLD }))
-    ),
-    h(
-      "div",
-      { className: "fh-set-control" },
-      h("input", {
-        className: "fh-set-input",
-        type: "number",
+      SettingsRow,
+      {
+        label: t("threshold.label"),
+        hint: t("threshold.hint", { min: MIN_COMPACT_THRESHOLD })
+      },
+      h(SettingsSlider, {
+        label: t("threshold.label"),
+        value,
         min: MIN_COMPACT_THRESHOLD,
         max: MAX_COMPACT_THRESHOLD,
-        step: 1,
-        value: text,
-        "aria-label": t("threshold.label"),
-        onChange: (event) => {
-          setText(event.currentTarget.value);
-        },
-        onBlur: () => {
-          commit();
-        },
-        onKeyDown: (event) => {
-          if (event.key === "Enter") commit();
-        }
+        step: 5,
+        suffix: "%",
+        onChange: commit
+      })
+    ),
+    h(
+      SettingsRow,
+      { label: t("threshold.presets"), hint: t("threshold.presetsHint") },
+      h(SettingsPresets, {
+        label: t("threshold.presets"),
+        options: PRESETS,
+        value,
+        suffix: "%",
+        onChange: commit
       }),
-      h(
-        "button",
-        {
-          type: "button",
-          className: "fh-set-reset",
-          onClick: reset
-        },
-        t("threshold.reset")
-      )
+      h(SettingsButton, { onClick: reset }, t("threshold.reset"))
     )
   );
 }
@@ -4877,7 +5314,9 @@ var compactContextSettings = {
   id: "compact-context",
   order: 20,
   locale: { ns: COMPACT_NS, dicts: { zh: zh4, en: en4 } },
-  component: CompactContextSettings
+  component: CompactContextSettings,
+  icon: SettingsCompressIcon,
+  tone: "blue"
 };
 
 // client/src/features/token-usage/metrics.ts
@@ -5058,6 +5497,9 @@ var zh5 = {
   "settings.description": "\u8F93\u5165\u6846\u4E0A\u65B9\u7684\u4E00\u884C\u5B9E\u65F6\u7528\u91CF\uFF1A\u5DF2\u6D88\u8017 token\u3001\u672C\u9636\u6BB5\u901F\u5EA6\u3001\u9996\u5B57\u5EF6\u8FDF\u3001\u8017\u65F6\u4E0E\u4E0A\u4E0B\u6587\u5360\u7528\u3002",
   "settings.enabled": "\u663E\u793A\u7528\u91CF\u72B6\u6001\u6761",
   "settings.enabledHint": "\u5173\u95ED\u540E\u8F93\u5165\u6846\u4E0A\u65B9\u4E0D\u518D\u663E\u793A\u4EFB\u4F55\u7528\u91CF\u4FE1\u606F\u3002",
+  "group.display": "\u663E\u793A\u5185\u5BB9",
+  "group.timing": "\u901F\u5EA6\u4E0E\u8017\u65F6",
+  "group.behavior": "\u8FD0\u884C\u884C\u4E3A",
   "settings.tokens": "\u5DF2\u6D88\u8017 token",
   "settings.tokensHint": "\u672C\u4F1A\u8BDD\u7D2F\u8BA1\u7684\u63D0\u793A\u8BCD\u4E0E\u8F93\u51FA token \u5408\u8BA1\uFF08\u4E0E\u4F1A\u8BDD\u7EDF\u8BA1\u540C\u4E00\u53E3\u5F84\uFF09\u3002",
   "settings.exact": "token \u7528\u7CBE\u786E\u6570\u5B57",
@@ -5092,6 +5534,9 @@ var en5 = {
   "settings.description": "One live line above the composer: consumed tokens, this turn\u2019s speed, first-token latency, elapsed time, and context occupancy.",
   "settings.enabled": "Show the usage bar",
   "settings.enabledHint": "When off, nothing is rendered above the composer.",
+  "group.display": "What to show",
+  "group.timing": "Speed and timing",
+  "group.behavior": "Behaviour",
   "settings.tokens": "Consumed tokens",
   "settings.tokensHint": "Prompt and output tokens accumulated in this session (the same figure as session statistics).",
   "settings.exact": "Exact token digits",
@@ -5131,6 +5576,21 @@ var styles4 = `
 }
 .fh-tu, .fh-tu * { box-sizing: border-box; }
 .fh-tu-item { display: inline-flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+/* \u6BCF\u4E2A\u8BFB\u6570\u524D\u7684\u5C0F\u8272\u70B9\uFF1A\u53EA\u7528\u4E8E\u533A\u5206\u6307\u6807\uFF0C\u4E0D\u627F\u62C5\u8BED\u4E49\uFF1B\u989C\u8272\u89C1 lib/palette.ts\u3002 */
+.fh-tu-dot {
+  width: 5px;
+  height: 5px;
+  flex: none;
+  align-self: center;
+  border-radius: 50%;
+  background: var(--dsw-alias-label-tertiary);
+}
+.fh-tu-dot[data-tone='gold'] { background: var(--fh-tone-gold); }
+.fh-tu-dot[data-tone='red'] { background: var(--fh-tone-red); }
+.fh-tu-dot[data-tone='blue'] { background: var(--fh-tone-blue); }
+.fh-tu-dot[data-tone='green'] { background: var(--fh-tone-green); }
+.fh-tu-dot[data-tone='violet'] { background: var(--fh-tone-violet); }
+.fh-tu-dot[data-tone='pink'] { background: var(--fh-tone-pink); }
 .fh-tu-label { color: color-mix(in srgb, var(--dsw-alias-label-primary) 55%, transparent); }
 .fh-tu-value { display: inline-flex; align-items: baseline; gap: 2px; color: var(--dsw-alias-label-primary); font-weight: 500; }
 .fh-tu-mark { color: color-mix(in srgb, var(--dsw-alias-label-primary) 50%, transparent); }
@@ -5141,7 +5601,7 @@ var styles4 = `
 `;
 
 // client/src/features/token-usage/index.ts
-var { useEffect: useEffect4, useState: useState6 } = React;
+var { useEffect: useEffect5, useState: useState7 } = React;
 var TOKEN_USAGE_NS = "feature-hub.token-usage";
 var TICK_MS = 1e3;
 function ReadingItem(props) {
@@ -5149,6 +5609,7 @@ function ReadingItem(props) {
   return h(
     "span",
     { className: "fh-tu-item", "data-metric": reading.key },
+    h("span", { className: "fh-tu-dot", "data-tone": reading.tone, "aria-hidden": true }),
     h("span", { className: "fh-tu-label" }, reading.label),
     h(
       "span",
@@ -5170,10 +5631,10 @@ function TokenUsageBar(props) {
   });
   const windowNodes = props.useChat((snapshot) => snapshot.legacy.nodes);
   const turnTimings = props.useChat((snapshot) => snapshot.legacy.turnTimings);
-  const [prefs, setPrefs] = useState6(readUsagePreferences);
-  const [now, setNow] = useState6(() => Date.now());
-  useEffect4(() => subscribeUsagePreferences(() => setPrefs(readUsagePreferences())), []);
-  useEffect4(() => {
+  const [prefs, setPrefs] = useState7(readUsagePreferences);
+  const [now, setNow] = useState7(() => Date.now());
+  useEffect5(() => subscribeUsagePreferences(() => setPrefs(readUsagePreferences())), []);
+  useEffect5(() => {
     if (!running || !prefs.liveElapsed) return;
     const timer = window.setInterval(() => setNow(Date.now()), TICK_MS);
     return () => window.clearInterval(timer);
@@ -5190,6 +5651,7 @@ function TokenUsageBar(props) {
   if (prefs.showTokens && total !== null) {
     readings.push({
       key: "tokens",
+      tone: "blue",
       label: t("consumed.label"),
       value: formatTokenCount(total, prefs.exactTokens),
       unit: t("consumed.unit")
@@ -5198,6 +5660,7 @@ function TokenUsageBar(props) {
   if (prefs.showSpeed && speedTps !== null && speedTps > 0) {
     readings.push({
       key: "speed",
+      tone: "green",
       label: t("speed.label"),
       value: formatRate(speedTps),
       unit: t("speed.unit"),
@@ -5207,6 +5670,7 @@ function TokenUsageBar(props) {
   if (prefs.showTtft && ttftMs !== null && ttftMs > 0) {
     readings.push({
       key: "ttft",
+      tone: "gold",
       label: t("ttft.label"),
       value: formatSeconds(ttftMs),
       estimated: true
@@ -5215,13 +5679,14 @@ function TokenUsageBar(props) {
   if (prefs.showElapsed && elapsedMs !== null && elapsedMs > 0) {
     readings.push({
       key: "elapsed",
+      tone: "red",
       label: t("elapsed.label"),
       value: formatSeconds(elapsedMs),
       estimated: true
     });
   }
   if (prefs.showContext && percent !== null) {
-    readings.push({ key: "context", label: t("context.label"), value: `${percent}%` });
+    readings.push({ key: "context", tone: "violet", label: t("context.label"), value: `${percent}%` });
   }
   if (readings.length === 0) return null;
   const estimateHint = t("estimate.hint");
@@ -5262,99 +5727,68 @@ var tokenUsageFeature = {
 };
 
 // client/src/features/token-usage/settings.ts
-var { useState: useState7 } = React;
-function ToggleRow(props) {
-  return h(
-    "div",
-    { className: "fh-set-row" },
-    h(
-      "div",
-      { className: "fh-set-text" },
-      h("span", { className: "fh-set-label" }, props.label),
-      h("span", { className: "fh-set-help" }, props.hint)
-    ),
-    h(
-      "div",
-      { className: "fh-set-control" },
-      h("input", {
-        className: "fh-set-checkbox",
-        type: "checkbox",
-        checked: props.checked,
-        disabled: props.disabled === true,
-        "aria-label": props.label,
-        onChange: (event) => {
-          props.onChange(event.currentTarget.checked);
-        }
-      })
-    )
-  );
-}
-var ROWS = [
-  { key: "showTokens", label: "settings.tokens", hint: "settings.tokensHint", nested: true },
-  { key: "exactTokens", label: "settings.exact", hint: "settings.exactHint", nested: true },
-  { key: "showSpeed", label: "settings.speed", hint: "settings.speedHint", nested: true },
-  { key: "showTtft", label: "settings.ttft", hint: "settings.ttftHint", nested: true },
-  { key: "showElapsed", label: "settings.elapsed", hint: "settings.elapsedHint", nested: true },
-  { key: "liveElapsed", label: "settings.live", hint: "settings.liveHint", nested: true },
-  { key: "showContext", label: "settings.context", hint: "settings.contextHint", nested: true }
+var { useState: useState8 } = React;
+var DISPLAY_ROWS = [
+  { key: "showTokens", label: "settings.tokens", hint: "settings.tokensHint" },
+  { key: "exactTokens", label: "settings.exact", hint: "settings.exactHint" },
+  { key: "showContext", label: "settings.context", hint: "settings.contextHint" }
+];
+var TIMING_ROWS = [
+  { key: "showSpeed", label: "settings.speed", hint: "settings.speedHint" },
+  { key: "showTtft", label: "settings.ttft", hint: "settings.ttftHint" },
+  { key: "showElapsed", label: "settings.elapsed", hint: "settings.elapsedHint" }
+];
+var BEHAVIOR_ROWS = [
+  { key: "liveElapsed", label: "settings.live", hint: "settings.liveHint" }
 ];
 function TokenUsageSettings(props) {
   const { t } = props;
-  const [prefs, setPrefs] = useState7(readUsagePreferences);
+  const [prefs, setPrefs] = useState8(readUsagePreferences);
   const update = (key, value) => {
     setPrefs(writeUsagePreferences({ ...prefs, [key]: value }));
   };
   const reset = () => {
     setPrefs(resetUsagePreferences());
   };
-  const rows = ROWS.map(
-    (row) => h(ToggleRow, {
-      key: row.key,
-      label: t(row.label),
-      hint: t(row.hint),
-      checked: prefs[row.key],
-      disabled: row.nested && !prefs.enabled,
-      onChange: (value) => {
-        update(row.key, value);
-      }
-    })
+  const disabled = !prefs.enabled;
+  const renderRows = (rows) => rows.map(
+    (row) => h(
+      SettingsRow,
+      { key: row.key, label: t(row.label), hint: t(row.hint) },
+      h(SettingsSwitch, {
+        label: t(row.label),
+        checked: prefs[row.key],
+        disabled,
+        onChange: (value) => {
+          update(row.key, value);
+        }
+      })
+    )
+  );
+  const isDefault = prefs.enabled === DEFAULT_USAGE_PREFERENCES.enabled && Object.keys(DEFAULT_USAGE_PREFERENCES).every(
+    (key) => prefs[key] === DEFAULT_USAGE_PREFERENCES[key]
   );
   return h(
     React.Fragment,
     null,
-    h(ToggleRow, {
-      key: "enabled",
-      label: t("settings.enabled"),
-      hint: t("settings.enabledHint"),
-      checked: prefs.enabled,
-      onChange: (value) => {
-        update("enabled", value);
-      }
-    }),
-    rows,
     h(
-      "div",
-      { className: "fh-set-row" },
-      h(
-        "div",
-        { className: "fh-set-text" },
-        h("span", { className: "fh-set-label" }, t("settings.resetLabel")),
-        h("span", { className: "fh-set-help" }, t("settings.resetHint"))
-      ),
-      h(
-        "div",
-        { className: "fh-set-control" },
-        h(
-          "button",
-          {
-            type: "button",
-            className: "fh-set-button",
-            disabled: prefs.enabled === DEFAULT_USAGE_PREFERENCES.enabled && ROWS.every((row) => prefs[row.key] === DEFAULT_USAGE_PREFERENCES[row.key]),
-            onClick: reset
-          },
-          t("settings.reset")
-        )
-      )
+      SettingsRow,
+      { hero: true, label: t("settings.enabled"), hint: t("settings.enabledHint") },
+      h(SettingsSwitch, {
+        label: t("settings.enabled"),
+        checked: prefs.enabled,
+        onChange: (value) => {
+          update("enabled", value);
+        }
+      })
+    ),
+    h(SettingsGroup, { title: t("group.display") }, renderRows(DISPLAY_ROWS)),
+    h(SettingsGroup, { title: t("group.timing") }, renderRows(TIMING_ROWS)),
+    h(SettingsGroup, { title: t("group.behavior") }, renderRows(BEHAVIOR_ROWS)),
+    h(
+      SettingsRow,
+      { label: t("settings.resetLabel"), hint: t("settings.resetHint") },
+      h(SettingsButton, { onClick: reset, disabled: isDefault }, t("settings.reset"))
     )
   );
 }
@@ -5362,7 +5796,9 @@ var tokenUsageSettings = {
   id: "token-usage",
   order: 25,
   locale: { ns: TOKEN_USAGE_NS, dicts: { zh: zh5, en: en5 } },
-  component: TokenUsageSettings
+  component: TokenUsageSettings,
+  icon: SettingsGaugeIcon,
+  tone: "green"
 };
 
 // client/src/features/task-notify/desktop-notify.ts
@@ -5861,6 +6297,8 @@ var zh6 = {
   "settings.description": "\u4EFB\u52A1\u5B8C\u6210\u3001\u5931\u8D25\u6216\u7B49\u5F85\u4F60\u56DE\u5E94\u65F6\u5F39 Windows \u7CFB\u7EDF\u901A\u77E5\uFF0C\u5E76\u7559\u5728\u901A\u77E5\u4E2D\u5FC3\uFF1B\u7A97\u53E3\u6700\u5C0F\u5316\u6216\u5173\u95ED\u5230\u6258\u76D8\u65F6\u4E5F\u80FD\u6536\u5230\u3002",
   "notify.enabled": "\u542F\u7528\u4EFB\u52A1\u63D0\u9192",
   "notify.enabledHint": "\u603B\u5F00\u5173\uFF1B\u5173\u95ED\u540E\u6240\u6709\u7A97\u53E3\u90FD\u4E0D\u518D\u51FA\u73B0\u4EFB\u4F55\u63D0\u9192\uFF0C\u7ACB\u5373\u751F\u6548\u3002",
+  "group.when": "\u63D0\u9192\u65F6\u673A",
+  "group.how": "\u6295\u9012\u65B9\u5F0F",
   "notify.completed": "\u4EFB\u52A1\u5B8C\u6210\u65F6\u63D0\u9192",
   "notify.completedHint": "\u4E00\u8F6E\u56DE\u7B54\u6B63\u5E38\u7ED3\u675F\u65F6\u63D0\u9192\u3002",
   "notify.failed": "\u4EFB\u52A1\u5931\u8D25\u65F6\u63D0\u9192",
@@ -5897,6 +6335,8 @@ var en6 = {
   "settings.description": "Windows notifications are raised when a task completes, fails, or waits for you, and stay in the notification center; they also arrive while the window is minimized or closed to the tray.",
   "notify.enabled": "Enable task notices",
   "notify.enabledHint": "Master switch; turning it off silences every window at once.",
+  "group.when": "When to notify",
+  "group.how": "How to deliver",
   "notify.completed": "Notify when a task completes",
   "notify.completedHint": "Shown when a turn ends normally.",
   "notify.failed": "Notify when a task fails",
@@ -5935,13 +6375,13 @@ var styles5 = `
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 10px 10px 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--dsw-alias-border-l1);
+  padding: 11px 10px 11px 13px;
+  border-radius: 14px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
   border-left-width: 3px;
-  background: var(--dsw-alias-bg-overlay);
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
-  box-shadow: 0 10px 28px color-mix(in srgb, var(--dsw-alias-label-primary) 14%, transparent);
+  box-shadow: 0 14px 36px color-mix(in srgb, #000 24%, transparent);
   pointer-events: auto;
   animation: fh-tn-in 160ms ease-out;
 }
@@ -6008,7 +6448,7 @@ var styles5 = `
   justify-content: center;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 7px;
   background: transparent;
   color: var(--dsw-alias-label-secondary);
   font: inherit;
@@ -6031,7 +6471,7 @@ var styles5 = `
 `;
 
 // client/src/features/task-notify/index.ts
-var { useEffect: useEffect5, useState: useState8 } = React;
+var { useEffect: useEffect6, useState: useState9 } = React;
 var TASK_NOTIFY_NS = "feature-hub.task-notify";
 var TASK_NOTIFY_ID = "task-notify";
 function glyphOf(kind) {
@@ -6059,8 +6499,8 @@ function glyphOf(kind) {
 }
 function TaskNotifyOverlay(props) {
   const { t, subscribe, toasts, dismiss, open } = props;
-  const [items, setItems] = useState8(() => toasts());
-  useEffect5(
+  const [items, setItems] = useState9(() => toasts());
+  useEffect6(
     () => subscribe(() => {
       setItems(toasts());
     }),
@@ -6125,39 +6565,18 @@ var taskNotify = {
 };
 
 // client/src/features/task-notify/settings.ts
-var { useEffect: useEffect6, useState: useState9 } = React;
-function NotifyToggleRow(props) {
-  return h(
-    "div",
-    { className: "fh-set-row" },
-    h(
-      "div",
-      { className: "fh-set-text" },
-      h("span", { className: "fh-set-label" }, props.label),
-      h("span", { className: "fh-set-help" }, props.hint)
-    ),
-    h(
-      "div",
-      { className: "fh-set-control" },
-      h("input", {
-        className: "fh-set-checkbox",
-        type: "checkbox",
-        checked: props.checked,
-        disabled: props.disabled === true,
-        "aria-label": props.label,
-        onChange: (event) => {
-          props.onChange(event.currentTarget.checked);
-        }
-      })
-    )
-  );
-}
+var { useEffect: useEffect7, useState: useState10 } = React;
+var WHEN_ROWS = [
+  { key: "completed", label: "notify.completed", hint: "notify.completedHint" },
+  { key: "failed", label: "notify.failed", hint: "notify.failedHint" },
+  { key: "asked", label: "notify.asked", hint: "notify.askedHint" }
+];
 function TaskNotifySettings(props) {
   const { t } = props;
-  const [notify, setNotify] = useState9(readNotifyPreferences);
-  const [permission, setPermission] = useState9(desktopNotifyPermission);
-  const [tested, setTested] = useState9(false);
-  useEffect6(() => subscribeNotifyPreferences(() => setNotify(readNotifyPreferences())), []);
+  const [notify, setNotify] = useState10(readNotifyPreferences);
+  const [permission, setPermission] = useState10(desktopNotifyPermission);
+  const [tested, setTested] = useState10(false);
+  useEffect7(() => subscribeNotifyPreferences(() => setNotify(readNotifyPreferences())), []);
   const setNotifyPref = (key, value) => {
     const next = { ...notify, [key]: value };
     setNotify(writeNotifyPreferences(next));
@@ -6179,76 +6598,59 @@ function TaskNotifySettings(props) {
       setTested(sent.delivered);
     })();
   };
+  const disabled = !notify.enabled;
   return h(
     React.Fragment,
     null,
-    h(NotifyToggleRow, {
-      key: "notify.enabled",
-      label: t("notify.enabled"),
-      hint: t("notify.enabledHint"),
-      checked: notify.enabled,
-      onChange: (value) => {
-        setNotifyPref("enabled", value);
-      }
-    }),
-    h(NotifyToggleRow, {
-      key: "notify.completed",
-      label: t("notify.completed"),
-      hint: t("notify.completedHint"),
-      checked: notify.completed,
-      disabled: !notify.enabled,
-      onChange: (value) => {
-        setNotifyPref("completed", value);
-      }
-    }),
-    h(NotifyToggleRow, {
-      key: "notify.failed",
-      label: t("notify.failed"),
-      hint: t("notify.failedHint"),
-      checked: notify.failed,
-      disabled: !notify.enabled,
-      onChange: (value) => {
-        setNotifyPref("failed", value);
-      }
-    }),
-    h(NotifyToggleRow, {
-      key: "notify.asked",
-      label: t("notify.asked"),
-      hint: t("notify.askedHint"),
-      checked: notify.asked,
-      disabled: !notify.enabled,
-      onChange: (value) => {
-        setNotifyPref("asked", value);
-      }
-    }),
-    h(NotifyToggleRow, {
-      key: "notify.system",
-      label: t("notify.system"),
-      hint: t("notify.systemHint"),
-      checked: notify.system,
-      disabled: !notify.enabled,
-      onChange: (value) => {
-        setNotifyPref("system", value);
-      }
-    }),
     h(
-      "div",
-      { className: "fh-set-row" },
+      SettingsRow,
+      { hero: true, label: t("notify.enabled"), hint: t("notify.enabledHint") },
+      h(SettingsSwitch, {
+        label: t("notify.enabled"),
+        checked: notify.enabled,
+        onChange: (value) => {
+          setNotifyPref("enabled", value);
+        }
+      })
+    ),
+    h(
+      SettingsGroup,
+      { title: t("group.when") },
+      WHEN_ROWS.map(
+        (row) => h(
+          SettingsRow,
+          { key: row.key, label: t(row.label), hint: t(row.hint) },
+          h(SettingsSwitch, {
+            label: t(row.label),
+            checked: notify[row.key],
+            disabled,
+            onChange: (value) => {
+              setNotifyPref(row.key, value);
+            }
+          })
+        )
+      )
+    ),
+    h(
+      SettingsGroup,
+      { title: t("group.how") },
       h(
-        "div",
-        { className: "fh-set-text" },
-        h("span", { className: "fh-set-label" }, t("notify.test")),
-        h("span", { className: "fh-set-help" }, t(`notify.permission.${permission}`))
+        SettingsRow,
+        { label: t("notify.system"), hint: t("notify.systemHint") },
+        h(SettingsSwitch, {
+          label: t("notify.system"),
+          checked: notify.system,
+          disabled,
+          onChange: (value) => {
+            setNotifyPref("system", value);
+          }
+        })
       ),
       h(
-        "div",
-        { className: "fh-set-control" },
-        h(
-          "button",
-          { type: "button", className: "fh-set-button", onClick: sendTest },
-          t("notify.testAction")
-        ),
-        tested ? h("span", { className: "fh-set-help" }, t("notify.testSent")) : null
+        SettingsRow,
+        { label: t("notify.test"), hint: t(`notify.permission.${permission}`) },
+        h(SettingsButton, { variant: "soft", onClick: sendTest, disabled }, t("notify.testAction")),
+        tested ? h("span", { className: "fh-set-note fh-set-note-ok" }, t("notify.testSent")) : null
       )
     )
   );
@@ -6257,7 +6659,9 @@ var taskNotifySettings = {
   id: "task-notify",
   order: 30,
   locale: { ns: TASK_NOTIFY_NS, dicts: { zh: zh6, en: en6 } },
-  component: TaskNotifySettings
+  component: TaskNotifySettings,
+  icon: SettingsBellIcon,
+  tone: "red"
 };
 
 // client/src/lib/dom.ts
@@ -6271,98 +6675,585 @@ function installStyles(css) {
   };
 }
 
+// client/src/lib/palette.ts
+var PALETTE_STYLES = `
+:root {
+  --fh-tone-gold: #b57a14;
+  --fh-tone-red: #c0432f;
+  --fh-tone-blue: #2f6f9f;
+  --fh-tone-green: #2f7a55;
+  --fh-tone-violet: #6f5aa8;
+  --fh-tone-pink: #b04a70;
+  /* \u6587\u4EF6\u5939\u56FE\u6807\u7684\u5E95\u8272\uFF1A\u540C\u4E00\u4E2A\u85E4\u9EC4\u7684\u4F4E\u900F\u660E\u5EA6\u586B\u5145\uFF0C\u60AC\u505C\u65F6\u52A0\u6DF1\u3002 */
+  --fh-folder-fill: color-mix(in srgb, var(--fh-tone-gold) 22%, transparent);
+  --fh-folder-fill-hover: color-mix(in srgb, var(--fh-tone-gold) 34%, transparent);
+}
+body[data-ds-dark-theme] {
+  --fh-tone-gold: #e8b054;
+  --fh-tone-red: #f07a67;
+  --fh-tone-blue: #7db4e8;
+  --fh-tone-green: #62c99b;
+  --fh-tone-violet: #b29aee;
+  --fh-tone-pink: #ef9cc0;
+  --fh-folder-fill: color-mix(in srgb, var(--fh-tone-gold) 26%, transparent);
+  --fh-folder-fill-hover: color-mix(in srgb, var(--fh-tone-gold) 40%, transparent);
+}
+`;
+
 // client/src/features/settings/styles.ts
 var styles6 = `
-.fh-set { max-width: 720px; color: var(--dsw-alias-label-primary); }
-.fh-set, .fh-set *, .fh-set *::before, .fh-set *::after { box-sizing: border-box; }
-.fh-set-card {
-  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 12%, transparent);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--dsw-alias-label-primary) 3%, transparent);
-  padding: 4px 16px 8px;
+.fh-set {
+  max-width: 720px;
+  padding: 2px 0 10px;
+  color: var(--dsw-alias-label-primary);
 }
-.fh-set-card-head { padding: 12px 0 4px; }
-.fh-set-card-title { margin: 0; font-size: 14px; font-weight: 600; line-height: 22px; }
-.fh-set-card-desc { margin: 2px 0 0; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-secondary); }
-.fh-set-row {
+.fh-set, .fh-set *, .fh-set *::before, .fh-set *::after { box-sizing: border-box; }
+
+/* ---- \u9875\u5934 ---- */
+.fh-set-hero {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 14px 0;
-  border-top: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
-  margin-top: 8px;
+  gap: 12px;
+  padding: 2px 2px 16px;
 }
-.fh-set-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.fh-set-label { font-size: 13px; line-height: 20px; }
-.fh-set-help { font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-secondary); }
-.fh-set-control { display: flex; align-items: center; gap: 8px; flex: none; }
-.fh-set-input {
-  width: 68px;
-  height: 30px;
-  padding: 0 8px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);
-  background: var(--dsw-alias-bg-layer-1);
-  color: var(--dsw-alias-label-primary);
-  font: inherit;
-  font-size: 13px;
-  text-align: right;
-  outline: none;
+.fh-set-hero-mark {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
+  background:
+    radial-gradient(120% 120% at 20% 0%, color-mix(in srgb, var(--fh-tone-gold) 16%, transparent), transparent 62%),
+    radial-gradient(120% 120% at 100% 100%, color-mix(in srgb, var(--fh-tone-blue) 14%, transparent), transparent 60%),
+    var(--dsw-alias-settings-card-fill);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);
+}
+.fh-set-hero-text { flex: 1 1 auto; min-width: 0; }
+.fh-set-hero-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 24px;
+  letter-spacing: 0.01em;
+}
+.fh-set-hero-desc {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+  text-wrap: pretty;
+}
+.fh-set-hero-count {
+  flex: none;
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  line-height: 16px;
   font-variant-numeric: tabular-nums;
 }
-.fh-set-input:focus-visible { border-color: var(--dsw-alias-brand-primary); }
-.fh-set-reset {
-  height: 30px;
-  padding: 0 10px;
-  border-radius: 8px;
-  border: 1px solid transparent;
+
+/* ---- \u6807\u7B7E\u9875\uFF1A\u4E00\u4E2A\u529F\u80FD\u4E00\u4E2A\u6807\u7B7E\uFF0C\u53EA\u6709\u5F53\u524D\u6807\u7B7E\u7684\u5361\u7247\u53EF\u89C1 ---- */
+.fh-set-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 2px 12px;
+}
+.fh-set-tab {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 10px 0 7px;
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
+  border-radius: 11px;
   background: transparent;
   color: var(--dsw-alias-label-secondary);
   font: inherit;
   font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+.fh-set-tab:hover {
+  border-color: color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent);
+  color: var(--dsw-alias-label-primary);
+}
+.fh-set-tab[data-active='true'] {
+  border-color: color-mix(in srgb, var(--fh-set-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--fh-set-accent) 11%, transparent);
+  color: var(--dsw-alias-label-primary);
+  font-weight: 600;
+}
+.fh-set-tab:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--fh-set-accent) 60%, transparent);
+  outline-offset: 1px;
+}
+.fh-set-tab-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--fh-set-accent) 12%, transparent);
+  color: var(--fh-set-accent);
+}
+.fh-set-tab[data-active='true'] .fh-set-tab-icon {
+  background: color-mix(in srgb, var(--fh-set-accent) 20%, transparent);
+}
+.fh-set-tab-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- \u5361\u7247 ---- */
+.fh-set-panels { display: flex; flex-direction: column; }
+.fh-set-panel[hidden] { display: none; }
+.fh-set-card {
+  position: relative;
+  overflow: hidden;
+  border: 0.5px solid var(--dsw-alias-settings-card-stroke);
+  border-radius: 16px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--fh-set-accent) 5%, var(--dsw-alias-settings-card-fill)),
+    var(--dsw-alias-settings-card-fill) 96px
+  );
+}
+.fh-set-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--fh-set-accent) 75%, transparent),
+    color-mix(in srgb, var(--fh-set-accent) 12%, transparent) 55%,
+    transparent
+  );
+  pointer-events: none;
+}
+/* \u6BCF\u4E2A\u529F\u80FD\u4E00\u4E2A\u5F3A\u8C03\u8272\uFF1B\u7F3A\u7701\uFF08\u672A\u77E5 tone\uFF09\u9000\u56DE\u77F3\u7891\u84DD\u3002 */
+.fh-set-card[data-tone='gold'],
+.fh-set-tab[data-tone='gold'] {
+  --fh-set-accent: var(--fh-tone-gold);
+}
+.fh-set-card[data-tone='red'],
+.fh-set-tab[data-tone='red'] {
+  --fh-set-accent: var(--fh-tone-red);
+}
+.fh-set-card[data-tone='blue'],
+.fh-set-tab[data-tone='blue'] {
+  --fh-set-accent: var(--fh-tone-blue);
+}
+.fh-set-card[data-tone='green'],
+.fh-set-tab[data-tone='green'] {
+  --fh-set-accent: var(--fh-tone-green);
+}
+.fh-set-card[data-tone='violet'],
+.fh-set-tab[data-tone='violet'] {
+  --fh-set-accent: var(--fh-tone-violet);
+}
+.fh-set-card[data-tone='pink'],
+.fh-set-tab[data-tone='pink'] {
+  --fh-set-accent: var(--fh-tone-pink);
+}
+.fh-set-card,
+.fh-set-tab {
+  --fh-set-accent: var(--fh-tone-blue);
+}
+
+.fh-set-card-head { padding: 13px 16px 0; }
+.fh-set-card-title {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 21px;
+}
+.fh-set-card-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+  text-wrap: pretty;
+}
+.fh-set-card-body { padding: 2px 14px 10px; }
+
+/* ---- \u8BBE\u7F6E\u884C ---- */
+.fh-set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 10px 8px;
+  margin: 0 -8px;
+  border-radius: 10px;
+  transition: background-color 120ms ease;
+}
+.fh-set-row:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent); }
+.fh-set-row + .fh-set-row {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent);
+}
+.fh-set-row-hero {
+  margin: 2px 0 6px;
+  padding: 11px 10px;
+  background: color-mix(in srgb, var(--fh-set-accent) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fh-set-accent) 17%, transparent);
+}
+.fh-set-row-hero:hover { background: color-mix(in srgb, var(--fh-set-accent) 10%, transparent); }
+.fh-set-row-hero + .fh-set-row { box-shadow: none; }
+.fh-set-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fh-set-label { font-size: 13px; font-weight: 500; line-height: 20px; }
+.fh-set-row-hero .fh-set-label { font-size: 14px; font-weight: 600; }
+.fh-set-help {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+  text-wrap: pretty;
+}
+.fh-set-control { display: flex; align-items: center; gap: 8px; flex: none; }
+
+/* ---- \u5206\u7EC4\u5C0F\u6807\u9898 ---- */
+.fh-set-group { margin-top: 12px; }
+.fh-set-group:first-child { margin-top: 4px; }
+.fh-set-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 2px 1px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 17px;
+  letter-spacing: 0.06em;
+}
+.fh-set-group-title::before {
+  content: '';
+  flex: none;
+  width: 3px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--fh-set-accent);
+  opacity: 0.85;
+}
+.fh-set-group .fh-set-row { padding: 9px 8px; }
+
+/* ---- \u5F00\u5173 ---- */
+.fh-set-switch {
+  position: relative;
+  flex: none;
+  width: 38px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+.fh-set-switch[data-on='true'] { background: var(--fh-set-accent); }
+.fh-set-switch:hover:not(:disabled) { filter: brightness(1.04); }
+.fh-set-switch:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--fh-set-accent) 70%, transparent);
+  outline-offset: 2px;
+}
+.fh-set-switch:disabled { opacity: 0.45; cursor: default; }
+.fh-set-switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  transition: transform 160ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.fh-set-switch[data-on='true'] .fh-set-switch-thumb { transform: translateX(16px); }
+
+/* ---- \u6B65\u8FDB\u5668 ---- */
+.fh-set-stepper {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 2px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
+  background: var(--dsw-alias-bg-layer-1);
+}
+.fh-set-stepper:focus-within { border-color: color-mix(in srgb, var(--fh-set-accent) 60%, transparent); }
+.fh-set-stepper-btn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
   cursor: pointer;
 }
-.fh-set-reset:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent); color: var(--dsw-alias-label-primary); }
-.fh-set-reset:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 1px; }
-.fh-set-checkbox {
-  width: 18px;
+.fh-set-stepper-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);
+  color: var(--dsw-alias-label-primary);
+}
+.fh-set-stepper-btn:disabled { opacity: 0.35; cursor: default; }
+.fh-set-stepper-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--fh-set-accent) 65%, transparent);
+  outline-offset: 0;
+}
+.fh-set-stepper-input {
+  width: 42px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+.fh-set-stepper-unit {
+  padding: 0 7px 0 1px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* ---- \u6ED1\u6746 ---- */
+.fh-set-slider { display: inline-flex; align-items: center; gap: 10px; }
+.fh-set-range {
+  width: 150px;
   height: 18px;
   margin: 0;
-  accent-color: var(--dsw-alias-brand-primary);
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
   cursor: pointer;
 }
-.fh-set-checkbox:disabled { cursor: default; opacity: 0.45; }
-.fh-set-checkbox:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 2px; }
+.fh-set-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--fh-set-accent) var(--fh-pct, 50%),
+    color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent) var(--fh-pct, 50%)
+  );
+}
+.fh-set-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  border: 2px solid var(--fh-set-accent);
+  background: var(--dsw-alias-bg-layer-1);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--dsw-alias-label-primary) 24%, transparent);
+}
+.fh-set-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
+}
+.fh-set-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--fh-set-accent);
+}
+.fh-set-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--fh-set-accent);
+  background: var(--dsw-alias-bg-layer-1);
+}
+.fh-set-range:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--fh-set-accent) 60%, transparent);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+.fh-set-range-value {
+  min-width: 42px;
+  text-align: right;
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- \u5FEB\u6377\u80F6\u56CA ---- */
+.fh-set-presets { display: inline-flex; align-items: center; gap: 4px; }
+.fh-set-preset {
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 14%, transparent);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 11px;
+  line-height: 22px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.fh-set-preset:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent); }
+.fh-set-preset[data-active='true'] {
+  border-color: color-mix(in srgb, var(--fh-set-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--fh-set-accent) 12%, transparent);
+  color: var(--fh-set-accent);
+  font-weight: 600;
+}
+.fh-set-preset:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--fh-set-accent) 60%, transparent);
+  outline-offset: 1px;
+}
+
+/* ---- \u6309\u94AE ---- */
 .fh-set-button {
   height: 30px;
   padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
   background: transparent;
   color: var(--dsw-alias-label-primary);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
+  white-space: nowrap;
 }
-.fh-set-button:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent); }
-.fh-set-button:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 1px; }
-.fh-set-card + .fh-set-card { margin-top: 16px; }
-.fh-set-foot { margin: 10px 2px 0; font-size: 12px; color: var(--dsw-alias-label-secondary); }
+.fh-set-button:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent); }
+.fh-set-button:disabled { opacity: 0.4; cursor: default; }
+.fh-set-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--fh-set-accent) 60%, transparent);
+  outline-offset: 1px;
+}
+.fh-set-button-soft {
+  border-color: color-mix(in srgb, var(--fh-set-accent) 34%, transparent);
+  background: color-mix(in srgb, var(--fh-set-accent) 13%, transparent);
+  color: var(--fh-set-accent);
+  font-weight: 600;
+}
+.fh-set-button-soft:hover:not(:disabled) { background: color-mix(in srgb, var(--fh-set-accent) 20%, transparent); }
+.fh-set-button-danger {
+  border-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 45%, transparent);
+  color: var(--dsw-alias-state-error-primary);
+}
+.fh-set-button-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, transparent);
+}
+
+/* ---- \u72B6\u6001\u6587\u5B57\uFF08\u6D4B\u8BD5\u901A\u77E5\u7684\u7ED3\u679C\u3001\u6743\u9650\u72B6\u6001\uFF09 ---- */
+.fh-set-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  line-height: 18px;
+}
+.fh-set-note-ok { color: var(--dsw-alias-state-success-primary); }
+.fh-set-note::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.85;
+}
+
+/* ---- \u9875\u811A ---- */
+.fh-set-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 2px 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+.fh-set-foot-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fh-tone-green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--fh-tone-green) 16%, transparent);
+}
+
+/* ---- \u7A84\u5C4F\uFF1A\u63A7\u4EF6\u6362\u5230\u4E0B\u4E00\u884C\uFF0C\u907F\u514D\u628A\u8BF4\u660E\u6324\u6210\u4E00\u6761\u7A84\u7F1D ---- */
+@media (max-width: 560px) {
+  .fh-set-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .fh-set-control { justify-content: flex-end; }
+  .fh-set-hero-count { display: none; }
+  .fh-set-tab { flex-basis: calc(50% - 3px); }
+  .fh-set-slider { width: 100%; }
+  .fh-set-range { flex: 1 1 auto; width: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fh-set-row, .fh-set-tab, .fh-set-switch, .fh-set-switch-thumb { transition: none; }
+}
 `;
 
 // client/src/features/settings/locale.ts
 var zh7 = {
   title: "\u529F\u80FD\u96C6",
+  subtitle: "\u4FA7\u8FB9\u680F\u3001\u8F93\u5165\u6846\u4E0E\u4EFB\u52A1\u63D0\u9192\u7684\u504F\u597D\u90FD\u96C6\u4E2D\u5728\u8FD9\u91CC\uFF0C\u6539\u5B8C\u7ACB\u5373\u751F\u6548\u3002",
+  count: "{n} \u9879\u529F\u80FD",
+  "tabs.label": "\u529F\u80FD\u5206\u7EC4",
   "saved.auto": "\u6539\u52A8\u5373\u65F6\u751F\u6548\uFF0C\u65E0\u9700\u4FDD\u5B58"
 };
 var en7 = {
   title: "Feature hub",
+  subtitle: "Preferences for the sidebar, composer, and task reminders \u2014 changes apply immediately.",
+  count: "{n} features",
+  "tabs.label": "Feature sections",
   "saved.auto": "Changes apply immediately"
 };
 
 // client/src/features/settings/index.ts
+var { useRef: useRef3, useState: useState11 } = React;
 var SETTINGS_NS = "feature-hub.settings";
+var ACTIVE_TAB_KEY = "dsh-feature-hub.settings.active-tab";
+function readActiveTab() {
+  try {
+    const raw = window.localStorage.getItem(ACTIVE_TAB_KEY);
+    return raw === null || raw === "" ? null : raw;
+  } catch (_error) {
+    return null;
+  }
+}
+function writeActiveTab(id) {
+  try {
+    window.localStorage.setItem(ACTIVE_TAB_KEY, id);
+  } catch (_error) {
+  }
+}
 function FeatureHubSettingsIcon(props) {
   const size = Number(props.size) || 16;
   return h(
@@ -6370,38 +7261,135 @@ function FeatureHubSettingsIcon(props) {
     {
       width: size,
       height: size,
-      viewBox: "0 0 16 16",
+      viewBox: "0 0 24 24",
       "aria-hidden": true,
       focusable: false,
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: 1.3,
-      strokeLinecap: "round"
+      fill: "none"
     },
-    h("path", { d: "M13.2 8 A5.2 5.2 0 1 1 11.6 4.3" }),
-    h("path", { d: "M8 5.2 V8 L10 9.1" })
+    h("rect", { x: 3, y: 3, width: 8.2, height: 8.2, rx: 2.4, fill: "var(--fh-tone-gold)" }),
+    h("rect", { x: 12.8, y: 3, width: 8.2, height: 8.2, rx: 2.4, fill: "var(--fh-tone-red)" }),
+    h("rect", { x: 3, y: 12.8, width: 8.2, height: 8.2, rx: 2.4, fill: "var(--fh-tone-green)" }),
+    h("rect", { x: 12.8, y: 12.8, width: 8.2, height: 8.2, rx: 2.4, fill: "var(--fh-tone-blue)" })
   );
 }
 function FeatureHubSettings(props) {
   const { t, panels } = props;
   const ordered = (panels ?? []).filter((panel) => panel !== void 0 && panel !== null).slice().sort((left, right) => (left.order || 0) - (right.order || 0));
+  const [activeId, setActiveId] = useState11(readActiveTab);
+  const tabRefs = useRef3([]);
+  const showTabs = ordered.length > 1;
+  const activePanel = ordered.find((panel) => panel.id === activeId) ?? ordered[0];
+  const selectTab = (id) => {
+    setActiveId(id);
+    writeActiveTab(id);
+  };
+  const onTabKeyDown = (event, index) => {
+    let nextIndex = -1;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % ordered.length;
+    else if (event.key === "ArrowLeft") nextIndex = (index - 1 + ordered.length) % ordered.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = ordered.length - 1;
+    if (nextIndex < 0) return;
+    event.preventDefault();
+    const next = ordered[nextIndex];
+    if (next === void 0) return;
+    selectTab(next.id);
+    const element = tabRefs.current[nextIndex];
+    if (element !== void 0 && element !== null) element.focus();
+  };
   return h(
     "section",
     { className: "fh-set" },
-    ordered.map(
-      (panel) => h(
+    h(
+      "header",
+      { className: "fh-set-hero" },
+      h("span", { className: "fh-set-hero-mark" }, h(FeatureHubSettingsIcon, { size: 22 })),
+      h(
         "div",
-        { key: panel.id, className: "fh-set-card" },
-        h(
-          "div",
-          { className: "fh-set-card-head" },
-          h("h3", { className: "fh-set-card-title" }, panel.t("settings.title")),
-          h("p", { className: "fh-set-card-desc" }, panel.t("settings.description"))
-        ),
-        h(panel.component, { t: panel.t })
-      )
+        { className: "fh-set-hero-text" },
+        h("h2", { className: "fh-set-hero-title" }, t("title")),
+        h("p", { className: "fh-set-hero-desc" }, t("subtitle"))
+      ),
+      h("span", { className: "fh-set-hero-count" }, t("count", { n: String(ordered.length) }))
     ),
-    h("p", { className: "fh-set-foot" }, t("saved.auto"))
+    showTabs ? h(
+      "div",
+      { className: "fh-set-tabs", role: "tablist", "aria-label": t("tabs.label") },
+      ordered.map((panel, index) => {
+        const selected = panel === activePanel;
+        return h(
+          "button",
+          {
+            key: panel.id,
+            ref: (element) => {
+              tabRefs.current[index] = element;
+            },
+            type: "button",
+            role: "tab",
+            id: `fh-set-tab-${panel.id}`,
+            className: "fh-set-tab",
+            title: panel.t("settings.title"),
+            "data-tone": panel.tone ?? "blue",
+            "data-active": selected ? "true" : "false",
+            "aria-selected": selected,
+            "aria-controls": `fh-set-panel-${panel.id}`,
+            tabIndex: selected ? 0 : -1,
+            onClick: () => {
+              selectTab(panel.id);
+            },
+            onKeyDown: (event) => {
+              onTabKeyDown(event, index);
+            }
+          },
+          panel.icon === void 0 ? null : h(
+            "span",
+            { className: "fh-set-tab-icon" },
+            h(panel.icon, { size: 16 })
+          ),
+          h("span", { className: "fh-set-tab-label" }, panel.t("settings.title"))
+        );
+      })
+    ) : null,
+    h(
+      "div",
+      { className: "fh-set-panels" },
+      ordered.map((panel) => {
+        const selected = panel === activePanel;
+        return h(
+          "div",
+          {
+            key: panel.id,
+            className: "fh-set-panel",
+            role: showTabs ? "tabpanel" : "region",
+            id: `fh-set-panel-${panel.id}`,
+            "aria-labelledby": showTabs ? `fh-set-tab-${panel.id}` : void 0,
+            "aria-label": showTabs ? void 0 : panel.t("settings.title"),
+            hidden: !selected
+          },
+          h(
+            "article",
+            { className: "fh-set-card", "data-tone": panel.tone ?? "blue" },
+            h(
+              "div",
+              { className: "fh-set-card-head" },
+              showTabs ? null : h("h3", { className: "fh-set-card-title" }, panel.t("settings.title")),
+              h("p", { className: "fh-set-card-desc" }, panel.t("settings.description"))
+            ),
+            h(
+              "div",
+              { className: "fh-set-card-body" },
+              h(panel.component, { t: panel.t })
+            )
+          )
+        );
+      })
+    ),
+    h(
+      "p",
+      { className: "fh-set-foot" },
+      h("span", { className: "fh-set-foot-dot", "aria-hidden": true }),
+      t("saved.auto")
+    )
   );
 }
 var featureHubSettings = {
@@ -6440,6 +7428,7 @@ function enabledOf(list) {
   return list.filter((item) => item !== void 0 && item !== null && item.enabled !== false);
 }
 function apply(ctx) {
+  ctx.effect(() => installStyles(PALETTE_STYLES), "feature-hub:palette");
   ctx.effect(() => ctx.locale.register(SIDEBAR_NS, SIDEBAR_DICT), "feature-hub:sidebar:dictionaries");
   ctx.effect(() => installStyles(SIDEBAR_STYLES2), "feature-hub:sidebar:styles");
   const tSidebar = ctx.locale.bind(SIDEBAR_NS);
@@ -6530,7 +7519,9 @@ function apply(ctx) {
     id: item.id,
     order: item.order,
     component: item.component,
-    t: ctx.locale.bind(item.locale.ns)
+    t: ctx.locale.bind(item.locale.ns),
+    icon: item.icon,
+    tone: item.tone
   }));
   ctx.effect(
     () => ctx.slots.inject(

@@ -58,7 +58,7 @@ pnpm run check-types  # 不写文件，只检查类型快照是否过期 / 契�
 2. **React 由加载器以闭包注入**（全局 `React` 和 `h`），**不要 `import React`**（只取类型可以用 `import type`）。
 3. **不能用 `react-dom`**（模块表只给 React）。弹层请用顶层 `popover` 属性或 `<dialog>`，不要用 portal。
 4. **不要 import 任何 `@deepseek-ai/*` 的 Client 包**（包括 primitives）。需要控件就自己写，样式抄现有页面的形制。
-5. **样式只用主题 token**（`--dsw-alias-*`），需要更淡的层次用 `color-mix()` 从 `--dsw-alias-label-primary` 派生。不要写死颜色（浅色主题会翻车）。
+5. **样式只用主题 token**（`--dsw-alias-*`），需要更淡的层次用 `color-mix()` 从 `--dsw-alias-label-primary` 派生。装饰性的强调色（图标、图标底座、开关轨道、进度条、分组标记、计数胶囊）统一取 `lib/palette.ts` 的 `--fh-tone-*`，深浅主题各一套值；**不要另写十六进制颜色，也不要把强调色用在正文文字上**（浅色主题对比度会不够）。
 6. **文案必须双语**：每个功能自带 `locale: { ns, dicts: { zh, en } }`，两个字典同时加键。漏键的表现是界面显示原始 key（例如 `title`）。
 7. **插槽注册要放在 `ctx.effect` 里**，返回 disposer；资源（样式、字典、定时器、监听器）都要可回收。
 
@@ -75,11 +75,14 @@ client/src/
 │   ├── index.ts             组件 + 描述对象（+ 只在本功能内使用的纯函数，如投影）
 │   ├── settings.ts          本功能的设置面板 + 设置描述对象（SETTINGS 清单元素）
 │   ├── locale.ts            zh / en 字典（键名与 t(...) 一一对应，含 settings.title / settings.description）
-│   ├── styles.ts            样式字符串（只用 --dsw-alias-* 与 color-mix 派生色）
+│   ├── styles.ts            样式字符串（主题 token + 装饰强调色 + color-mix 派生色）
 │   └── <private>.ts         仅本功能使用的工具（例：git-branch/branch-name.ts、compact-context/runner.ts）
-├── features/settings/       设置页壳：只做卡片框架、排序与 .fh-set-* 样式契约，不含任何功能的偏好
+├── features/settings/       设置页壳：页头、功能标签页、卡片框架、排序与 .fh-set-* 样式契约，不含任何功能的偏好
 └── lib/                     真正跨域共用的工具
     ├── dom.ts               样式注入
+    ├── palette.ts           国风强调色变量（图标/开关/进度条等装饰位）
+    ├── settings-controls.tsx 设置页共用控件（开关/步进器/滑杆/胶囊/按钮）
+    ├── settings-icons.tsx    设置标签页图标（时钟/压缩/仪表/铃铛）
     ├── status.ts            状态点/转圈（外壳与最近任务共用）
     └── time.ts              相对/绝对时间（外壳与最近任务共用）
 ```
@@ -97,21 +100,21 @@ client/src/
 
 四个可插拔清单 + 一个设置页壳，字段一致才便于统一安装：
 
-| 注册点       | 清单             | 描述对象字段                                                |
-| ------------ | ---------------- | ----------------------------------------------------------- |
-| 侧边栏分组   | `SECTIONS`       | `id`、`order`、`locale`、`styles?`、`component`、`enabled?` |
-| 输入框工具行 | `CONTROLS`       | `id`、`order`、`locale`、`styles?`、`component`、`enabled?` |
-| 输入框右侧   | `RIGHT_CONTROLS` | `id`、`order`、`locale`、`styles?`、`component`、`enabled?` |
-| 输入框上方   | `DOCKS`          | `id`、`order`、`locale`、`styles?`、`component`、`enabled?` |
-| 设置面板     | `SETTINGS`       | `id`、`order`、`locale`、`styles?`、`component`、`enabled?` |
-| 设置页壳     | 单独注册         | `id`、`order`、`locale`、`styles`、`component`、`icon`      |
+| 注册点       | 清单             | 描述对象字段                                                                  |
+| ------------ | ---------------- | ----------------------------------------------------------------------------- |
+| 侧边栏分组   | `SECTIONS`       | `id`、`order`、`locale`、`styles?`、`component`、`enabled?`                   |
+| 输入框工具行 | `CONTROLS`       | `id`、`order`、`locale`、`styles?`、`component`、`enabled?`                   |
+| 输入框右侧   | `RIGHT_CONTROLS` | `id`、`order`、`locale`、`styles?`、`component`、`enabled?`                   |
+| 输入框上方   | `DOCKS`          | `id`、`order`、`locale`、`styles?`、`component`、`enabled?`                   |
+| 设置面板     | `SETTINGS`       | `id`、`order`、`locale`、`styles?`、`component`、`icon?`、`tone?`、`enabled?` |
+| 设置页壳     | 单独注册         | `id`、`order`、`locale`、`styles`、`component`、`icon`                        |
 
 ### 加一个功能的步骤
 
 1. 建 `client/src/features/<id>/`，写 `index.ts`（组件 + 描述对象）、`locale.ts`、`styles.ts`；私有工具另开文件。
-2. 需要设置时再写 `settings.ts`：只渲染 `.fh-set-row` 等骨架结构，卡片标题/描述用功能字典里的 `settings.title` / `settings.description`。
+2. 需要设置时再写 `settings.ts`：只渲染 `.fh-set-row` 等骨架结构；标签页文字与卡片说明分别用功能字典里的 `settings.title` / `settings.description`，由页壳统一渲染。
 3. 在 `main.ts` 的 `SECTIONS`、`CONTROLS`（工具行左侧）、`RIGHT_CONTROLS`（工具行右侧）或 `DOCKS`（输入框正上方的整行 `conversation.input.dock`）里加一行；有设置面板则同时加进 `SETTINGS`。
-4. 字典键与 `zh` / `en` 两份同时加；CSS 类名带本功能前缀（`fh-br-`、`fh-ws-` 之类），避免与外壳或其它功能撞名。
+4. 字典键与 `zh` / `en` 两份同时加；CSS 类名带本功能前缀（`fh-br-`、`fh-ws-` 之类），避免与外壳或其它功能撞名。设置标签页用 `icon` + `tone`（`gold / red / blue / green / violet / pink`）声明外观，控件从 `lib/settings-controls.tsx` 取，不要重写一套。
 5. 跑 `pnpm run all`（check → lint → build → verify），再按"让改动生效"确认槽位。
 
 ## 插槽规则（踩过的坑，别再犯）
@@ -156,7 +159,7 @@ client/src/
 
 - 会话/工作区数据只通过插槽 props 的 selector hooks 读（`useSessions`、`useWorkspaces`、`useSessionStatus`），**不要自己扫 session log，不要写会话数据**。
 - 不要读写别的插件的 DOM、样式表或源码。
-- 偏好设置用功能目录内的 localStorage + 订阅模块（如 `features/recent-tasks/preferences.ts`、`features/task-notify/preferences.ts`），别的地方不要直接碰 `localStorage`。
+- 偏好设置用功能目录内的 localStorage + 订阅模块（如 `features/recent-tasks/preferences.ts`、`features/task-notify/preferences.ts`），别的地方不要直接碰 `localStorage`。唯一例外是设置页壳自己的 UI 记忆（当前标签，键 `dsh-feature-hub.settings.active-tab`），它不是任何功能的偏好。
 
 ## 改动的验收标准
 

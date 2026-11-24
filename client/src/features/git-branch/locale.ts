@@ -15,6 +15,9 @@ export const zh = {
   'error.unreachable': '无法连接 Host',
   'error.branchName': '分支名不合法',
   'project.unknown': '未归属项目',
+  'project.copy': '点击复制项目名称：{name}',
+  'project.copied': '已复制',
+  'project.copyFailed': '复制失败',
   'warn.text':
     '该会话已开始工作，切到 {branch} 可能丢失未提交的改动（当前 {count} 个文件有改动）。确定切换？',
   'warn.running':
@@ -42,6 +45,9 @@ export const en: Record<keyof typeof zh, string> = {
   'error.unreachable': 'Cannot reach the Host',
   'error.branchName': 'That branch name is not valid',
   'project.unknown': 'No project',
+  'project.copy': 'Select to copy the project name: {name}',
+  'project.copied': 'Copied',
+  'project.copyFailed': 'Copy failed',
   'warn.text':
     'This session has already run work; switching to {branch} can strand uncommitted changes ({count} files changed). Switch anyway?',
   'warn.running':

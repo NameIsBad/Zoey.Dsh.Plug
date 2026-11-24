@@ -8,18 +8,19 @@
  */
 
 export const styles = `
-/* 分组计数徽标 */
+/* 分组计数徽标：藤黄淡底，与时钟图标同一色系。 */
 .fh-ws-recent .fh-ws-count {
   flex: none;
   min-width: 18px;
   padding: 0 6px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 12%, transparent);
-  background: color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--fh-tone-gold) 26%, transparent);
+  background: color-mix(in srgb, var(--fh-tone-gold) 11%, transparent);
   font-size: 10px;
   line-height: 16px;
   text-align: center;
-  color: var(--dsw-alias-label-secondary);
+  color: color-mix(in srgb, var(--fh-tone-gold) 72%, var(--dsw-alias-label-primary));
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
